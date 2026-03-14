@@ -1,0 +1,95 @@
+---
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description?: string;
+  canonicalPath?: string;
+  ogImage?: string;
+  type?: "website" | "article";
+  jsonLd?: Record<string, unknown>;
+}
+
+const {
+  title,
+  description = "Insider food guides for Reykjavík and beyond. Written by locals in the food industry — not influencers, not tourists. Updated for 2026.",
+  canonicalPath,
+  ogImage,
+  type = "website",
+  jsonLd,
+} = Astro.props;
+
+const siteUrl = "https://www.rvkfoodie.is";
+const canonical = canonicalPath ? `${siteUrl}${canonicalPath}` : undefined;
+const ogImg = ogImage ?? `${siteUrl}/og-default.jpg`;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {canonical && <link rel="canonical" href={canonical} />}
+
+    <!-- Open Graph -->
+    <meta property="og:type" content={type} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:site_name" content="Reykjavík Foodie" />
+    {canonical && <meta property="og:url" content={canonical} />}
+    {ogImg && <meta property="og:image" content={ogImg} />}
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    {ogImg && <meta name="twitter:image" content={ogImg} />}
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    {jsonLd && (
+      <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+    )}
+  </head>
+  <body class="bg-cream text-ink font-body text-normal leading-normal antialiased">
+    <header class="max-w-2xl mx-auto px-6 pt-12 pb-8">
+      <nav class="flex items-center justify-between">
+        <a href="/" class="inline-block">
+          <img src="/logo.svg" alt="Reykjavík Foodie" class="h-10" />
+        </a>
+        <div class="flex gap-6 text-tiny">
+          <a href="/about" class="text-ink-light hover:text-blue transition-colors">About</a>
+          <a href="/changelog" class="text-ink-light hover:text-blue transition-colors">Guide Updates</a>
+          <a href="https://instagram.com/rvkfoodie" target="_blank" rel="noopener" class="text-ink-light hover:text-blue transition-colors">Instagram</a>
+        </div>
+      </nav>
+    </header>
+    <main class="max-w-2xl mx-auto px-6 pb-24">
+      <slot />
+    </main>
+    <footer class="max-w-2xl mx-auto px-6 pb-12 text-tiny text-ink-light leading-tiny">
+      <div class="border-t border-ink/10 pt-8 space-y-4">
+        <div class="flex flex-wrap gap-x-6 gap-y-2">
+          <a href="/guides/food-guide" class="hover:text-blue transition-colors">Food Guide</a>
+          <a href="/guides/bar-crawl" class="hover:text-blue transition-colors">Bar Crawl</a>
+          <a href="/guides/golden-circle" class="hover:text-blue transition-colors">Golden Circle</a>
+          <a href="/changelog" class="hover:text-blue transition-colors">Guide Updates</a>
+          <a href="/about" class="hover:text-blue transition-colors">About</a>
+        </div>
+        <div class="flex items-center justify-between">
+          <span>&copy; {new Date().getFullYear()} Reykjavík Foodie</span>
+          <a href="https://instagram.com/rvkfoodie" target="_blank" rel="noopener" class="hover:text-blue transition-colors">
+            @rvkfoodie
+          </a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

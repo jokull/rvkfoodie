@@ -1,0 +1,104 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import VenueCard from "../../components/VenueCard.astro";
+import Paywall from "../../components/Paywall.astro";
+import RestaurantCallout from "../../components/RestaurantCallout.astro";
+import { getGuideBySlug, getAllGuides, type SectionBlock, type TextBlock } from "../../lib/payload";
+import { lexicalToHtml } from "../../lib/lexical";
+
+const { slug } = Astro.params;
+const guide = await getGuideBySlug(slug!);
+if (!guide) return Astro.redirect("/");
+
+const allGuides = await getAllGuides();
+const otherGuides = allGuides.filter((g) => g.slug !== guide.slug);
+
+const unlockedProducts: string[] =
+  (await Astro.session?.get("unlockedProducts")) ?? [];
+const unlocked = unlockedProducts.includes(guide.gumroadProductId);
+const error = Astro.url.searchParams.get("error");
+
+let totalHidden = 0;
+for (const block of guide.content) {
+  if (block.blockType === "section") {
+    totalHidden += (block as SectionBlock).venues.filter((v) => !v.isFree).length;
+  }
+}
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  name: guide.title,
+  description: guide.description,
+  offers: { "@type": "Offer", price: guide.price, priceCurrency: "USD", url: guide.gumroadUrl, availability: "https://schema.org/InStock" },
+  brand: { "@type": "Organization", name: "Reykjavík Foodie" },
+};
+---
+
+<Layout title={`${guide.title} — Reykjavík Foodie`} description={guide.description} canonicalPath={`/guides/${guide.slug}`} jsonLd={jsonLd}>
+  <a href="/" class="text-tiny text-ink-light hover:text-blue transition-colors mb-8 inline-block">&larr; All guides</a>
+
+  <h1 class="font-display text-huge leading-huge mb-2">{guide.title}</h1>
+  <p class="text-tiny text-ink-light mb-12">{guide.subtitle}</p>
+
+  {guide.content.map((block) => {
+    if (block.blockType === "section") {
+      const section = block as SectionBlock;
+      const freeVenues = section.venues.filter((v) => v.isFree);
+      const gatedVenues = section.venues.filter((v) => !v.isFree);
+      return (
+        <section class="mb-12">
+          <h2 class="font-display text-[1.75rem] leading-tight mb-2 pb-4 border-b border-ink/10">{section.title}</h2>
+          {freeVenues.map((venue) => <VenueCard {...venue} />)}
+          {unlocked
+            ? gatedVenues.map((venue) => <VenueCard {...venue} />)
+            : gatedVenues.length > 0
+              ? <p class="py-6 text-ink-light text-tiny italic">+{gatedVenues.length} more in the full guide</p>
+              : null}
+        </section>
+      );
+    }
+    if (block.blockType === "textBlock") {
+      const textBlock = block as TextBlock;
+      if (!unlocked && !textBlock.isFree) return null;
+      const html = lexicalToHtml(textBlock.content);
+      return (
+        <section class="mb-12 prose-custom">
+          {textBlock.heading && <h2 class="font-display text-[1.75rem] leading-tight mb-4 pb-4 border-b border-ink/10">{textBlock.heading}</h2>}
+          <Fragment set:html={html} />
+        </section>
+      );
+    }
+    return null;
+  })}
+
+  {!unlocked && totalHidden > 0 && (
+    <Paywall gumroadUrl={guide.gumroadUrl} price={guide.price} hiddenCount={totalHidden} slug={guide.slug} productId={guide.gumroadProductId} error={error === "invalid_key" ? "invalid" : undefined} />
+  )}
+
+  {unlocked && guide.googleMapsUrl && (
+    <div class="mb-12">
+      <h2 class="font-display text-[1.75rem] leading-tight mb-4 pb-4 border-b border-ink/10">Google Maps</h2>
+      <a href={guide.googleMapsUrl} target="_blank" rel="noopener" class="inline-block bg-blue text-white font-medium px-6 py-2.5 rounded-full text-tiny hover:opacity-90 transition-opacity">Open pin list in Google Maps &nearr;</a>
+    </div>
+  )}
+
+  {otherGuides.length > 0 && (
+    <aside class="mt-16 border-t border-ink/10 pt-8">
+      <h2 class="font-display text-[1.5rem] leading-tight mb-4">More guides</h2>
+      <div class="flex flex-wrap gap-3">
+        {otherGuides.map((g) => (
+          <a href={`/guides/${g.slug}`} class="border border-ink/10 rounded-full px-4 py-1.5 text-tiny hover:border-blue hover:text-blue transition-colors">{g.title}</a>
+        ))}
+      </div>
+      <p class="mt-4 text-tiny text-ink-light"><a href="/about" class="text-blue hover:opacity-80 transition-opacity">About the author &rarr;</a></p>
+    </aside>
+  )}
+
+  <div class="mt-12"><RestaurantCallout /></div>
+</Layout>
+
+<style>
+  .prose-custom :global(p) { margin-bottom: 1rem; }
+  .prose-custom :global(strong) { font-weight: 500; }
+</style>

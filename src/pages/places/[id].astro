@@ -1,0 +1,90 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import RestaurantCallout from "../../components/RestaurantCallout.astro";
+import { getAllGuides, type Venue, type SectionBlock } from "../../lib/payload";
+
+interface VenueWithContext extends Venue {
+  sectionTitle: string;
+  guideSlug: string;
+  guideTitle: string;
+  gumroadUrl: string;
+  guidePrice: number;
+}
+
+const { id } = Astro.params;
+const allGuides = await getAllGuides();
+
+let venue: VenueWithContext | null = null;
+const allVenues: VenueWithContext[] = [];
+
+for (const guide of allGuides) {
+  for (const block of guide.content) {
+    if (block.blockType === "section") {
+      const section = block as SectionBlock;
+      for (const v of section.venues) {
+        const ctx: VenueWithContext = {
+          ...v,
+          sectionTitle: section.title,
+          guideSlug: guide.slug,
+          guideTitle: guide.title,
+          gumroadUrl: guide.gumroadUrl,
+          guidePrice: guide.price,
+        };
+        allVenues.push(ctx);
+        if (v.id === id) venue = ctx;
+      }
+    }
+  }
+}
+
+if (!venue) return Astro.redirect("/");
+
+const mapsQuery = encodeURIComponent(`${venue.name} ${venue.address} Iceland`);
+const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Restaurant",
+  name: venue.name,
+  address: { "@type": "PostalAddress", streetAddress: venue.address, addressCountry: "IS" },
+  description: venue.description,
+};
+
+const nearby = allVenues
+  .filter((v) => v.id !== venue!.id && v.guideSlug === venue!.guideSlug && v.sectionTitle === venue!.sectionTitle)
+  .slice(0, 4);
+---
+
+<Layout title={`${venue.name} — Reykjavík Foodie`} description={venue.description.slice(0, 160)} canonicalPath={`/places/${venue.id}`} jsonLd={jsonLd}>
+  <a href={`/guides/${venue.guideSlug}`} class="text-tiny text-ink-light hover:text-blue transition-colors mb-8 inline-block">&larr; {venue.guideTitle}</a>
+
+  <article>
+    <p class="text-tiny leading-tiny text-blue font-medium tracking-wide uppercase mb-3">{venue.sectionTitle}</p>
+    <h1 class="font-display text-huge leading-huge mb-2">{venue.name}</h1>
+    {venue.address && <a href={mapsUrl} target="_blank" rel="noopener" class="text-tiny text-ink-light hover:text-blue transition-colors inline-block mb-8">{venue.address} &nearr;</a>}
+    {venue.time && <p class="text-tiny text-ink-light mb-6">{venue.time}</p>}
+    <p class="mb-6">{venue.description}</p>
+    {venue.note && <p class="text-tiny text-ink-light italic mb-8">{venue.note}</p>}
+
+    <div class="flex flex-wrap gap-3 mb-12">
+      <a href={mapsUrl} target="_blank" rel="noopener" class="inline-block border border-ink/15 rounded-full px-5 py-2 text-tiny hover:border-blue hover:text-blue transition-colors">Open in Google Maps &nearr;</a>
+      <a href={`/guides/${venue.guideSlug}`} class="inline-block bg-blue text-white font-medium px-5 py-2 rounded-full text-tiny hover:opacity-90 transition-opacity">See full {venue.guideTitle} — ${venue.guidePrice}</a>
+    </div>
+  </article>
+
+  {nearby.length > 0 && (
+    <aside class="border-t border-ink/10 pt-8">
+      <h2 class="font-display text-[1.75rem] leading-tight mb-4">More in {venue.sectionTitle}</h2>
+      <div class="space-y-4">
+        {nearby.map((v) => (
+          <a href={`/places/${v.id}`} class="block border border-ink/10 rounded-xl p-5 hover:border-ink/25 transition-colors group">
+            <h3 class="font-display text-[1.25rem] leading-tight group-hover:text-blue transition-colors">{v.name}</h3>
+            {v.address && <p class="text-tiny text-ink-light mt-1">{v.address}</p>}
+          </a>
+        ))}
+      </div>
+    </aside>
+  )}
+
+  <div class="mt-12"><RestaurantCallout /></div>
+</Layout>
