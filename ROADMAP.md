@@ -35,11 +35,12 @@ The unlock flow is frictionless: buy on Gumroad, get a license key, enter it on 
 
 ## Todo
 
-- [ ] Fix `media.rvkfoodie.is` R2 custom domain (requires moving nameservers to Cloudflare; using r2.dev public URL as interim)
-- [ ] OG image (`/og-default.jpg`) missing from `/public/`
 - [ ] Photos from Instagram added to venues/editorials
 - [ ] Design polish and responsive testing
-- [ ] SEO meta tags per page (guide-specific OG images, descriptions)
+- [ ] Cross-reference every venue with grapevine.is pages — link to Grapevine reviews/articles where they exist, adds credibility and SEO internal/external linking
+- [ ] "Best of Reykjavík" badges on venue pages — Grapevine runs annual "Best of Reykjavík" awards, show badges on venues that have won (e.g. "Best Burger 2025"). Data to be maintained manually in Payload CMS
+- [ ] Opening hours on venue pages — no Google Places API access, so build a lightweight manual update flow: add `openingHours` field to Venue block in Payload CMS, create a monthly reminder/script to review and update hours across all venues
+- [ ] Explore alternatives for venue data enrichment without Google Places API — consider scraping opening hours from venue websites/Instagram bios, or using OpenStreetMap Nominatim/Overpass API as a free data source
 
 ## Done
 
@@ -68,3 +69,10 @@ The unlock flow is frictionless: buy on Gumroad, get a license key, enter it on 
 - [x] About page
 - [x] Dynamic sitemap generation
 - [x] R2 image serving via r2.dev public URL (interim fix)
+- [x] R2 custom domain `media.rvkfoodie.is` SSL fixed and live
+- [x] OG images generated (default + per-guide variants)
+- [x] SEO meta tags: OG images, article:published_time, og:locale, image dimensions
+- [x] Onedollarstats analytics tracking
+- [x] Gumroad `?wanted=true` for direct-to-checkout links
+- [x] License key prefill via `?key=` URL parameter
+- [x] Venue page guide upsell card with venue count and section list

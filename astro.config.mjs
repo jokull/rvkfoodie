@@ -9,4 +9,7 @@ export default defineConfig({
     plugins: [tailwindcss()],
   },
   session: {},
+  security: {
+    checkOrigin: false,
+  },
 });

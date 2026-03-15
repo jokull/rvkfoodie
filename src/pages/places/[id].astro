@@ -15,12 +15,18 @@ const { id } = Astro.params;
 const allGuides = await getAllGuides();
 
 let venue: VenueWithContext | null = null;
+let guideVenueCount = 0;
+let guideSectionNames: string[] = [];
 const allVenues: VenueWithContext[] = [];
 
 for (const guide of allGuides) {
+  let venueCountForGuide = 0;
+  const sectionNames: string[] = [];
   for (const block of guide.content) {
     if (block.blockType === "section") {
       const section = block as SectionBlock;
+      sectionNames.push(section.title);
+      venueCountForGuide += section.venues.length;
       for (const v of section.venues) {
         const ctx: VenueWithContext = {
           ...v,
@@ -31,9 +37,18 @@ for (const guide of allGuides) {
           guidePrice: guide.price,
         };
         allVenues.push(ctx);
-        if (v.id === id) venue = ctx;
+        if (v.id === id) {
+          venue = ctx;
+          guideVenueCount = venueCountForGuide; // will be updated after loop
+          guideSectionNames = sectionNames;
+        }
       }
     }
+  }
+  // Update with final count if this was the matching guide
+  if (venue && venue.guideSlug === guide.slug) {
+    guideVenueCount = venueCountForGuide;
+    guideSectionNames = sectionNames;
   }
 }
 
@@ -53,6 +68,8 @@ const jsonLd = {
 const nearby = allVenues
   .filter((v) => v.id !== venue!.id && v.guideSlug === venue!.guideSlug && v.sectionTitle === venue!.sectionTitle)
   .slice(0, 4);
+
+const otherSections = guideSectionNames.filter((s) => s !== venue!.sectionTitle);
 ---
 
 <Layout title={`${venue.name} — Reykjavík Foodie`} description={venue.description.slice(0, 160)} canonicalPath={`/places/${venue.id}`} jsonLd={jsonLd}>
@@ -68,13 +85,24 @@ const nearby = allVenues
 
     <div class="flex flex-wrap gap-3 mb-12">
       <a href={mapsUrl} target="_blank" rel="noopener" class="inline-block border border-ink/15 rounded-full px-5 py-2 text-tiny hover:border-blue hover:text-blue transition-colors">Open in Google Maps &nearr;</a>
-      <a href={`/guides/${venue.guideSlug}`} class="inline-block bg-blue text-white font-medium px-5 py-2 rounded-full text-tiny hover:opacity-90 transition-opacity">See full {venue.guideTitle} — ${venue.guidePrice}</a>
     </div>
   </article>
 
+  {/* Guide upsell */}
+  <div class="border border-ink/10 rounded-2xl p-8 mb-12">
+    <p class="text-tiny text-blue font-medium uppercase tracking-wide mb-2">From the {venue.guideTitle}</p>
+    <h2 class="font-display text-[1.75rem] leading-tight mb-3">{venue.name} is one of {guideVenueCount} hand-picked spots</h2>
+    <p class="text-ink-light mb-2">
+      The full guide covers {guideSectionNames.join(", ")} — every spot personally vetted by a local.
+    </p>
+    <p class="text-ink-light mb-6 text-tiny">Includes Google Maps pin list and regular updates when places open, close, or change.</p>
+    <a href={`/guides/${venue.guideSlug}`} class="inline-block bg-blue text-white font-medium px-6 py-2.5 rounded-full text-tiny hover:opacity-90 transition-opacity">See the full guide — ${venue.guidePrice}</a>
+  </div>
+
   {nearby.length > 0 && (
     <aside class="border-t border-ink/10 pt-8">
-      <h2 class="font-display text-[1.75rem] leading-tight mb-4">More in {venue.sectionTitle}</h2>
+      <h2 class="font-display text-[1.5rem] leading-tight mb-2">More in {venue.sectionTitle}</h2>
+      <p class="text-tiny text-ink-light mb-4">Also in the <a href={`/guides/${venue.guideSlug}`} class="text-blue hover:opacity-80 transition-opacity">{venue.guideTitle}</a></p>
       <div class="space-y-4">
         {nearby.map((v) => (
           <a href={`/places/${v.id}`} class="block border border-ink/10 rounded-xl p-5 hover:border-ink/25 transition-colors group">

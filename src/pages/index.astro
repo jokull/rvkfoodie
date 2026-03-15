@@ -115,7 +115,7 @@ const jsonLd = {
       <span class="text-tiny text-ink-light whitespace-nowrap mt-1">$17</span>
     </div>
     <p class="text-ink-light mb-4">Get the Food Guide + Bar Crawl together and save.</p>
-    <a href="https://rvkfoodie.gumroad.com/l/bundle" target="_blank" rel="noopener" class="inline-block bg-blue text-white font-medium px-6 py-2.5 rounded-full text-tiny hover:opacity-90 transition-opacity">Get the bundle — $17</a>
+    <a href={`/api/checkout?slug=food-guide&url=${encodeURIComponent("https://rvkfoodie.gumroad.com/l/bundle")}`} class="inline-block bg-blue text-white font-medium px-6 py-2.5 rounded-full text-tiny hover:opacity-90 transition-opacity">Get the bundle — $17</a>
   </div>
 
   {/* Blog posts */}

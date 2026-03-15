@@ -5,10 +5,13 @@ interface Props {
   hiddenCount: number;
   slug: string;
   productId: string;
+  prefillKey?: string;
   error?: string;
+  pending?: boolean;
 }
 
-const { gumroadUrl, price, hiddenCount, slug, productId, error } = Astro.props;
+const { gumroadUrl, price, hiddenCount, slug, productId, prefillKey, error, pending } = Astro.props;
+const checkoutUrl = `/api/checkout?slug=${slug}&url=${encodeURIComponent(gumroadUrl)}`;
 ---
 
 <div class="relative mt-4 mb-16">
@@ -25,13 +28,15 @@ const { gumroadUrl, price, hiddenCount, slug, productId, error } = Astro.props;
     </p>
 
     <a
-      href={gumroadUrl}
-      target="_blank"
-      rel="noopener"
+      href={checkoutUrl}
       class="inline-block bg-blue text-white font-medium px-8 py-3 rounded-full hover:opacity-90 transition-opacity mb-8"
     >
       Get the guide — ${price}
     </a>
+
+    {pending && (
+      <p class="text-tiny text-blue mb-4">Purchase received — your guide is being unlocked. Refresh this page in a moment.</p>
+    )}
 
     <div class="border-t border-ink/10 pt-6">
       <p class="text-tiny text-ink-light mb-3">Already purchased? Enter your license key</p>
@@ -42,6 +47,7 @@ const { gumroadUrl, price, hiddenCount, slug, productId, error } = Astro.props;
           type="text"
           name="license_key"
           placeholder="XXXX-XXXX-XXXX-XXXX"
+          value={prefillKey}
           required
           class="flex-1 border border-ink/15 rounded-lg px-4 py-2 text-tiny bg-white focus:outline-none focus:border-blue placeholder:text-ink/30"
         />

@@ -2,5 +2,11 @@
   "name": "rvkfoodie",
   "compatibility_date": "2026-03-01",
   "compatibility_flags": ["global_fetch_strictly_public"],
-  "workers_dev": true
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "kv_namespaces": [
+    { "binding": "PURCHASES", "id": "782842e31e944c38af1413c73fdcced2" }
+  ]
 }

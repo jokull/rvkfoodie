@@ -5,6 +5,7 @@ import Paywall from "../../components/Paywall.astro";
 import RestaurantCallout from "../../components/RestaurantCallout.astro";
 import { getGuideBySlug, getAllGuides, type SectionBlock, type TextBlock } from "../../lib/payload";
 import { lexicalToHtml } from "../../lib/lexical";
+import { env } from "cloudflare:workers";
 
 const { slug } = Astro.params;
 const guide = await getGuideBySlug(slug!);
@@ -13,10 +14,29 @@ if (!guide) return Astro.redirect("/");
 const allGuides = await getAllGuides();
 const otherGuides = allGuides.filter((g) => g.slug !== guide.slug);
 
-const unlockedProducts: string[] =
+let unlockedProducts: string[] =
   (await Astro.session?.get("unlockedProducts")) ?? [];
+
+// Auto-claim: check if session has a pending unlock token
+const unlockToken = await Astro.session?.get("unlockToken") as string | undefined;
+if (unlockToken && !unlockedProducts.includes(guide.gumroadProductId)) {
+  const kv = env.PURCHASES;
+  const raw = await kv.get(`unlock:${unlockToken}`);
+  if (raw) {
+    const purchase = JSON.parse(raw) as { productIds: string[] };
+    for (const pid of purchase.productIds) {
+      if (!unlockedProducts.includes(pid)) unlockedProducts.push(pid);
+    }
+    await Astro.session?.set("unlockedProducts", unlockedProducts);
+    await kv.delete(`unlock:${unlockToken}`);
+    await Astro.session?.set("unlockToken", null);
+  }
+}
+
 const unlocked = unlockedProducts.includes(guide.gumroadProductId);
 const error = Astro.url.searchParams.get("error");
+const prefillKey = Astro.url.searchParams.get("key") ?? "";
+const pending = Astro.url.searchParams.get("pending") === "true";
 
 let totalHidden = 0;
 for (const block of guide.content) {
@@ -27,6 +47,8 @@ for (const block of guide.content) {
 
 const totalVenues = guide.content.reduce((n, b) =>
   b.blockType === "section" ? n + (b as SectionBlock).venues.length : n, 0);
+
+const introHtml = guide.intro ? lexicalToHtml(guide.intro) : "";
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -44,7 +66,13 @@ const jsonLd = {
   <a href="/" class="text-tiny text-ink-light hover:text-blue transition-colors mb-8 inline-block">&larr; All guides</a>
 
   <h1 class="font-display text-huge leading-huge mb-2">{guide.title}</h1>
-  <p class="text-tiny text-ink-light mb-12">{guide.subtitle}</p>
+  <p class="text-tiny text-ink-light mb-8">{guide.subtitle}</p>
+
+  {introHtml && (
+    <div class="mb-12 prose-intro">
+      <Fragment set:html={introHtml} />
+    </div>
+  )}
 
   {guide.content.map((block) => {
     if (block.blockType === "section") {
@@ -78,7 +106,7 @@ const jsonLd = {
   })}
 
   {!unlocked && totalHidden > 0 && (
-    <Paywall gumroadUrl={guide.gumroadUrl} price={guide.price} hiddenCount={totalHidden} slug={guide.slug} productId={guide.gumroadProductId} error={error === "invalid_key" ? "invalid" : undefined} />
+    <Paywall gumroadUrl={guide.gumroadUrl} price={guide.price} hiddenCount={totalHidden} slug={guide.slug} productId={guide.gumroadProductId} prefillKey={prefillKey} error={error === "invalid_key" ? "invalid" : undefined} pending={pending} />
   )}
 
   {unlocked && guide.googleMapsUrl && (
@@ -104,6 +132,11 @@ const jsonLd = {
 </Layout>
 
 <style>
+  .prose-intro :global(p) { margin-bottom: 1rem; color: var(--color-ink-light); }
+  .prose-intro :global(h3) { font-weight: 500; margin-top: 1.5rem; margin-bottom: 0.5rem; color: var(--color-ink); }
+  .prose-intro :global(ul) { list-style: disc; padding-left: 1.25rem; color: var(--color-ink-light); }
+  .prose-intro :global(li) { margin-bottom: 0.25rem; }
+  .prose-intro :global(strong) { font-weight: 500; color: var(--color-ink); }
   .prose-custom :global(p) { margin-bottom: 1rem; }
   .prose-custom :global(strong) { font-weight: 500; }
 </style>

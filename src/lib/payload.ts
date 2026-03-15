@@ -64,6 +64,7 @@ export interface Guide {
   gumroadProductId: string;
   gumroadUrl: string;
   googleMapsUrl?: string;
+  intro?: unknown; // Lexical JSON
   content: ContentBlock[];
 }
 
