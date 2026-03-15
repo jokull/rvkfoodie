@@ -1,0 +1,283 @@
+{
+  "sources": "Google Maps (browser scraping) + OpenStreetMap (Nominatim/Overpass) + user corrections",
+  "collected": "2026-03-15",
+  "note": "Opening hours are approximate (Google shows current-day status). Full weekly hours need manual verification.",
+  "venues": [
+    {
+      "name": "Sandholt Bakery",
+      "address": "Laugavegur 36",
+      "lat": 64.1450,
+      "lon": -21.9260,
+      "hours": "Mo-Su 07:30-18:00",
+      "phone": null,
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/Sandholt+Laugavegur+36+Reykjavik",
+      "bestOf": "Best Bakery 2025 — Reykjavík Grapevine"
+    },
+    {
+      "name": "DEIG Workshop",
+      "address": "Tryggvagata 14",
+      "lat": 64.1501,
+      "lon": -21.9434,
+      "hours": "Mo-Fr 07:00-17:00; Sa-Su 08:00-16:00",
+      "phone": null,
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/DEIG+Workshop+Tryggvagata+Reykjavik",
+      "bestOf": null
+    },
+    {
+      "name": "Reykjavik Roasters",
+      "address": "Kárastígur 1",
+      "lat": 64.1440,
+      "lon": -21.9270,
+      "hours": "Mo-Fr 08:30-17:00; Sa 09:00-17:00; Su 10:00-17:00",
+      "phone": null,
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/Reykjavik+Roasters+Kárastígur+Reykjavik",
+      "bestOf": "Best Coffeehouse 2025 — Reykjavík Grapevine"
+    },
+    {
+      "name": "Brauð & Co",
+      "address": "Frakkastígur 16",
+      "lat": 64.1440,
+      "lon": -21.9261,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/Brauð+Co+Frakkastígur+Reykjavik",
+      "bestOf": null
+    },
+    {
+      "name": "Plantan",
+      "address": "Njálsgata 1",
+      "lat": 64.1425,
+      "lon": -21.9205,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/Plantan+Njálsgata+Reykjavik",
+      "bestOf": null
+    },
+    {
+      "name": "Jómfrúin",
+      "address": "Lækjargata 4",
+      "lat": 64.1468,
+      "lon": -21.9374,
+      "hours": "Opens ~11:30 AM, closes ~10 PM",
+      "phone": "551 0100",
+      "website": "dineout.is",
+      "gmaps": "https://www.google.com/maps/search/Jómfrúin+Lækjargata+Reykjavik",
+      "bestOf": null
+    },
+    {
+      "name": "Apótek",
+      "address": "Austurstræti 16",
+      "lat": 64.1474,
+      "lon": -21.9385,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/Apótek+Austurstræti+Reykjavik",
+      "bestOf": null
+    },
+    {
+      "name": "Bæjarins Beztu Pylsur",
+      "address": "Tryggvagata 1",
+      "lat": 64.1481,
+      "lon": -21.9393,
+      "hours": "~10 AM - 1 AM (late night)",
+      "phone": null,
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/Bæjarins+Beztu+Pylsur+Tryggvagata+Reykjavik",
+      "bestOf": null
+    },
+    {
+      "name": "Fine",
+      "address": "Rauðarárstígur 33",
+      "lat": 64.1407,
+      "lon": -21.9147,
+      "hours": "Mo-Th 13:30-22:00; Fr-Sa 13:30-23:00; Su 13:30-22:00",
+      "phone": null,
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/Fine+Rauðarárstígur+Reykjavik",
+      "bestOf": null
+    },
+    {
+      "name": "Chickpea",
+      "address": "Hallveigarstígur 1",
+      "lat": 64.1457,
+      "lon": -21.9341,
+      "hours": "Mo-Su 10:00-20:00",
+      "phone": null,
+      "website": "chickpea.is",
+      "gmaps": "https://www.google.com/maps/search/Chickpea+Reykjavik",
+      "bestOf": null
+    },
+    {
+      "name": "Shalimar",
+      "address": "Austurstræti 4",
+      "lat": 64.1479,
+      "lon": -21.9407,
+      "hours": "Opens ~4 PM",
+      "phone": "551 0292",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/Shalimar+Reykjavik",
+      "bestOf": null
+    },
+    {
+      "name": "Ramen Momo",
+      "address": "Tryggvagata 16",
+      "lat": 64.1499,
+      "lon": -21.9431,
+      "hours": "Mo-Fr 11:30-21:00; Sa-Su 12:00-21:30",
+      "phone": null,
+      "website": "ramenmomo.is",
+      "gmaps": "https://www.google.com/maps/search/Ramen+Momo+Tryggvagata+Reykjavik",
+      "bestOf": null
+    },
+    {
+      "name": "Austur Indíafélagið",
+      "address": "Hverfisgata 56",
+      "lat": 64.1457,
+      "lon": -21.9256,
+      "hours": "Su-Th 18:00-22:00; Fr-Sa 18:00-23:00",
+      "phone": null,
+      "website": "austurindia.is",
+      "gmaps": "https://www.google.com/maps/search/Austur+Indíafélagið+Hverfisgata+Reykjavik",
+      "bestOf": "Best Goddamn Restaurant 2025 — Reykjavík Grapevine"
+    },
+    {
+      "name": "Skál!",
+      "address": "Njálsgata 1",
+      "lat": 64.1447,
+      "lon": -21.9298,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/Skál+restaurant+Njálsgata+Reykjavik",
+      "bestOf": null
+    },
+    {
+      "name": "La Primavera",
+      "address": "Grandagarður 20",
+      "lat": 64.1561,
+      "lon": -21.9389,
+      "hours": "Opens ~11:30 AM (closed Mon)",
+      "phone": "519 7766",
+      "website": "laprimavera.is",
+      "gmaps": "https://www.google.com/maps/search/La+Primavera+Grandagarður+Reykjavik",
+      "bestOf": null
+    },
+    {
+      "name": "2Guys at Hlemmur",
+      "address": "Laugavegur 105",
+      "lat": 64.1432,
+      "lon": -21.9160,
+      "hours": "Mo-Su 11:30-21:00",
+      "phone": null,
+      "website": null,
+      "gmaps": "https://maps.app.goo.gl/R8dkUo5DwJG1jyUs7",
+      "bestOf": null
+    },
+    {
+      "name": "Le Kock",
+      "address": "Tryggvagata 14",
+      "lat": 64.1501,
+      "lon": -21.9434,
+      "hours": "Mo-Su 11:30-22:00",
+      "phone": null,
+      "website": "lekock.is",
+      "gmaps": "https://www.google.com/maps/search/Le+Kock+Tryggvagata+Reykjavik",
+      "bestOf": null
+    },
+    {
+      "name": "Sumac Grill + Drinks",
+      "address": "Laugavegur 28",
+      "lat": 64.1454,
+      "lon": -21.9277,
+      "hours": "Tu-Th 17:30-22:00; Fr-Sa 17:30-24:00",
+      "phone": null,
+      "website": "sumac.is",
+      "gmaps": "https://www.google.com/maps/search/Sumac+Grill+Laugavegur+Reykjavik",
+      "bestOf": null
+    },
+    {
+      "name": "Ban Thai",
+      "address": "Laugavegur 130",
+      "lat": 64.1429,
+      "lon": -21.9120,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/Ban+Thai+Laugavegur+130+Reykjavik",
+      "bestOf": null
+    },
+    {
+      "name": "Skreið",
+      "address": "Lækjargata 8",
+      "lat": 64.1463,
+      "lon": -21.9326,
+      "hours": "Su 15-23; Mo 17-23; Tu 17-23; We 15-23; Th 15-00; Fr 15-00; Sa 15-00",
+      "phone": "784 0404",
+      "website": "dineout.is",
+      "gmaps": "https://maps.app.goo.gl/te9QQGqXp7RMUN9M8",
+      "bestOf": null
+    },
+    {
+      "name": "Vínstúkan Tíu Sopar",
+      "address": "Laugavegur 27",
+      "lat": 64.1456,
+      "lon": -21.9284,
+      "hours": "Opens ~4 PM daily",
+      "phone": "547 2380",
+      "website": "tiu-sopar.is",
+      "gmaps": "https://www.google.com/maps/search/Vínstúkan+Tíu+Sopar+Reykjavik",
+      "bestOf": "Best Wine Bar 2025 + 2026 — Reykjavík Grapevine"
+    },
+    {
+      "name": "Röntgen",
+      "address": "Hverfisgata 12",
+      "lat": 64.1471,
+      "lon": -21.9330,
+      "hours": null,
+      "phone": null,
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/Röntgen+bar+Hverfisgata+Reykjavik",
+      "bestOf": "Best Goddamn Bar 2026 — Reykjavík Grapevine"
+    },
+    {
+      "name": "Kramber",
+      "address": "Vitastígur 10",
+      "lat": 64.1454,
+      "lon": -21.9323,
+      "hours": "Opens ~3 PM",
+      "phone": "869 7020",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/Kramber+bar+Reykjavik",
+      "bestOf": null
+    },
+    {
+      "name": "Port 9",
+      "address": "Veghúsastígur 9",
+      "lat": 64.1464,
+      "lon": -21.9265,
+      "hours": "Opens ~4 PM",
+      "phone": "832 2929",
+      "website": "dineout.is",
+      "gmaps": "https://www.google.com/maps/search/Port+9+bar+Reykjavik",
+      "bestOf": null
+    },
+    {
+      "name": "Amma Don",
+      "alsoKnownAs": "ÓX",
+      "address": "Laugavegur 55, 101 Reykjavík (Hotel VON)",
+      "lat": 64.1446,
+      "lon": -21.9233,
+      "hours": "Tu-Fr 18:00-00:00; Sa 12:30-16:30, 18:00-00:00; Su-Mo closed",
+      "phone": null,
+      "website": null,
+      "gmaps": "https://maps.app.goo.gl/Ui1cb3jAhv7PgZFT6",
+      "bestOf": null
+    }
+  ]
+}

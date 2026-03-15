@@ -1,7 +1,8 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import Icon from "../../components/Icon.astro";
 import RestaurantCallout from "../../components/RestaurantCallout.astro";
-import { getAllGuides, type Venue, type SectionBlock } from "../../lib/payload";
+import { getAllGuides, getAllEditorials, type Venue, type SectionBlock } from "../../lib/payload";
 
 interface VenueWithContext extends Venue {
   sectionTitle: string;
@@ -54,8 +55,7 @@ for (const guide of allGuides) {
 
 if (!venue) return Astro.redirect("/");
 
-const mapsQuery = encodeURIComponent(`${venue.name} ${venue.address} Iceland`);
-const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
+const mapsUrl = venue.googleMapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${venue.name} ${venue.address} Iceland`)}`;
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -65,11 +65,20 @@ const jsonLd = {
   description: venue.description,
 };
 
+// Only show free venues in "More in" section — don't give away paid content
 const nearby = allVenues
-  .filter((v) => v.id !== venue!.id && v.guideSlug === venue!.guideSlug && v.sectionTitle === venue!.sectionTitle)
-  .slice(0, 4);
+  .filter((v) => v.id !== venue!.id && v.guideSlug === venue!.guideSlug && v.sectionTitle === venue!.sectionTitle && v.isFree)
+  .slice(0, 3);
 
 const otherSections = guideSectionNames.filter((s) => s !== venue!.sectionTitle);
+
+// Find related blog posts that mention this venue by name
+const editorials = await getAllEditorials();
+const venuNameLower = venue.name.toLowerCase().replace(/[!?]/g, "");
+const relatedPosts = editorials.filter((p) => {
+  const text = `${p.title} ${p.excerpt}`.toLowerCase();
+  return text.includes(venuNameLower) || venuNameLower.split(" ").every((w) => w.length > 3 && text.includes(w));
+}).slice(0, 3);
 ---
 
 <Layout title={`${venue.name} — Reykjavík Foodie`} description={venue.description.slice(0, 160)} canonicalPath={`/places/${venue.id}`} jsonLd={jsonLd}>
@@ -77,9 +86,27 @@ const otherSections = guideSectionNames.filter((s) => s !== venue!.sectionTitle)
 
   <article>
     <p class="text-tiny leading-tiny text-blue font-medium tracking-wide uppercase mb-3">{venue.sectionTitle}</p>
+    {venue.bestOfAward && (
+      <p class="text-tiny font-medium mb-3">
+        {venue.grapevineUrl ? (
+          <a href={venue.grapevineUrl} target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-blue hover:opacity-80 transition-opacity">
+            <Icon name="trophy" class="w-4 h-4" />{venue.bestOfAward}
+          </a>
+        ) : (
+          <span class="inline-flex items-center gap-1.5 text-blue"><Icon name="trophy" class="w-4 h-4" />{venue.bestOfAward}</span>
+        )}
+      </p>
+    )}
     <h1 class="font-display text-huge leading-huge mb-2">{venue.name}</h1>
-    {venue.address && <a href={mapsUrl} target="_blank" rel="noopener" class="text-tiny text-ink-light hover:text-blue transition-colors inline-block mb-8">{venue.address} &nearr;</a>}
-    {venue.time && <p class="text-tiny text-ink-light mb-6">{venue.time}</p>}
+    {venue.address && <a href={mapsUrl} target="_blank" rel="noopener" class="text-tiny text-ink-light hover:text-blue transition-colors inline-block mb-4">{venue.address} &nearr;</a>}
+    {venue.openingHours && <p class="text-tiny text-ink-light mb-4">{venue.openingHours}</p>}
+    {venue.time && <p class="text-tiny text-ink-light mb-4">{venue.time}</p>}
+    {(venue.phone || venue.website) && (
+      <div class="flex gap-4 text-tiny text-ink-light mb-6">
+        {venue.phone && <span>{venue.phone}</span>}
+        {venue.website && <a href={venue.website.startsWith("http") ? venue.website : `https://${venue.website}`} target="_blank" rel="noopener" class="text-blue hover:opacity-80 transition-opacity">{venue.website}</a>}
+      </div>
+    )}
     <p class="mb-6">{venue.description}</p>
     {venue.note && <p class="text-tiny text-ink-light italic mb-8">{venue.note}</p>}
 
@@ -99,10 +126,24 @@ const otherSections = guideSectionNames.filter((s) => s !== venue!.sectionTitle)
     <a href={`/guides/${venue.guideSlug}`} class="inline-block bg-blue text-white font-medium px-6 py-2.5 rounded-full text-tiny hover:opacity-90 transition-opacity">See the full guide — ${venue.guidePrice}</a>
   </div>
 
+  {relatedPosts.length > 0 && (
+    <aside class="border-t border-ink/10 pt-8 mb-8">
+      <h2 class="font-display text-[1.5rem] leading-tight mb-4">From the blog</h2>
+      <div class="space-y-4">
+        {relatedPosts.map((p) => (
+          <a href={`/blog/${p.slug}`} class="block border border-ink/10 rounded-xl p-5 hover:border-ink/25 transition-colors group">
+            <p class="text-tiny text-ink-light mb-1">{new Date(p.date).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</p>
+            <h3 class="font-display text-[1.25rem] leading-tight group-hover:text-blue transition-colors">{p.title}</h3>
+          </a>
+        ))}
+      </div>
+    </aside>
+  )}
+
   {nearby.length > 0 && (
     <aside class="border-t border-ink/10 pt-8">
-      <h2 class="font-display text-[1.5rem] leading-tight mb-2">More in {venue.sectionTitle}</h2>
-      <p class="text-tiny text-ink-light mb-4">Also in the <a href={`/guides/${venue.guideSlug}`} class="text-blue hover:opacity-80 transition-opacity">{venue.guideTitle}</a></p>
+      <h2 class="font-display text-[1.5rem] leading-tight mb-2">Also in {venue.sectionTitle}</h2>
+      <p class="text-tiny text-ink-light mb-4">Free preview from the <a href={`/guides/${venue.guideSlug}`} class="text-blue hover:opacity-80 transition-opacity">{venue.guideTitle}</a></p>
       <div class="space-y-4">
         {nearby.map((v) => (
           <a href={`/places/${v.id}`} class="block border border-ink/10 rounded-xl p-5 hover:border-ink/25 transition-colors group">

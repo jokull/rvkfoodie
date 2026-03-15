@@ -35,6 +35,14 @@ export interface Venue {
   note?: string;
   time?: string;
   isFree: boolean;
+  latitude?: number;
+  longitude?: number;
+  openingHours?: string;
+  googleMapsUrl?: string;
+  website?: string;
+  phone?: string;
+  bestOfAward?: string;
+  grapevineUrl?: string;
 }
 
 export interface SectionBlock {

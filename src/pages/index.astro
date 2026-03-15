@@ -1,5 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import Icon from "../components/Icon.astro";
 import { getAllGuides, getAllEditorials, type Guide, type Editorial } from "../lib/payload";
 import { mediaUrl } from "../lib/images";
 
@@ -26,10 +27,10 @@ const collageCards = [
   { x: 170,  y: 185,  rot: "-4deg",  z: 2, w: 125 },
 ];
 
-const guideEmoji: Record<string, string> = {
-  "food-guide": "🍽️",
-  "bar-crawl": "🍸",
-  "golden-circle": "🌋",
+const guideIcon: Record<string, "utensils" | "cocktail" | "map-pin" | "book-open"> = {
+  "food-guide": "utensils",
+  "bar-crawl": "cocktail",
+  "golden-circle": "map-pin",
 };
 
 
@@ -92,7 +93,7 @@ const jsonLd = {
           <div class="p-8">
             <div class="flex items-start justify-between gap-4 mb-2">
               <div class="flex items-center gap-3">
-                <span class="text-[2rem] leading-none">{guideEmoji[guide.slug] || "📖"}</span>
+                <Icon name={guideIcon[guide.slug] || "book-open"} class="w-7 h-7 text-blue shrink-0" />
                 <h3 class="font-display text-[1.75rem] leading-tight group-hover:text-blue transition-colors">{guide.title}</h3>
               </div>
               {unlockedProducts.includes(guide.gumroadProductId) ? (
@@ -146,7 +147,7 @@ const jsonLd = {
 
   <section class="border-t border-ink/10 pt-8">
     <div class="flex items-center gap-4">
-      <img src="/about.jpg" alt="Reykjavík Foodie" class="w-12 h-12 rounded-full object-cover" width="48" height="48" loading="lazy" />
+      <img src="/about.jpg" alt="Reykjavík Foodie" class="w-14 h-18 rounded-lg object-cover" loading="lazy" />
       <p class="text-ink-light">Written by a local foodie living in Reykjavík. <a href="/about" class="text-blue hover:opacity-80 transition-opacity">Read more &rarr;</a></p>
     </div>
   </section>

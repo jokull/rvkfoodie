@@ -3,7 +3,7 @@ import Layout from "../../layouts/Layout.astro";
 import VenueCard from "../../components/VenueCard.astro";
 import Paywall from "../../components/Paywall.astro";
 import RestaurantCallout from "../../components/RestaurantCallout.astro";
-import { getGuideBySlug, getAllGuides, type SectionBlock, type TextBlock } from "../../lib/payload";
+import { getGuideBySlug, getAllGuides, getAllEditorials, type SectionBlock, type TextBlock } from "../../lib/payload";
 import { lexicalToHtml } from "../../lib/lexical";
 import { env } from "cloudflare:workers";
 
@@ -49,6 +49,16 @@ const totalVenues = guide.content.reduce((n, b) =>
   b.blockType === "section" ? n + (b as SectionBlock).venues.length : n, 0);
 
 const introHtml = guide.intro ? lexicalToHtml(guide.intro) : "";
+
+// Find blog posts that mention venues from this guide
+const editorials = await getAllEditorials();
+const venueNames = guide.content.flatMap((b) =>
+  b.blockType === "section" ? (b as SectionBlock).venues.map((v) => v.name.toLowerCase().replace(/[!?]/g, "")) : []
+);
+const relatedPosts = editorials.filter((p) => {
+  const text = `${p.title} ${p.excerpt}`.toLowerCase();
+  return venueNames.some((vn) => text.includes(vn));
+}).slice(0, 3);
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -125,6 +135,21 @@ const jsonLd = {
         ))}
       </div>
       <p class="mt-4 text-tiny text-ink-light"><a href="/about" class="text-blue hover:opacity-80 transition-opacity">About the author &rarr;</a></p>
+    </aside>
+  )}
+
+  {relatedPosts.length > 0 && (
+    <aside class="mt-12 border-t border-ink/10 pt-8">
+      <h2 class="font-display text-[1.5rem] leading-tight mb-4">From the blog</h2>
+      <div class="space-y-4">
+        {relatedPosts.map((p) => (
+          <a href={`/blog/${p.slug}`} class="block border border-ink/10 rounded-xl p-5 hover:border-ink/25 transition-colors group">
+            <p class="text-tiny text-ink-light mb-1">{new Date(p.date).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</p>
+            <h3 class="font-display text-[1.25rem] leading-tight group-hover:text-blue transition-colors">{p.title}</h3>
+            <p class="text-tiny text-ink-light mt-1 line-clamp-2">{p.excerpt}</p>
+          </a>
+        ))}
+      </div>
     </aside>
   )}
 

@@ -1,4 +1,6 @@
 ---
+import Icon from "./Icon.astro";
+
 interface Props {
   id?: string;
   name: string;
@@ -6,18 +8,34 @@ interface Props {
   description: string;
   note?: string;
   time?: string;
+  openingHours?: string;
+  googleMapsUrl?: string;
+  website?: string;
+  phone?: string;
+  bestOfAward?: string;
+  grapevineUrl?: string;
 }
 
-const { id, name, address, description, note, time } = Astro.props;
+const { id, name, address, description, note, time, openingHours, googleMapsUrl, website, phone, bestOfAward, grapevineUrl } = Astro.props;
 
-const mapsQuery = encodeURIComponent(`${name} ${address} Iceland`);
-const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
+const mapsUrl = googleMapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name} ${address} Iceland`)}`;
 ---
 
 <article class="py-8 border-b border-ink/5 last:border-0">
   {time && (
     <p class="text-tiny leading-tiny text-blue font-medium tracking-wide uppercase mb-2">
       {time}
+    </p>
+  )}
+  {bestOfAward && (
+    <p class="text-tiny font-medium mb-2">
+      {grapevineUrl ? (
+        <a href={grapevineUrl} target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-blue hover:opacity-80 transition-opacity">
+          <Icon name="trophy" class="w-4 h-4" />{bestOfAward}
+        </a>
+      ) : (
+        <span class="inline-flex items-center gap-1 text-blue"><Icon name="trophy" class="w-4 h-4" />{bestOfAward}</span>
+      )}
     </p>
   )}
   <h3 class="font-display text-[1.75rem] leading-tight mb-1">
@@ -38,5 +56,8 @@ const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${mapsQuery}`;
   <p class="mt-3">{description}</p>
   {note && (
     <p class="mt-2 text-tiny leading-tiny text-ink-light italic">{note}</p>
+  )}
+  {openingHours && (
+    <p class="mt-2 text-tiny leading-tiny text-ink-light">{openingHours}</p>
   )}
 </article>
