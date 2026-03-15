@@ -7,6 +7,7 @@ interface Props {
   canonicalPath?: string;
   ogImage?: string;
   type?: "website" | "article";
+  publishedTime?: string;
   jsonLd?: Record<string, unknown>;
 }
 
@@ -16,12 +17,13 @@ const {
   canonicalPath,
   ogImage,
   type = "website",
+  publishedTime,
   jsonLd,
 } = Astro.props;
 
 const siteUrl = "https://www.rvkfoodie.is";
 const canonical = canonicalPath ? `${siteUrl}${canonicalPath}` : undefined;
-const ogImg = ogImage ?? `${siteUrl}/og-default.jpg`;
+const ogImg = ogImage?.startsWith("http") ? ogImage : `${siteUrl}${ogImage ?? "/og-default.jpg"}`;
 ---
 
 <!doctype html>
@@ -34,18 +36,17 @@ const ogImg = ogImage ?? `${siteUrl}/og-default.jpg`;
     {canonical && <link rel="canonical" href={canonical} />}
 
     <!-- Open Graph -->
+    <meta property="og:locale" content="en_US" />
     <meta property="og:type" content={type} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:site_name" content="Reykjavík Foodie" />
     {canonical && <meta property="og:url" content={canonical} />}
     {ogImg && <meta property="og:image" content={ogImg} />}
+    {ogImg && <meta property="og:image:width" content="1200" />}
+    {ogImg && <meta property="og:image:height" content="630" />}
+    {publishedTime && <meta property="article:published_time" content={publishedTime} />}
 
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={title} />
-    <meta name="twitter:description" content={description} />
-    {ogImg && <meta name="twitter:image" content={ogImg} />}
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -57,12 +58,14 @@ const ogImg = ogImage ?? `${siteUrl}/og-default.jpg`;
     {jsonLd && (
       <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
     )}
+
+    <script defer src="https://assets.onedollarstats.com/stonks.js"></script>
   </head>
   <body class="bg-cream text-ink font-body text-normal leading-normal antialiased">
     <header class="max-w-2xl mx-auto px-6 pt-12 pb-8">
       <nav class="flex items-center justify-between">
         <a href="/" class="inline-block">
-          <img src="/logo.svg" alt="Reykjavík Foodie" class="h-10" />
+          <img src="/logo.svg" alt="Reykjavík Foodie" class="h-30" />
         </a>
         <div class="flex gap-6 text-tiny">
           <a href="/about" class="text-ink-light hover:text-blue transition-colors">About</a>

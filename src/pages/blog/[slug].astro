@@ -21,13 +21,14 @@ const jsonLd = {
   headline: post.title,
   description: post.excerpt,
   datePublished: post.date,
+  mainEntityOfPage: `https://www.rvkfoodie.is/blog/${post.slug}`,
   author: { "@type": "Person", name: "Reykjavík Foodie", url: "https://www.rvkfoodie.is/about" },
-  publisher: { "@type": "Organization", name: "Reykjavík Foodie", url: "https://www.rvkfoodie.is" },
+  publisher: { "@type": "Organization", name: "Reykjavík Foodie", url: "https://www.rvkfoodie.is", logo: { "@type": "ImageObject", url: "https://www.rvkfoodie.is/logo.svg" } },
   ...(heroUrl ? { image: heroUrl } : {}),
 };
 ---
 
-<Layout title={`${post.title} — Reykjavík Foodie`} description={post.excerpt} canonicalPath={`/blog/${post.slug}`} type="article" jsonLd={jsonLd}>
+<Layout title={`${post.title} — Reykjavík Foodie`} description={post.excerpt} canonicalPath={`/blog/${post.slug}`} type="article" publishedTime={post.date} ogImage={heroUrl ?? undefined} jsonLd={jsonLd}>
   <a href="/" class="text-tiny text-ink-light hover:text-blue transition-colors mb-8 inline-block">&larr; Home</a>
 
   <article>

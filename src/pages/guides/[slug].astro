@@ -25,17 +25,22 @@ for (const block of guide.content) {
   }
 }
 
+const totalVenues = guide.content.reduce((n, b) =>
+  b.blockType === "section" ? n + (b as SectionBlock).venues.length : n, 0);
+
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Product",
   name: guide.title,
   description: guide.description,
+  url: `https://www.rvkfoodie.is/guides/${guide.slug}`,
   offers: { "@type": "Offer", price: guide.price, priceCurrency: "USD", url: guide.gumroadUrl, availability: "https://schema.org/InStock" },
-  brand: { "@type": "Organization", name: "Reykjavík Foodie" },
+  brand: { "@type": "Organization", name: "Reykjavík Foodie", url: "https://www.rvkfoodie.is" },
+  ...(totalVenues > 0 ? { keywords: `Reykjavík restaurants, Iceland food guide, ${totalVenues} venues` } : {}),
 };
 ---
 
-<Layout title={`${guide.title} — Reykjavík Foodie`} description={guide.description} canonicalPath={`/guides/${guide.slug}`} jsonLd={jsonLd}>
+<Layout title={`${guide.title} — Reykjavík Foodie`} description={guide.description} canonicalPath={`/guides/${guide.slug}`} ogImage={`/og-${guide.slug}.jpg`} jsonLd={jsonLd}>
   <a href="/" class="text-tiny text-ink-light hover:text-blue transition-colors mb-8 inline-block">&larr; All guides</a>
 
   <h1 class="font-display text-huge leading-huge mb-2">{guide.title}</h1>

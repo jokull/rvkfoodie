@@ -1,5 +1,4 @@
-const R2_MEDIA_URL =
-  "https://pub-c92153303381493fb0e233eaebc16b1d.r2.dev";
+const R2_MEDIA_URL = "https://media.rvkfoodie.is";
 const PAYLOAD_MEDIA_URL = "https://rvkfoodie-cms.solberg.workers.dev";
 
 /**
