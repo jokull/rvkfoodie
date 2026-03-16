@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { getAllGuides, getAllEditorials, type SectionBlock } from "../lib/payload";
+import { getAllGuides, getAllEditorials, type SectionBlock } from "../lib/cms";
 
 export const GET: APIRoute = async () => {
   const [guides, editorials] = await Promise.all([

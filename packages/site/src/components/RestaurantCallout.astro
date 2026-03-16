@@ -1,17 +1,20 @@
 ---
+import { getSiteSettings } from "../lib/cms";
+
+const settings = await getSiteSettings();
 ---
 
 <div class="border border-ink/10 rounded-2xl p-8">
   <p class="font-display text-[1.25rem] leading-tight mb-2">
-    Running a restaurant in Reykjavík?
+    {settings.restaurantCalloutTitle}
   </p>
   <p class="text-ink-light text-tiny mb-4">
-    New menu, seasonal opening, or something we should know about? We'd love to hear from you.
+    {settings.restaurantCalloutText}
   </p>
   <a
-    href="mailto:rvkfoodie@rvkfoodie.is"
+    href={`mailto:${settings.restaurantCalloutEmail}`}
     class="text-tiny text-blue hover:opacity-80 transition-opacity"
   >
-    rvkfoodie@rvkfoodie.is &rarr;
+    {settings.restaurantCalloutEmail} &rarr;
   </a>
 </div>

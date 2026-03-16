@@ -2,7 +2,8 @@
 import Layout from "../../layouts/Layout.astro";
 import Icon from "../../components/Icon.astro";
 import RestaurantCallout from "../../components/RestaurantCallout.astro";
-import { getAllGuides, getAllEditorials, type Venue, type SectionBlock } from "../../lib/payload";
+import { getAllGuides, getAllEditorials, type Venue, type SectionBlock } from "../../lib/cms";
+import { mediaUrl } from "../../lib/images";
 
 interface VenueWithContext extends Venue {
   sectionTitle: string;
@@ -79,12 +80,19 @@ const relatedPosts = editorials.filter((p) => {
   const text = `${p.title} ${p.excerpt}`.toLowerCase();
   return text.includes(venuNameLower) || venuNameLower.split(" ").every((w) => w.length > 3 && text.includes(w));
 }).slice(0, 3);
+
+const venueImgUrl = venue.image ? mediaUrl(venue.image.filename || venue.image.url) : null;
 ---
 
-<Layout title={`${venue.name} — Reykjavík Foodie`} description={venue.description.slice(0, 160)} canonicalPath={`/places/${venue.id}`} jsonLd={jsonLd}>
+<Layout title={`${venue.name} — Reykjavík Foodie`} description={venue.description.slice(0, 160)} canonicalPath={`/places/${venue.id}`} ogImage={venueImgUrl ?? undefined} jsonLd={jsonLd}>
   <a href={`/guides/${venue.guideSlug}`} class="text-tiny text-ink-light hover:text-blue transition-colors mb-8 inline-block">&larr; {venue.guideTitle}</a>
 
   <article>
+    {venueImgUrl && (
+      <div class="mb-8 rounded-2xl overflow-hidden">
+        <img src={venueImgUrl} alt={venue.image?.alt || venue.name} class="w-full rounded-2xl" loading="eager" />
+      </div>
+    )}
     <p class="text-tiny leading-tiny text-blue font-medium tracking-wide uppercase mb-3">{venue.sectionTitle}</p>
     {venue.bestOfAward && (
       <p class="text-tiny font-medium mb-3">

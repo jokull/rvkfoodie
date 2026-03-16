@@ -1,0 +1,698 @@
+scalar JSON
+
+"""Cloudflare Image Resizing transform parameters"""
+input ImageTransformParams {
+  width: Int
+  height: Int
+  fit: String
+  quality: Int
+  format: String
+  gravity: String
+  dpr: Int
+}
+
+type Asset {
+  id: ID!
+  filename: String!
+  mimeType: String!
+  size: Int!
+  width: Int
+  height: Int
+  alt: String
+  title: String
+  url: String!
+  blurhash: String
+  responsiveImage(transforms: ImageTransformParams, cfImagesParams: ImageTransformParams): ResponsiveImage
+}
+
+type ResponsiveImage {
+  src: String!
+  srcSet: String!
+  webpSrcSet: String!
+  width: Int!
+  height: Int!
+  aspectRatio: Float!
+  alt: String
+  title: String
+  base64: String
+  bgColor: String
+  sizes: String
+}
+
+type SiteInfo {
+  locales: [String!]!
+}
+
+"""DatoCMS-compatible SEO meta tag"""
+type Tag {
+  tag: String!
+  attributes: JSON
+  content: String
+}
+
+type SeoField {
+  title: String
+  description: String
+  image: Asset
+  twitterCard: String
+}
+
+type ColorField {
+  red: Int!
+  green: Int!
+  blue: Int!
+  alpha: Int
+  hex: String!
+}
+
+type LatLonField {
+  latitude: Float!
+  longitude: Float!
+}
+
+"""DatoCMS-compatible StructuredText response"""
+type StructuredText {
+  value: JSON!
+  blocks: [JSON!]!
+  inlineBlocks: [JSON!]!
+  links: [JSON!]!
+}
+
+type StringMultiLocaleField {
+  locale: String!
+  value: String
+}
+
+type IntMultiLocaleField {
+  locale: String!
+  value: Int
+}
+
+type FloatMultiLocaleField {
+  locale: String!
+  value: Float
+}
+
+type BooleanMultiLocaleField {
+  locale: String!
+  value: Boolean
+}
+
+input MatchesFilter {
+  pattern: String!
+  caseSensitive: Boolean
+}
+
+input StringFilter {
+  eq: String
+  neq: String
+  in: [String!]
+  notIn: [String!]
+  matches: String
+  notMatches: String
+  isBlank: Boolean
+  isPresent: Boolean
+  exists: Boolean
+}
+
+input TextFilter {
+  matches: String
+  notMatches: String
+  isBlank: Boolean
+  isPresent: Boolean
+  exists: Boolean
+}
+
+input IntFilter {
+  eq: Int
+  neq: Int
+  gt: Int
+  lt: Int
+  gte: Int
+  lte: Int
+  exists: Boolean
+}
+
+input FloatFilter {
+  eq: Float
+  neq: Float
+  gt: Float
+  lt: Float
+  gte: Float
+  lte: Float
+  exists: Boolean
+}
+
+input BooleanFilter {
+  eq: Boolean
+  exists: Boolean
+}
+
+input DateTimeFilter {
+  eq: String
+  neq: String
+  gt: String
+  lt: String
+  gte: String
+  lte: String
+  exists: Boolean
+}
+
+"""Filter for single-reference fields (link, media) by record/asset ID"""
+input LinkFilter {
+  eq: ID
+  neq: ID
+  in: [ID!]
+  notIn: [ID!]
+  exists: Boolean
+}
+
+"""
+Filter for multi-reference fields (links, media_gallery) stored as JSON arrays
+"""
+input LinksFilter {
+  eq: [ID!]
+  allIn: [ID!]
+  anyIn: [ID!]
+  notIn: [ID!]
+  exists: Boolean
+}
+
+"""Filter for geolocation fields"""
+input NearFilter {
+  latitude: Float!
+  longitude: Float!
+  radius: Float!
+}
+
+input LatLonFilter {
+  near: NearFilter
+  exists: Boolean
+}
+
+"""
+Filter for fields that only support existence checks (seo, json, color)
+"""
+input ExistsFilter {
+  exists: Boolean
+}
+
+"""Filter records by which locales have content"""
+input LocalesFilter {
+  allIn: [String!]
+  anyIn: [String!]
+  notIn: [String!]
+}
+
+"""Filter for tree model parent field"""
+input ParentFilter {
+  eq: ID
+  exists: Boolean
+}
+
+input PositionFilter {
+  eq: Int
+  neq: Int
+  gt: Int
+  lt: Int
+  gte: Int
+  lte: Int
+}
+
+union GuideContentBlock = SectionRecord | TextBlockRecord
+
+type GuideContentField {
+  value: JSON!
+  blocks: [GuideContentBlock!]!
+  inlineBlocks: [GuideContentBlock!]!
+  links: [JSON!]!
+}
+
+union SectionRecordVenuesBlock = VenueRecord
+
+type SectionRecordVenuesField {
+  value: JSON!
+  blocks: [SectionRecordVenuesBlock!]!
+  inlineBlocks: [SectionRecordVenuesBlock!]!
+  links: [JSON!]!
+}
+
+type VenueRecord {
+  id: ID!
+  _modelApiKey: String!
+  name: String
+  address: String
+  description: String
+  note: String
+  time: String
+  isFree: Boolean
+  location: LatLonField
+  openingHours: String
+  googleMapsUrl: String
+  website: String
+  phone: String
+  bestOfAward: String
+  grapevineUrl: String
+  image: Asset
+}
+
+type SectionRecord {
+  id: ID!
+  _modelApiKey: String!
+  title: String
+  venues: SectionRecordVenuesField
+}
+
+type TextBlockRecord {
+  id: ID!
+  _modelApiKey: String!
+  heading: String
+  content: StructuredText
+  isFree: Boolean
+}
+
+type Guide {
+  id: ID!
+  _modelApiKey: String!
+  _status: String
+  _createdAt: String
+  _updatedAt: String
+  _publishedAt: String
+  _firstPublishedAt: String
+  _seoMetaTags: [Tag!]!
+  title: String
+  slug: String
+  subtitle: String
+  description: String
+  price: Int
+  gumroadProductId: String
+  gumroadUrl: String
+  googleMapsUrl: String
+  intro: StructuredText
+  content: GuideContentField
+  _allReferencingChangelogEntrys(filter: ChangelogEntryFilter, orderBy: [ChangelogEntryOrderBy!], first: Int, skip: Int): [ChangelogEntry!]!
+}
+
+input GuideFilter {
+  id: StringFilter
+  _status: StringFilter
+  _createdAt: DateTimeFilter
+  _updatedAt: DateTimeFilter
+  _publishedAt: DateTimeFilter
+  _firstPublishedAt: DateTimeFilter
+  title: StringFilter
+  slug: StringFilter
+  subtitle: StringFilter
+  description: StringFilter
+  price: IntFilter
+  gumroadProductId: StringFilter
+  gumroadUrl: StringFilter
+  googleMapsUrl: StringFilter
+  intro: TextFilter
+  content: TextFilter
+  AND: [GuideFilter!]
+  OR: [GuideFilter!]
+}
+
+enum GuideOrderBy {
+  _createdAt_ASC
+  _createdAt_DESC
+  _updatedAt_ASC
+  _updatedAt_DESC
+  _publishedAt_ASC
+  _publishedAt_DESC
+  _firstPublishedAt_ASC
+  _firstPublishedAt_DESC
+  title_ASC
+  title_DESC
+  slug_ASC
+  slug_DESC
+  subtitle_ASC
+  subtitle_DESC
+  description_ASC
+  description_DESC
+  price_ASC
+  price_DESC
+  gumroadProductId_ASC
+  gumroadProductId_DESC
+  gumroadUrl_ASC
+  gumroadUrl_DESC
+  googleMapsUrl_ASC
+  googleMapsUrl_DESC
+  intro_ASC
+  intro_DESC
+  content_ASC
+  content_DESC
+}
+
+type GuideMeta {
+  count: Int!
+}
+
+type Editorial {
+  id: ID!
+  _modelApiKey: String!
+  _status: String
+  _createdAt: String
+  _updatedAt: String
+  _publishedAt: String
+  _firstPublishedAt: String
+  _seoMetaTags: [Tag!]!
+  title: String
+  slug: String
+  excerpt: String
+  date: String
+  image: Asset
+  content: StructuredText
+}
+
+input EditorialFilter {
+  id: StringFilter
+  _status: StringFilter
+  _createdAt: DateTimeFilter
+  _updatedAt: DateTimeFilter
+  _publishedAt: DateTimeFilter
+  _firstPublishedAt: DateTimeFilter
+  title: StringFilter
+  slug: StringFilter
+  excerpt: StringFilter
+  date: StringFilter
+  image: LinkFilter
+  content: TextFilter
+  AND: [EditorialFilter!]
+  OR: [EditorialFilter!]
+}
+
+enum EditorialOrderBy {
+  _createdAt_ASC
+  _createdAt_DESC
+  _updatedAt_ASC
+  _updatedAt_DESC
+  _publishedAt_ASC
+  _publishedAt_DESC
+  _firstPublishedAt_ASC
+  _firstPublishedAt_DESC
+  title_ASC
+  title_DESC
+  slug_ASC
+  slug_DESC
+  excerpt_ASC
+  excerpt_DESC
+  date_ASC
+  date_DESC
+  image_ASC
+  image_DESC
+  content_ASC
+  content_DESC
+}
+
+type EditorialMeta {
+  count: Int!
+}
+
+type ChangelogEntry {
+  id: ID!
+  _modelApiKey: String!
+  _status: String
+  _createdAt: String
+  _updatedAt: String
+  _publishedAt: String
+  _firstPublishedAt: String
+  _seoMetaTags: [Tag!]!
+  _position: Int
+  date: String
+  title: String
+  description: String
+  changeType: String
+  guide: Guide
+}
+
+input ChangelogEntryFilter {
+  id: StringFilter
+  _status: StringFilter
+  _createdAt: DateTimeFilter
+  _updatedAt: DateTimeFilter
+  _publishedAt: DateTimeFilter
+  _firstPublishedAt: DateTimeFilter
+  _position: PositionFilter
+  date: StringFilter
+  title: StringFilter
+  description: StringFilter
+  changeType: StringFilter
+  guide: LinkFilter
+  AND: [ChangelogEntryFilter!]
+  OR: [ChangelogEntryFilter!]
+}
+
+enum ChangelogEntryOrderBy {
+  _createdAt_ASC
+  _createdAt_DESC
+  _updatedAt_ASC
+  _updatedAt_DESC
+  _publishedAt_ASC
+  _publishedAt_DESC
+  _firstPublishedAt_ASC
+  _firstPublishedAt_DESC
+  _position_ASC
+  _position_DESC
+  date_ASC
+  date_DESC
+  title_ASC
+  title_DESC
+  description_ASC
+  description_DESC
+  changeType_ASC
+  changeType_DESC
+  guide_ASC
+  guide_DESC
+}
+
+type ChangelogEntryMeta {
+  count: Int!
+}
+
+type HomePage {
+  id: ID!
+  _modelApiKey: String!
+  _status: String
+  _createdAt: String
+  _updatedAt: String
+  _publishedAt: String
+  _firstPublishedAt: String
+  _seoMetaTags: [Tag!]!
+  headline: String
+  headlineEmphasis: String
+  subtext: String
+  bundleTitle: String
+  bundleDescription: String
+  bundlePrice: Int
+  bundleGumroadUrl: String
+  authorBlurb: String
+}
+
+input HomePageFilter {
+  id: StringFilter
+  _status: StringFilter
+  _createdAt: DateTimeFilter
+  _updatedAt: DateTimeFilter
+  _publishedAt: DateTimeFilter
+  _firstPublishedAt: DateTimeFilter
+  headline: StringFilter
+  headlineEmphasis: StringFilter
+  subtext: StringFilter
+  bundleTitle: StringFilter
+  bundleDescription: StringFilter
+  bundlePrice: IntFilter
+  bundleGumroadUrl: StringFilter
+  authorBlurb: StringFilter
+  AND: [HomePageFilter!]
+  OR: [HomePageFilter!]
+}
+
+enum HomePageOrderBy {
+  _createdAt_ASC
+  _createdAt_DESC
+  _updatedAt_ASC
+  _updatedAt_DESC
+  _publishedAt_ASC
+  _publishedAt_DESC
+  _firstPublishedAt_ASC
+  _firstPublishedAt_DESC
+  headline_ASC
+  headline_DESC
+  headlineEmphasis_ASC
+  headlineEmphasis_DESC
+  subtext_ASC
+  subtext_DESC
+  bundleTitle_ASC
+  bundleTitle_DESC
+  bundleDescription_ASC
+  bundleDescription_DESC
+  bundlePrice_ASC
+  bundlePrice_DESC
+  bundleGumroadUrl_ASC
+  bundleGumroadUrl_DESC
+  authorBlurb_ASC
+  authorBlurb_DESC
+}
+
+type HomePageMeta {
+  count: Int!
+}
+
+type AboutPage {
+  id: ID!
+  _modelApiKey: String!
+  _status: String
+  _createdAt: String
+  _updatedAt: String
+  _publishedAt: String
+  _firstPublishedAt: String
+  _seoMetaTags: [Tag!]!
+  title: String
+  metaDescription: String
+  bio: StructuredText
+}
+
+input AboutPageFilter {
+  id: StringFilter
+  _status: StringFilter
+  _createdAt: DateTimeFilter
+  _updatedAt: DateTimeFilter
+  _publishedAt: DateTimeFilter
+  _firstPublishedAt: DateTimeFilter
+  title: StringFilter
+  metaDescription: StringFilter
+  bio: TextFilter
+  AND: [AboutPageFilter!]
+  OR: [AboutPageFilter!]
+}
+
+enum AboutPageOrderBy {
+  _createdAt_ASC
+  _createdAt_DESC
+  _updatedAt_ASC
+  _updatedAt_DESC
+  _publishedAt_ASC
+  _publishedAt_DESC
+  _firstPublishedAt_ASC
+  _firstPublishedAt_DESC
+  title_ASC
+  title_DESC
+  metaDescription_ASC
+  metaDescription_DESC
+  bio_ASC
+  bio_DESC
+}
+
+type AboutPageMeta {
+  count: Int!
+}
+
+type SiteSettings {
+  id: ID!
+  _modelApiKey: String!
+  _status: String
+  _createdAt: String
+  _updatedAt: String
+  _publishedAt: String
+  _firstPublishedAt: String
+  _seoMetaTags: [Tag!]!
+  defaultMetaDescription: String
+  restaurantCalloutTitle: String
+  restaurantCalloutText: String
+  restaurantCalloutEmail: String
+  changelogSubtitle: String
+}
+
+input SiteSettingsFilter {
+  id: StringFilter
+  _status: StringFilter
+  _createdAt: DateTimeFilter
+  _updatedAt: DateTimeFilter
+  _publishedAt: DateTimeFilter
+  _firstPublishedAt: DateTimeFilter
+  defaultMetaDescription: StringFilter
+  restaurantCalloutTitle: StringFilter
+  restaurantCalloutText: StringFilter
+  restaurantCalloutEmail: StringFilter
+  changelogSubtitle: StringFilter
+  AND: [SiteSettingsFilter!]
+  OR: [SiteSettingsFilter!]
+}
+
+enum SiteSettingsOrderBy {
+  _createdAt_ASC
+  _createdAt_DESC
+  _updatedAt_ASC
+  _updatedAt_DESC
+  _publishedAt_ASC
+  _publishedAt_DESC
+  _firstPublishedAt_ASC
+  _firstPublishedAt_DESC
+  defaultMetaDescription_ASC
+  defaultMetaDescription_DESC
+  restaurantCalloutTitle_ASC
+  restaurantCalloutTitle_DESC
+  restaurantCalloutText_ASC
+  restaurantCalloutText_DESC
+  restaurantCalloutEmail_ASC
+  restaurantCalloutEmail_DESC
+  changelogSubtitle_ASC
+  changelogSubtitle_DESC
+}
+
+type SiteSettingsMeta {
+  count: Int!
+}
+
+input UploadFilter {
+  id: StringFilter
+  filename: StringFilter
+  mimeType: StringFilter
+  width: IntFilter
+  height: IntFilter
+  size: IntFilter
+  alt: StringFilter
+  title: StringFilter
+  _createdAt: DateTimeFilter
+  AND: [UploadFilter!]
+  OR: [UploadFilter!]
+}
+
+enum UploadOrderBy {
+  filename_ASC
+  filename_DESC
+  size_ASC
+  size_DESC
+  _createdAt_ASC
+  _createdAt_DESC
+}
+
+type UploadMeta {
+  count: Int!
+}
+
+type Query {
+  allGuides(locale: String, fallbackLocales: [String!], filter: GuideFilter, orderBy: [GuideOrderBy!], first: Int, skip: Int): [Guide!]!
+  guide(locale: String, fallbackLocales: [String!], id: ID, filter: GuideFilter): Guide
+  _allGuidesMeta(filter: GuideFilter): GuideMeta!
+  allEditorials(locale: String, fallbackLocales: [String!], filter: EditorialFilter, orderBy: [EditorialOrderBy!], first: Int, skip: Int): [Editorial!]!
+  editorial(locale: String, fallbackLocales: [String!], id: ID, filter: EditorialFilter): Editorial
+  _allEditorialsMeta(filter: EditorialFilter): EditorialMeta!
+  allChangelogEntrys(locale: String, fallbackLocales: [String!], filter: ChangelogEntryFilter, orderBy: [ChangelogEntryOrderBy!], first: Int, skip: Int): [ChangelogEntry!]!
+  changelogEntry(locale: String, fallbackLocales: [String!], id: ID, filter: ChangelogEntryFilter): ChangelogEntry
+  _allChangelogEntrysMeta(filter: ChangelogEntryFilter): ChangelogEntryMeta!
+  allHomePages(locale: String, fallbackLocales: [String!], filter: HomePageFilter, orderBy: [HomePageOrderBy!], first: Int, skip: Int): [HomePage!]!
+  homePage(locale: String, fallbackLocales: [String!], id: ID, filter: HomePageFilter): HomePage
+  _allHomePagesMeta(filter: HomePageFilter): HomePageMeta!
+  allAboutPages(locale: String, fallbackLocales: [String!], filter: AboutPageFilter, orderBy: [AboutPageOrderBy!], first: Int, skip: Int): [AboutPage!]!
+  aboutPage(locale: String, fallbackLocales: [String!], id: ID, filter: AboutPageFilter): AboutPage
+  _allAboutPagesMeta(filter: AboutPageFilter): AboutPageMeta!
+  allSiteSettingss(locale: String, fallbackLocales: [String!], filter: SiteSettingsFilter, orderBy: [SiteSettingsOrderBy!], first: Int, skip: Int): [SiteSettings!]!
+  siteSettings(locale: String, fallbackLocales: [String!], id: ID, filter: SiteSettingsFilter): SiteSettings
+  _allSiteSettingssMeta(filter: SiteSettingsFilter): SiteSettingsMeta!
+  _site: SiteInfo!
+  allUploads(filter: UploadFilter, orderBy: [UploadOrderBy!], first: Int, skip: Int): [Asset!]!
+  _allUploadsMeta(filter: UploadFilter): UploadMeta!
+}

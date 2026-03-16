@@ -43,6 +43,7 @@ export interface Venue {
   phone?: string;
   bestOfAward?: string;
   grapevineUrl?: string;
+  image?: PayloadImage;
 }
 
 export interface SectionBlock {
@@ -149,3 +150,41 @@ export async function getChangelog(): Promise<ChangelogEntry[]> {
   });
   return data.docs;
 }
+
+// ============ GLOBALS ============
+
+export interface HomePageData {
+  headline: string;
+  headlineEmphasis?: string;
+  subtext: string;
+  bundleTitle: string;
+  bundleDescription: string;
+  bundlePrice: number;
+  bundleGumroadUrl: string;
+  authorBlurb: string;
+}
+
+export interface AboutPageData {
+  title: string;
+  metaDescription: string;
+  bio: unknown; // Lexical JSON
+}
+
+export interface SiteSettingsData {
+  defaultMetaDescription: string;
+  restaurantCalloutTitle: string;
+  restaurantCalloutText: string;
+  restaurantCalloutEmail: string;
+  changelogSubtitle: string;
+}
+
+async function getGlobal<T>(slug: string): Promise<T> {
+  const url = new URL(`${PAYLOAD_URL}/api/globals/${slug}`);
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`Global ${slug} fetch error: ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
+export const getHomePage = () => getGlobal<HomePageData>("homePage");
+export const getAboutPage = () => getGlobal<AboutPageData>("aboutPage");
+export const getSiteSettings = () => getGlobal<SiteSettingsData>("siteSettings");

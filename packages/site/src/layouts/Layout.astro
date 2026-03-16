@@ -62,14 +62,14 @@ const ogImg = ogImage?.startsWith("http") ? ogImage : `${siteUrl}${ogImage ?? "/
     <script defer src="https://assets.onedollarstats.com/stonks.js"></script>
   </head>
   <body class="bg-cream text-ink font-body text-normal leading-normal antialiased">
-    <header class="max-w-2xl mx-auto px-6 pt-12 pb-8">
-      <nav class="flex items-center justify-between">
+    <header class="max-w-2xl mx-auto px-6 pt-8 sm:pt-12 pb-6 sm:pb-8">
+      <nav class="flex flex-col sm:flex-row items-center sm:justify-between gap-4">
         <a href="/" class="inline-block">
-          <img src="/logo.svg" alt="Reykjavík Foodie" class="h-30" />
+          <img src="/logo.svg" alt="Reykjavík Foodie" class="h-16 sm:h-30" />
         </a>
-        <div class="flex gap-6 text-tiny">
+        <div class="flex gap-4 sm:gap-6 text-tiny">
           <a href="/about" class="text-ink-light hover:text-blue transition-colors">About</a>
-          <a href="/changelog" class="text-ink-light hover:text-blue transition-colors">Guide Updates</a>
+          <a href="/changelog" class="text-ink-light hover:text-blue transition-colors">Updates</a>
           <a href="https://instagram.com/rvkfoodie" target="_blank" rel="noopener" class="text-ink-light hover:text-blue transition-colors">Instagram</a>
         </div>
       </nav>

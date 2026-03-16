@@ -1,0 +1,12 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "plugins": [
+      {
+        "name": "@0no-co/graphqlsp",
+        "schema": "./src/lib/graphql-schema.graphql",
+        "tadaOutputLocation": "./src/lib/graphql-env.d.ts"
+      }
+    ]
+  }
+}

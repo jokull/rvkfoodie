@@ -1,20 +1,11 @@
 {
   "name": "rvkfoodie",
-  "type": "module",
+  "private": true,
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview",
-    "deploy": "astro build && wrangler deploy"
-  },
-  "dependencies": {
-    "@astrojs/cloudflare": "^13.0.0",
-    "astro": "^6.0.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.0.0",
-    "lucide-static": "^0.577.0",
-    "tailwindcss": "^4.0.0",
-    "typescript": "^5.7.0"
+    "dev": "pnpm --filter @rvkfoodie/site dev",
+    "build": "pnpm --filter @rvkfoodie/site build",
+    "deploy:site": "pnpm --filter @rvkfoodie/site run build && pnpm --filter @rvkfoodie/site exec wrangler deploy",
+    "deploy:cms": "pnpm --filter @rvkfoodie/cms deploy",
+    "deploy": "pnpm deploy:cms && pnpm deploy:site"
   }
 }

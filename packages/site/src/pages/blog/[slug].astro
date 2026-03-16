@@ -1,8 +1,8 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import RestaurantCallout from "../../components/RestaurantCallout.astro";
-import { getEditorialBySlug, getAllEditorials, getAllGuides, type SectionBlock } from "../../lib/payload";
-import { lexicalToHtml } from "../../lib/lexical";
+import { getEditorialBySlug, getAllEditorials, getAllGuides, type SectionBlock } from "../../lib/cms";
+import { dastToHtml } from "../../lib/dast";
 import { mediaUrl } from "../../lib/images";
 
 const { slug } = Astro.params;
@@ -31,7 +31,7 @@ for (const guide of allGuides) {
 const otherPosts = allEditorials.filter((p) => p.slug !== post.slug).slice(0, 3);
 
 const dateStr = new Date(post.date).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
-const contentHtml = lexicalToHtml(post.content);
+const contentHtml = dastToHtml(post.content);
 const heroUrl = post.image ? mediaUrl(post.image.filename || post.image.url) : null;
 
 const jsonLd = {

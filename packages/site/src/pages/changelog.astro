@@ -1,8 +1,9 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { getChangelog, type ChangelogEntry } from "../lib/payload";
+import { getChangelog, getSiteSettings, type ChangelogEntry } from "../lib/cms";
 
 const entries = await getChangelog();
+const settings = await getSiteSettings();
 
 const typeLabel: Record<string, string> = { added: "Added", removed: "Removed", updated: "Updated" };
 const typeColor: Record<string, string> = { added: "text-green-700 bg-green-50", removed: "text-red-700 bg-red-50", updated: "text-blue bg-blue/5" };
@@ -10,7 +11,7 @@ const typeColor: Record<string, string> = { added: "text-green-700 bg-green-50",
 
 <Layout title="Guide Updates — Reykjavík Foodie" description="Every update to our Reykjavík food guides, tracked." canonicalPath="/changelog">
   <h1 class="font-display text-huge leading-huge mb-4">Guide Updates</h1>
-  <p class="text-ink-light mb-12">New spots, closures, menu changes — this is how we keep our guides current.</p>
+  <p class="text-ink-light mb-12">{settings.changelogSubtitle}</p>
 
   {entries.length === 0 ? (
     <div class="border border-ink/10 rounded-2xl p-8 text-center">

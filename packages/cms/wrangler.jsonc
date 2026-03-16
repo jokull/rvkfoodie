@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rvkfoodie-agent-cms",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-12-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "rvkfoodie-agent-cms",
+      "database_id": "696acd61-02f0-42b7-b039-1a02fdb485cf",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "ASSETS",
+      "bucket_name": "rvkfoodie-cms"
+    }
+  ],
+  "vars": {
+    "ENVIRONMENT": "production",
+    "ASSET_BASE_URL": "https://media.rvkfoodie.is"
+  }
+}
