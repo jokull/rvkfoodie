@@ -21,6 +21,15 @@
       "bucket_name": "rvkfoodie-cms"
     }
   ],
+  "vectorize": [
+    {
+      "binding": "VECTORIZE",
+      "index_name": "rvkfoodie-content"
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  },
   "vars": {
     "ENVIRONMENT": "production",
     "ASSET_BASE_URL": "https://media.rvkfoodie.is"

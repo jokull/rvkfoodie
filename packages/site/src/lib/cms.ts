@@ -3,15 +3,16 @@
  * Uses gql.tada for statically typed queries.
  */
 
-import { graphql, readFragment, type FragmentOf, type ResultOf } from "gql.tada";
+import { graphql, type ResultOf } from "gql.tada";
+import { print } from "graphql";
 
 const GRAPHQL_URL = "https://rvkfoodie-agent-cms.solberg.workers.dev/graphql";
 
-async function execute<T>(query: { toString(): string }, variables?: Record<string, unknown>): Promise<T> {
+async function execute<T>(document: { kind: "Document" }, variables?: Record<string, unknown>): Promise<T> {
   const res = await fetch(GRAPHQL_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query: query.toString(), variables }),
+    body: JSON.stringify({ query: print(document as Parameters<typeof print>[0]), variables }),
   });
   if (!res.ok) throw new Error(`GraphQL error: ${res.status}`);
   const json = (await res.json()) as { data: T; errors?: { message: string }[] };
@@ -19,7 +20,15 @@ async function execute<T>(query: { toString(): string }, variables?: Record<stri
   return json.data;
 }
 
-// ============ QUERIES ============
+// ============ QUERIES (inline, no fragments) ============
+
+const VENUE_FIELDS = `
+  id name address description note time isFree
+  location { latitude longitude }
+  openingHours googleMapsUrl website phone
+  bestOfAward grapevineUrl
+  image { id url alt width height }
+`;
 
 const AllGuidesQuery = graphql(`
   query AllGuides {
@@ -148,60 +157,28 @@ const SiteSettingsQuery = graphql(`
   }
 `);
 
-// ============ TYPES (derived from queries) ============
+// ============ TYPES (derived from gql.tada) ============
 
-export type Guide = ReturnType<typeof mapGuide>;
+type RawGuide = NonNullable<ResultOf<typeof AllGuidesQuery>["allGuides"]>[number];
+type RawBlock = NonNullable<RawGuide["content"]>["blocks"][number];
+type RawSection = Extract<RawBlock, { __typename: "SectionRecord" }>;
+type RawVenue = NonNullable<RawSection["venues"]>["blocks"][number];
+
 export type Editorial = NonNullable<ResultOf<typeof AllEditorialsQuery>["allEditorials"]>[number];
 export type ChangelogEntry = NonNullable<ResultOf<typeof ChangelogQuery>["allChangelogEntrys"]>[number];
 export type HomePageData = NonNullable<ResultOf<typeof HomePageQuery>["homePage"]>;
 export type AboutPageData = NonNullable<ResultOf<typeof AboutPageQuery>["aboutPage"]>;
 export type SiteSettingsData = NonNullable<ResultOf<typeof SiteSettingsQuery>["siteSettings"]>;
 
-// Re-export block types for template use
-export interface PayloadImage {
-  id: string;
-  url: string;
-  alt: string | null;
-  width: number | null;
-  height: number | null;
-}
-
-export interface Venue {
-  id: string;
-  blockType: "venue";
-  name: string;
-  address: string;
-  description: string;
-  note?: string | null;
-  time?: string | null;
-  isFree: boolean;
-  latitude?: number;
-  longitude?: number;
-  openingHours?: string | null;
-  googleMapsUrl?: string | null;
-  website?: string | null;
-  phone?: string | null;
-  bestOfAward?: string | null;
-  grapevineUrl?: string | null;
-  image?: PayloadImage | null;
-}
-
-export interface SectionBlock {
-  id: string;
-  blockType: "section";
-  title: string;
-  venues: Venue[];
-}
-
-export interface TextBlock {
-  id: string;
-  blockType: "textBlock";
-  heading?: string | null;
-  content: unknown;
-  isFree: boolean;
-}
-
+// Mapped types with blockType discriminator for templates
+export type Venue = ReturnType<typeof mapVenue>;
+export type SectionBlock = { blockType: "section"; id: string; title: string; venues: Venue[] };
+export type TextBlock = { blockType: "textBlock"; id: string; heading: string | null; content: unknown; isFree: boolean };
 export type ContentBlock = SectionBlock | TextBlock;
+export type Guide = ReturnType<typeof mapGuide>;
+
+// Legacy compat
+export type PayloadImage = NonNullable<Editorial["image"]>;
 
 // ============ FETCHERS ============
 
@@ -222,7 +199,7 @@ export async function getAllEditorials() {
 
 export async function getEditorialBySlug(slug: string) {
   const data = await execute<ResultOf<typeof EditorialBySlugQuery>>(EditorialBySlugQuery, { slug });
-  return data.editorial;
+  return data.editorial ?? null;
 }
 
 export async function getChangelog() {
@@ -247,56 +224,63 @@ export async function getSiteSettings() {
 
 // ============ MAPPERS ============
 
-type RawGuide = NonNullable<ResultOf<typeof AllGuidesQuery>["allGuides"]>[number];
-type RawBlock = NonNullable<RawGuide["content"]>["blocks"][number];
-type RawSectionRecord = Extract<RawBlock, { __typename: "SectionRecord" }>;
-type RawVenueRecord = NonNullable<RawSectionRecord["venues"]>["blocks"][number];
-
 function mapGuide(raw: RawGuide) {
   return {
     id: raw.id,
-    title: raw.title,
-    slug: raw.slug,
-    subtitle: raw.subtitle,
-    description: raw.description,
-    price: raw.price,
-    gumroadProductId: raw.gumroadProductId,
-    gumroadUrl: raw.gumroadUrl,
+    title: raw.title ?? "",
+    slug: raw.slug ?? "",
+    subtitle: raw.subtitle ?? "",
+    description: raw.description ?? "",
+    price: raw.price ?? 0,
+    gumroadProductId: raw.gumroadProductId ?? "",
+    gumroadUrl: raw.gumroadUrl ?? "",
     googleMapsUrl: raw.googleMapsUrl,
     intro: raw.intro,
-    content: mapBlocks(raw.content),
+    content: mapContentBlocks(raw.content),
   };
 }
 
-function mapVenue(v: Extract<RawVenueRecord, { __typename: "VenueRecord" }>): Venue {
+function mapVenue(v: Extract<RawVenue, { __typename: "VenueRecord" }>) {
   return {
-    ...v,
     blockType: "venue" as const,
+    id: v.id,
+    name: v.name ?? "",
+    address: v.address ?? "",
+    description: v.description ?? "",
+    note: v.note,
+    time: v.time,
     isFree: v.isFree ?? false,
     latitude: v.location?.latitude ?? undefined,
     longitude: v.location?.longitude ?? undefined,
+    openingHours: v.openingHours,
+    googleMapsUrl: v.googleMapsUrl,
+    website: v.website,
+    phone: v.phone,
+    bestOfAward: v.bestOfAward,
+    grapevineUrl: v.grapevineUrl,
+    image: v.image,
   };
 }
 
-function mapBlocks(content: RawGuide["content"]): ContentBlock[] {
+function mapContentBlocks(content: RawGuide["content"]): ContentBlock[] {
   if (!content?.blocks) return [];
   return content.blocks
     .map((b): ContentBlock | null => {
       if (b.__typename === "SectionRecord") {
         return {
-          id: b.id,
           blockType: "section" as const,
-          title: b.title,
-          venues: (b.venues?.blocks || [])
+          id: b.id,
+          title: b.title ?? "",
+          venues: (b.venues?.blocks ?? [])
             .filter((v): v is Extract<typeof v, { __typename: "VenueRecord" }> => v.__typename === "VenueRecord")
             .map(mapVenue),
         };
       }
       if (b.__typename === "TextBlockRecord") {
         return {
-          id: b.id,
           blockType: "textBlock" as const,
-          heading: b.heading,
+          id: b.id,
+          heading: b.heading ?? null,
           content: b.content,
           isFree: b.isFree ?? false,
         };

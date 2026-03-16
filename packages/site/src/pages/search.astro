@@ -1,0 +1,141 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Icon from "../components/Icon.astro";
+import { getAllGuides, getAllEditorials } from "../lib/cms";
+import { mediaUrl } from "../lib/images";
+
+const query = Astro.url.searchParams.get("q")?.trim() || "";
+
+interface SearchResult {
+  type: "venue" | "editorial" | "guide";
+  title: string;
+  subtitle: string;
+  url: string;
+  image?: string;
+  badge?: string;
+}
+
+let results: SearchResult[] = [];
+
+if (query.length >= 2) {
+  const q = query.toLowerCase();
+  const [guides, editorials] = await Promise.all([getAllGuides(), getAllEditorials()]);
+
+  // Search venues
+  for (const guide of guides) {
+    for (const block of guide.content) {
+      if (block.blockType !== "section") continue;
+      const section = block;
+      for (const venue of section.venues) {
+        const text = `${venue.name} ${venue.address} ${venue.description} ${venue.bestOfAward || ""}`.toLowerCase();
+        if (text.includes(q)) {
+          results.push({
+            type: "venue",
+            title: venue.name,
+            subtitle: `${venue.address} · ${section.title} · ${guide.title}`,
+            url: `/places/${venue.id}`,
+            image: venue.image?.url ? mediaUrl(venue.image.url) : undefined,
+            badge: venue.bestOfAward || undefined,
+          });
+        }
+      }
+    }
+  }
+
+  // Search editorials
+  for (const ed of editorials) {
+    const text = `${ed.title} ${ed.excerpt}`.toLowerCase();
+    if (text.includes(q)) {
+      results.push({
+        type: "editorial",
+        title: ed.title,
+        subtitle: ed.excerpt,
+        url: `/blog/${ed.slug}`,
+        image: ed.image ? mediaUrl(ed.image.url) : undefined,
+      });
+    }
+  }
+
+  // Search guides
+  for (const guide of guides) {
+    const text = `${guide.title} ${guide.subtitle} ${guide.description}`.toLowerCase();
+    if (text.includes(q)) {
+      results.push({
+        type: "guide",
+        title: guide.title,
+        subtitle: guide.description,
+        url: `/guides/${guide.slug}`,
+      });
+    }
+  }
+}
+
+const examples = ["Skál!", "best bakery", "cocktail bars", "golden circle", "tapas"];
+---
+
+<Layout title={query ? `"${query}" — Search — Reykjavík Foodie` : "Search — Reykjavík Foodie"} canonicalPath="/search">
+  <div class="mb-12">
+    <h1 class="font-display text-huge leading-huge mb-6">Search</h1>
+
+    <form method="GET" action="/search" class="relative mb-8">
+      <input
+        type="text"
+        name="q"
+        value={query}
+        placeholder="Search venues, blog posts, guides..."
+        autofocus
+        class="w-full border border-ink/15 rounded-2xl px-6 py-4 text-normal bg-white focus:outline-none focus:border-blue placeholder:text-ink/30 pr-14"
+      />
+      <button type="submit" class="absolute right-4 top-1/2 -translate-y-1/2 text-blue hover:opacity-80 transition-opacity">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.3-4.3" />
+        </svg>
+      </button>
+    </form>
+
+    {!query && (
+      <div class="text-tiny text-ink-light">
+        <p class="mb-3">Try searching for:</p>
+        <div class="flex flex-wrap gap-2">
+          {examples.map((ex) => (
+            <a href={`/search?q=${encodeURIComponent(ex)}`} class="border border-ink/10 rounded-full px-4 py-1.5 hover:border-blue hover:text-blue transition-colors">{ex}</a>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {query && results.length === 0 && (
+      <p class="text-ink-light">No results for "{query}". Try a different search term.</p>
+    )}
+
+    {results.length > 0 && (
+      <div class="space-y-1">
+        <p class="text-tiny text-ink-light mb-4">{results.length} result{results.length !== 1 ? "s" : ""} for "{query}"</p>
+        {results.map((r) => (
+          <a href={r.url} class="flex gap-4 items-start p-4 -mx-4 rounded-xl hover:bg-ink/[0.03] transition-colors group">
+            {r.image && (
+              <div class="w-16 h-16 rounded-lg overflow-hidden shrink-0">
+                <img src={r.image} alt={r.title} class="w-full h-full object-cover" loading="lazy" />
+              </div>
+            )}
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-0.5">
+                <span class="text-tiny text-blue font-medium uppercase tracking-wide">
+                  {r.type === "venue" ? "Venue" : r.type === "editorial" ? "Blog" : "Guide"}
+                </span>
+                {r.badge && (
+                  <span class="inline-flex items-center gap-1 text-tiny text-blue">
+                    <Icon name="trophy" class="w-3 h-3" />{r.badge}
+                  </span>
+                )}
+              </div>
+              <h3 class="font-display text-[1.25rem] leading-tight group-hover:text-blue transition-colors">{r.title}</h3>
+              <p class="text-tiny text-ink-light mt-1 line-clamp-1">{r.subtitle}</p>
+            </div>
+          </a>
+        ))}
+      </div>
+    )}
+  </div>
+</Layout>
