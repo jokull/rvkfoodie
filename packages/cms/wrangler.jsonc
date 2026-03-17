@@ -10,8 +10,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "rvkfoodie-agent-cms",
-      "database_id": "696acd61-02f0-42b7-b039-1a02fdb485cf",
+      "database_name": "rvkfoodie-cms-v2",
+      "database_id": "c4e9eb97-ee8e-42ae-bf22-97b27e54cc6f",
       "migrations_dir": "migrations"
     }
   ],

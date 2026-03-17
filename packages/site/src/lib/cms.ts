@@ -9,12 +9,21 @@ import { print } from "graphql";
 const GRAPHQL_URL = "https://rvkfoodie-agent-cms.solberg.workers.dev/graphql";
 
 async function execute<T>(document: { kind: "Document" }, variables?: Record<string, unknown>): Promise<T> {
+  let queryString: string;
+  try {
+    queryString = print(document as Parameters<typeof print>[0]);
+  } catch (e) {
+    throw new Error(`Failed to print GraphQL query: ${e}`);
+  }
   const res = await fetch(GRAPHQL_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query: print(document as Parameters<typeof print>[0]), variables }),
+    body: JSON.stringify({ query: queryString, variables }),
   });
-  if (!res.ok) throw new Error(`GraphQL error: ${res.status}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`GraphQL HTTP ${res.status}: ${text.slice(0, 200)}`);
+  }
   const json = (await res.json()) as { data: T; errors?: { message: string }[] };
   if (json.errors?.length) throw new Error(`GraphQL: ${json.errors.map((e) => e.message).join(", ")}`);
   return json.data;
@@ -162,7 +171,7 @@ const SiteSettingsQuery = graphql(`
 type RawGuide = NonNullable<ResultOf<typeof AllGuidesQuery>["allGuides"]>[number];
 type RawBlock = NonNullable<RawGuide["content"]>["blocks"][number];
 type RawSection = Extract<RawBlock, { __typename: "SectionRecord" }>;
-type RawVenue = NonNullable<RawSection["venues"]>["blocks"][number];
+type RawVenue = Extract<NonNullable<RawSection["venues"]>["blocks"][number], { __typename: "VenueRecord" }>;
 
 export type Editorial = NonNullable<ResultOf<typeof AllEditorialsQuery>["allEditorials"]>[number];
 export type ChangelogEntry = NonNullable<ResultOf<typeof ChangelogQuery>["allChangelogEntrys"]>[number];
@@ -240,7 +249,7 @@ function mapGuide(raw: RawGuide) {
   };
 }
 
-function mapVenue(v: Extract<RawVenue, { __typename: "VenueRecord" }>) {
+function mapVenue(v: RawVenue): Venue {
   return {
     blockType: "venue" as const,
     id: v.id,
@@ -272,7 +281,7 @@ function mapContentBlocks(content: RawGuide["content"]): ContentBlock[] {
           id: b.id,
           title: b.title ?? "",
           venues: (b.venues?.blocks ?? [])
-            .filter((v): v is Extract<typeof v, { __typename: "VenueRecord" }> => v.__typename === "VenueRecord")
+            .filter((v): v is RawVenue => v.__typename === "VenueRecord")
             .map(mapVenue),
         };
       }

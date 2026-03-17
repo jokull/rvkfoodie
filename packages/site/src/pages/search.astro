@@ -4,6 +4,7 @@ import Icon from "../components/Icon.astro";
 import { getAllGuides, getAllEditorials } from "../lib/cms";
 import { mediaUrl } from "../lib/images";
 
+const CMS_URL = "https://rvkfoodie-agent-cms.solberg.workers.dev";
 const query = Astro.url.searchParams.get("q")?.trim() || "";
 
 interface SearchResult {
@@ -13,6 +14,7 @@ interface SearchResult {
   url: string;
   image?: string;
   badge?: string;
+  score?: number;
 }
 
 let results: SearchResult[] = [];
@@ -21,56 +23,116 @@ if (query.length >= 2) {
   const q = query.toLowerCase();
   const [guides, editorials] = await Promise.all([getAllGuides(), getAllEditorials()]);
 
-  // Search venues
+  // Build lookup maps
+  const guideById = new Map(guides.map((g) => [g.id, g]));
+  const editorialById = new Map(editorials.map((e) => [e.id, e]));
+  const venueMap = new Map<string, { venue: typeof guides[0]["content"][0] extends { venues: (infer V)[] } ? V : never; section: string; guide: typeof guides[0] }>();
   for (const guide of guides) {
     for (const block of guide.content) {
       if (block.blockType !== "section") continue;
-      const section = block;
-      for (const venue of section.venues) {
-        const text = `${venue.name} ${venue.address} ${venue.description} ${venue.bestOfAward || ""}`.toLowerCase();
-        if (text.includes(q)) {
+      for (const venue of block.venues) {
+        venueMap.set(venue.id, { venue, section: block.title, guide });
+      }
+    }
+  }
+
+  // Try semantic search first
+  let semanticResults: { recordId: string; modelApiKey: string; rank: number }[] = [];
+  try {
+    const res = await fetch(`${CMS_URL}/api/search`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, mode: "semantic", first: 20 }),
+    });
+    if (res.ok) {
+      const data = await res.json() as { results: typeof semanticResults };
+      semanticResults = data.results || [];
+    }
+  } catch {}
+
+  // Hydrate semantic results
+  if (semanticResults.length > 0) {
+    for (const sr of semanticResults) {
+      if (sr.modelApiKey === "guide") {
+        const guide = guideById.get(sr.recordId);
+        if (guide) {
           results.push({
-            type: "venue",
-            title: venue.name,
-            subtitle: `${venue.address} · ${section.title} · ${guide.title}`,
-            url: `/places/${venue.id}`,
-            image: venue.image?.url ? mediaUrl(venue.image.url) : undefined,
-            badge: venue.bestOfAward || undefined,
+            type: "guide",
+            title: guide.title,
+            subtitle: guide.description,
+            url: `/guides/${guide.slug}`,
+            score: sr.rank,
+          });
+        }
+      } else if (sr.modelApiKey === "editorial") {
+        const ed = editorialById.get(sr.recordId);
+        if (ed) {
+          results.push({
+            type: "editorial",
+            title: ed.title,
+            subtitle: ed.excerpt ?? "",
+            url: `/blog/${ed.slug}`,
+            image: ed.image?.url ? mediaUrl(ed.image.url) : undefined,
+            score: sr.rank,
           });
         }
       }
     }
   }
 
-  // Search editorials
-  for (const ed of editorials) {
-    const text = `${ed.title} ${ed.excerpt}`.toLowerCase();
+  // Always add client-side venue search (venues aren't indexed in Vectorize)
+  for (const [id, { venue, section, guide }] of venueMap) {
+    const text = `${venue.name} ${venue.address} ${venue.description} ${venue.bestOfAward || ""}`.toLowerCase();
     if (text.includes(q)) {
+      // Skip if already in semantic results via guide
       results.push({
-        type: "editorial",
-        title: ed.title,
-        subtitle: ed.excerpt,
-        url: `/blog/${ed.slug}`,
-        image: ed.image ? mediaUrl(ed.image.url) : undefined,
+        type: "venue",
+        title: venue.name,
+        subtitle: `${venue.address} · ${section} · ${guide.title}`,
+        url: `/places/${venue.id}`,
+        image: venue.image?.url ? mediaUrl(venue.image.url) : undefined,
+        badge: venue.bestOfAward || undefined,
       });
     }
   }
 
-  // Search guides
-  for (const guide of guides) {
-    const text = `${guide.title} ${guide.subtitle} ${guide.description}`.toLowerCase();
-    if (text.includes(q)) {
-      results.push({
-        type: "guide",
-        title: guide.title,
-        subtitle: guide.description,
-        url: `/guides/${guide.slug}`,
-      });
+  // Fallback: if no semantic results, do full client-side search on editorials/guides too
+  if (semanticResults.length === 0) {
+    for (const ed of editorials) {
+      const text = `${ed.title} ${ed.excerpt}`.toLowerCase();
+      if (text.includes(q)) {
+        results.push({
+          type: "editorial",
+          title: ed.title,
+          subtitle: ed.excerpt ?? "",
+          url: `/blog/${ed.slug}`,
+          image: ed.image?.url ? mediaUrl(ed.image.url) : undefined,
+        });
+      }
+    }
+    for (const guide of guides) {
+      const text = `${guide.title} ${guide.subtitle} ${guide.description}`.toLowerCase();
+      if (text.includes(q)) {
+        results.push({
+          type: "guide",
+          title: guide.title,
+          subtitle: guide.description,
+          url: `/guides/${guide.slug}`,
+        });
+      }
     }
   }
+
+  // Deduplicate by URL
+  const seen = new Set<string>();
+  results = results.filter((r) => {
+    if (seen.has(r.url)) return false;
+    seen.add(r.url);
+    return true;
+  });
 }
 
-const examples = ["Skál!", "best bakery", "cocktail bars", "golden circle", "tapas"];
+const examples = ["dinner reservations", "best bakery", "cocktail bars", "golden circle stops", "tapas wine"];
 ---
 
 <Layout title={query ? `"${query}" — Search — Reykjavík Foodie` : "Search — Reykjavík Foodie"} canonicalPath="/search">

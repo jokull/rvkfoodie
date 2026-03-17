@@ -52,6 +52,24 @@ Issues and friction points encountered while migrating rvkfoodie.is to agent-cms
 
 **Accepted tradeoff:** Agent-first design. MCP tools and GraphQL playground at `/graphql` are the primary interfaces.
 
+## GraphQL depth limit blocks introspection
+
+**Problem:** Default query depth limit (12) blocks the standard GraphQL introspection query used by gql.tada `generate-schema`. Returns "Query depth 18 exceeds limit 12".
+
+**Impact:** Cannot regenerate typed schema after CMS updates. gql.tada, GraphiQL, and other tooling that rely on introspection break.
+
+**Needed:** Either exempt introspection queries from the depth limit, or provide a `/graphql/sdl` endpoint that returns the SDL directly. Also a shallower introspection query that still returns a valid schema doesn't work either — `buildClientSchema` needs `interfaces` which requires deeper nesting.
+
+**Workaround:** Use the previously generated schema file and don't regenerate. Types may drift from actual schema.
+
+## Typed block resolution regression
+
+**Problem:** After latest agent-cms updates (`1067af6` and related commits), querying `content { blocks { __typename ... on SectionRecord { ... } } }` returns "Unexpected error" INTERNAL_SERVER_ERROR. Simple queries without typed blocks still work.
+
+**Impact:** Site is down (500) because all guide page queries use typed blocks. Homepage, about, settings, editorials work fine since they don't use typed block resolution.
+
+**Needed:** Fix the typed block resolver in the latest agent-cms version. The `54b4fc1` recursive fix worked before but something in the subsequent commits (`1067af6`, `adc3211`, `d9d4981`, `9e6340b`, `2bcdd7d`) broke it.
+
 ## PATCH endpoint validation
 
 **Problem:** After the "Eliminate any types" commit, PATCH `/api/records/{id}` requires `{ modelApiKey, data: { field: value } }` in the body. Previous format with `modelApiKey` in query params and flat data object stopped working.
