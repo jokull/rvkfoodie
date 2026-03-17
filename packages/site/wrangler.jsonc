@@ -8,5 +8,8 @@
   },
   "kv_namespaces": [
     { "binding": "PURCHASES", "id": "782842e31e944c38af1413c73fdcced2" }
+  ],
+  "services": [
+    { "binding": "CMS", "service": "rvkfoodie-agent-cms" }
   ]
 }

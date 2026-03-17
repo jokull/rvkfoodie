@@ -14,7 +14,7 @@ interface VenueWithContext extends Venue {
 }
 
 const { id } = Astro.params;
-const allGuides = await getAllGuides();
+const [allGuides, editorials] = await Promise.all([getAllGuides(), getAllEditorials()]);
 
 let venue: VenueWithContext | null = null;
 let guideVenueCount = 0;
@@ -73,8 +73,7 @@ const nearby = allVenues
 
 const otherSections = guideSectionNames.filter((s) => s !== venue!.sectionTitle);
 
-// Find related blog posts that mention this venue by name
-const editorials = await getAllEditorials();
+// Find related blog posts that mention this venue by name (editorials already fetched above)
 const venuNameLower = venue.name.toLowerCase().replace(/[!?]/g, "");
 const relatedPosts = editorials.filter((p) => {
   const text = `${p.title} ${p.excerpt}`.toLowerCase();

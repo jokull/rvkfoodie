@@ -4,12 +4,12 @@ import Icon from "../components/Icon.astro";
 import { getAllGuides, getAllEditorials, getHomePage, type Guide, type Editorial } from "../lib/cms";
 import { mediaUrl } from "../lib/images";
 
-const guides = await getAllGuides();
-const editorials = await getAllEditorials();
-const home = await getHomePage();
-
-const unlockedProducts: string[] =
-  (await Astro.session?.get("unlockedProducts")) ?? [];
+const [guides, editorials, home, unlockedProducts] = await Promise.all([
+  getAllGuides(),
+  getAllEditorials(),
+  getHomePage(),
+  Astro.session?.get("unlockedProducts").then((v) => (v as string[]) ?? []).catch(() => [] as string[]),
+]);
 
 // Collect photos for collage from editorials with images
 const collagePhotos = editorials

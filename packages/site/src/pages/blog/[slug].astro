@@ -6,11 +6,12 @@ import { dastToHtml } from "../../lib/dast";
 import { mediaUrl } from "../../lib/images";
 
 const { slug } = Astro.params;
-const post = await getEditorialBySlug(slug!);
+const [post, allGuides, allEditorials] = await Promise.all([
+  getEditorialBySlug(slug!),
+  getAllGuides(),
+  getAllEditorials(),
+]);
 if (!post) return Astro.redirect("/");
-
-const allGuides = await getAllGuides();
-const allEditorials = await getAllEditorials();
 
 // Find venues mentioned in this post (match by name in title/excerpt/content)
 const postText = `${post.title} ${post.excerpt}`.toLowerCase();

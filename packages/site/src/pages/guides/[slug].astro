@@ -8,17 +8,19 @@ import { dastToHtml } from "../../lib/dast";
 import { env } from "cloudflare:workers";
 
 const { slug } = Astro.params;
-const guide = await getGuideBySlug(slug!);
+
+// Parallelize all independent fetches
+const [guide, allGuides, editorials, sessionProducts, unlockToken] = await Promise.all([
+  getGuideBySlug(slug!),
+  getAllGuides(),
+  getAllEditorials(),
+  Astro.session?.get("unlockedProducts").catch(() => null) as Promise<string[] | null>,
+  Astro.session?.get("unlockToken").catch(() => null) as Promise<string | null>,
+]);
 if (!guide) return Astro.redirect("/");
 
-const allGuides = await getAllGuides();
 const otherGuides = allGuides.filter((g) => g.slug !== guide.slug);
-
-let unlockedProducts: string[] =
-  (await Astro.session?.get("unlockedProducts")) ?? [];
-
-// Auto-claim: check if session has a pending unlock token
-const unlockToken = await Astro.session?.get("unlockToken") as string | undefined;
+let unlockedProducts: string[] = sessionProducts ?? [];
 if (unlockToken && !unlockedProducts.includes(guide.gumroadProductId)) {
   const kv = env.PURCHASES;
   const raw = await kv.get(`unlock:${unlockToken}`);
@@ -50,8 +52,7 @@ const totalVenues = guide.content.reduce((n, b) =>
 
 const introHtml = guide.intro ? dastToHtml(guide.intro) : "";
 
-// Find blog posts that mention venues from this guide
-const editorials = await getAllEditorials();
+// Find blog posts that mention venues from this guide (editorials already fetched above)
 const venueNames = guide.content.flatMap((b) =>
   b.blockType === "section" ? (b as SectionBlock).venues.map((v) => v.name.toLowerCase().replace(/[!?]/g, "")) : []
 );

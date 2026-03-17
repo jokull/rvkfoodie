@@ -5,27 +5,53 @@
 
 import { graphql, type ResultOf } from "gql.tada";
 import { print } from "graphql";
+import { env } from "cloudflare:workers";
 
-const GRAPHQL_URL = "https://rvkfoodie-agent-cms.solberg.workers.dev/graphql";
+// Use service binding (worker-to-worker, zero network hop) when available,
+// fall back to public URL for local dev
+const CMS_PUBLIC_URL = "https://rvkfoodie-agent-cms.solberg.workers.dev/graphql";
+
+function getCmsFetch(): typeof fetch {
+  const cms = (env as Record<string, unknown>).CMS as { fetch: typeof fetch } | undefined;
+  if (cms) return cms.fetch.bind(cms);
+  return fetch;
+}
 
 async function execute<T>(document: { kind: "Document" }, variables?: Record<string, unknown>): Promise<T> {
+  const t0 = performance.now();
   let queryString: string;
   try {
     queryString = print(document as Parameters<typeof print>[0]);
   } catch (e) {
     throw new Error(`Failed to print GraphQL query: ${e}`);
   }
-  const res = await fetch(GRAPHQL_URL, {
+  const tPrint = performance.now();
+
+  // Extract operation name for logging
+  const opMatch = queryString.match(/(?:query|mutation)\s+(\w+)/);
+  const opName = opMatch?.[1] ?? "anonymous";
+
+  const cmsFetch = getCmsFetch();
+  // Service binding uses a dummy URL — only the path matters
+  const url = cmsFetch === fetch ? CMS_PUBLIC_URL : "http://cms/graphql";
+  const res = await cmsFetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query: queryString, variables }),
   });
+  const tFetch = performance.now();
+
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`GraphQL HTTP ${res.status}: ${text.slice(0, 200)}`);
   }
   const json = (await res.json()) as { data: T; errors?: { message: string }[] };
+  const tParse = performance.now();
+
   if (json.errors?.length) throw new Error(`GraphQL: ${json.errors.map((e) => e.message).join(", ")}`);
+
+  console.log(`[cms] ${opName}: print=${(tPrint - t0).toFixed(0)}ms fetch=${(tFetch - tPrint).toFixed(0)}ms parse=${(tParse - tFetch).toFixed(0)}ms total=${(tParse - t0).toFixed(0)}ms`);
+
   return json.data;
 }
 

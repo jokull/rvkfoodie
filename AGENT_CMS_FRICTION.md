@@ -62,6 +62,24 @@ Issues and friction points encountered while migrating rvkfoodie.is to agent-cms
 
 **Workaround:** Use the previously generated schema file and don't regenerate. Types may drift from actual schema.
 
+## GraphQL schema rebuilt on every request (~900ms)
+
+**Problem:** Every GraphQL query triggers a full schema build: loads all models + fields from D1, constructs SDL, creates resolvers, builds the graphql-yoga schema. This takes ~900ms even for `{ __typename }`.
+
+**Evidence:** `/health` = 123ms, `{ __typename }` = 990ms, `{ homePage { headline } }` = 930ms. The overhead is constant regardless of query complexity.
+
+**Impact:** Every page has a minimum ~1s TTFB even with parallelized queries. With service bindings (zero network hop), this will still be ~500ms+.
+
+**Measured breakdown (service binding, no network hop):**
+```
+[cms] HomePage:      fetch=1176ms (all inside CMS worker)
+[cms] AllGuides:     fetch=1276ms
+[cms] AllEditorials: fetch=1276ms
+```
+Health endpoint: 123ms. The extra ~1000ms is pure schema build.
+
+**Needed:** Cache the built GraphQL schema in a module-scoped variable. Only rebuild when models/fields change. The schema only changes when `POST /api/models` or `POST /api/models/:id/fields` is called — invalidation is deterministic. A version counter in D1 (`SELECT max(updated_at) FROM models UNION SELECT max(updated_at) FROM fields`) would let you skip rebuild on 99.9% of requests.
+
 ## Typed block resolution regression
 
 **Problem:** After latest agent-cms updates (`1067af6` and related commits), querying `content { blocks { __typename ... on SectionRecord { ... } } }` returns "Unexpected error" INTERNAL_SERVER_ERROR. Simple queries without typed blocks still work.

@@ -4,8 +4,7 @@ import RestaurantCallout from "../components/RestaurantCallout.astro";
 import { getAllGuides, getAboutPage } from "../lib/cms";
 import { dastToHtml } from "../lib/dast";
 
-const guides = await getAllGuides();
-const about = await getAboutPage();
+const [guides, about] = await Promise.all([getAllGuides(), getAboutPage()]);
 const bioHtml = about.bio ? dastToHtml(about.bio) : "";
 
 const jsonLd = {
