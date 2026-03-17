@@ -12,8 +12,7 @@ import { env } from "cloudflare:workers";
 const CMS_PUBLIC_URL = "https://rvkfoodie-agent-cms.solberg.workers.dev/graphql";
 
 function getCmsFetch(): typeof fetch {
-  const cms = (env as Record<string, unknown>).CMS as { fetch: typeof fetch } | undefined;
-  if (cms) return cms.fetch.bind(cms);
+  if (env.CMS) return env.CMS.fetch.bind(env.CMS);
   return fetch;
 }
 
@@ -51,19 +50,12 @@ async function execute<T>(document: { kind: "Document" }, variables?: Record<str
   if (json.errors?.length) throw new Error(`GraphQL: ${json.errors.map((e) => e.message).join(", ")}`);
 
   console.log(`[cms] ${opName}: print=${(tPrint - t0).toFixed(0)}ms fetch=${(tFetch - tPrint).toFixed(0)}ms parse=${(tParse - tFetch).toFixed(0)}ms total=${(tParse - t0).toFixed(0)}ms`);
+  console.log(`[cms] ${opName} query: ${queryString.slice(0, 200)}`);
 
   return json.data;
 }
 
 // ============ QUERIES (inline, no fragments) ============
-
-const VENUE_FIELDS = `
-  id name address description note time isFree
-  location { latitude longitude }
-  openingHours googleMapsUrl website phone
-  bestOfAward grapevineUrl
-  image { id url alt width height }
-`;
 
 const AllGuidesQuery = graphql(`
   query AllGuides {
@@ -141,8 +133,18 @@ const AllEditorialsQuery = graphql(`
   query AllEditorials {
     allEditorials(orderBy: [date_DESC]) {
       id title slug excerpt date
-      image { id url alt width height }
-      content { value }
+      image { id url alt width height filename }
+      content {
+        value
+        blocks {
+          __typename
+          ... on ImageBlockRecord {
+            id
+            image { id url alt width height filename }
+            caption
+          }
+        }
+      }
     }
   }
 `);
@@ -151,15 +153,25 @@ const EditorialBySlugQuery = graphql(`
   query EditorialBySlug($slug: String!) {
     editorial(filter: { slug: { eq: $slug } }) {
       id title slug excerpt date
-      image { id url alt width height }
-      content { value }
+      image { id url alt width height filename }
+      content {
+        value
+        blocks {
+          __typename
+          ... on ImageBlockRecord {
+            id
+            image { id url alt width height filename }
+            caption
+          }
+        }
+      }
     }
   }
 `);
 
 const ChangelogQuery = graphql(`
   query Changelog {
-    allChangelogEntrys(orderBy: [date_DESC]) {
+    allChangelogEntries(orderBy: [date_DESC]) {
       id date title description changeType
       guide { id title slug }
     }
@@ -200,7 +212,7 @@ type RawSection = Extract<RawBlock, { __typename: "SectionRecord" }>;
 type RawVenue = Extract<NonNullable<RawSection["venues"]>["blocks"][number], { __typename: "VenueRecord" }>;
 
 export type Editorial = NonNullable<ResultOf<typeof AllEditorialsQuery>["allEditorials"]>[number];
-export type ChangelogEntry = NonNullable<ResultOf<typeof ChangelogQuery>["allChangelogEntrys"]>[number];
+export type ChangelogEntry = NonNullable<ResultOf<typeof ChangelogQuery>["allChangelogEntries"]>[number];
 export type HomePageData = NonNullable<ResultOf<typeof HomePageQuery>["homePage"]>;
 export type AboutPageData = NonNullable<ResultOf<typeof AboutPageQuery>["aboutPage"]>;
 export type SiteSettingsData = NonNullable<ResultOf<typeof SiteSettingsQuery>["siteSettings"]>;
@@ -239,22 +251,25 @@ export async function getEditorialBySlug(slug: string) {
 
 export async function getChangelog() {
   const data = await execute<ResultOf<typeof ChangelogQuery>>(ChangelogQuery);
-  return data.allChangelogEntrys;
+  return data.allChangelogEntries;
 }
 
 export async function getHomePage() {
   const data = await execute<ResultOf<typeof HomePageQuery>>(HomePageQuery);
-  return data.homePage!;
+  if (!data.homePage) throw new Error("HomePage singleton not found in CMS");
+  return data.homePage;
 }
 
 export async function getAboutPage() {
   const data = await execute<ResultOf<typeof AboutPageQuery>>(AboutPageQuery);
-  return data.aboutPage!;
+  if (!data.aboutPage) throw new Error("AboutPage singleton not found in CMS");
+  return data.aboutPage;
 }
 
 export async function getSiteSettings() {
   const data = await execute<ResultOf<typeof SiteSettingsQuery>>(SiteSettingsQuery);
-  return data.siteSettings!;
+  if (!data.siteSettings) throw new Error("SiteSettings singleton not found in CMS");
+  return data.siteSettings;
 }
 
 // ============ MAPPERS ============
@@ -275,7 +290,7 @@ function mapGuide(raw: RawGuide) {
   };
 }
 
-function mapVenue(v: RawVenue): Venue {
+function mapVenue(v: RawVenue) {
   return {
     blockType: "venue" as const,
     id: v.id,

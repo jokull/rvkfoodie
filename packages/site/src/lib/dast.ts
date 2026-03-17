@@ -6,18 +6,48 @@
 
 import { render } from "datocms-structured-text-to-html-string";
 
+interface DastSpan {
+  type: "span";
+  value?: string;
+  marks?: string[];
+}
+
+interface DastLink {
+  type: "link";
+  url: string;
+  children?: DastInline[];
+}
+
+type DastInline = DastSpan | DastLink | { type: string; value?: string };
+
+interface DastNode {
+  type: string;
+  level?: number;
+  style?: string;
+  url?: string;
+  value?: string;
+  item?: string;
+  marks?: string[];
+  children?: DastNode[];
+}
+
+interface DastDocument {
+  schema?: string;
+  document?: { type: string; children?: DastNode[] };
+}
+
 /**
  * Render DAST structured text to HTML string.
  * Skips block nodes (those are rendered by templates).
  */
-export function dastToHtml(st: any): string {
+export function dastToHtml(st: { value?: unknown } | DastDocument | null | undefined): string {
   if (!st) return "";
 
   // Handle agent-cms format: { value: { schema: "dast", document: {...} }, blocks: {...} }
   // The render function expects: { value: { schema: "dast", document: {...} } }
   // Blocks in our format are a map, but the library expects an array
 
-  const doc = st.value || st;
+  const doc = ("value" in st ? st.value : st) as DastDocument | undefined;
   if (!doc?.schema && !doc?.document) return "";
 
   try {
@@ -38,7 +68,7 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function renderInline(node: any): string {
+function renderInline(node: DastNode): string {
   if (!node) return "";
   if (node.type === "span") {
     let html = escapeHtml(node.value || "");
@@ -51,12 +81,12 @@ function renderInline(node: any): string {
     return html;
   }
   if (node.type === "link") {
-    return `<a href="${escapeHtml(node.url)}">${(node.children || []).map(renderInline).join("")}</a>`;
+    return `<a href="${escapeHtml(node.url || "")}">${(node.children || []).map(renderInline).join("")}</a>`;
   }
   return node.value ? escapeHtml(node.value) : "";
 }
 
-function renderNode(node: any): string {
+function renderNode(node: DastNode): string {
   if (!node) return "";
   if (node.type === "paragraph") return `<p>${(node.children || []).map(renderInline).join("")}</p>`;
   if (node.type === "heading") {
@@ -65,7 +95,7 @@ function renderNode(node: any): string {
   }
   if (node.type === "list") {
     const tag = node.style === "numbered" ? "ol" : "ul";
-    return `<${tag}>${(node.children || []).map((li: any) =>
+    return `<${tag}>${(node.children || []).map((li) =>
       `<li>${(li.children || []).map(renderNode).join("")}</li>`
     ).join("")}</${tag}>`;
   }
@@ -74,8 +104,9 @@ function renderNode(node: any): string {
   return "";
 }
 
-function manualRender(doc: any): string {
+function manualRender(doc: DastDocument): string {
   const document = doc.document || doc;
-  if (!document?.children) return "";
-  return document.children.map(renderNode).join("\n");
+  const children = (document as { children?: DastNode[] }).children;
+  if (!children) return "";
+  return children.map(renderNode).join("\n");
 }

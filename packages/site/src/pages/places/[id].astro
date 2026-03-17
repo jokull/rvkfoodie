@@ -56,22 +56,25 @@ for (const guide of allGuides) {
 
 if (!venue) return Astro.redirect("/");
 
-const mapsUrl = venue.googleMapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${venue.name} ${venue.address} Iceland`)}`;
+// After the guard above, venue is guaranteed non-null — bind to a const for narrowing
+const v = venue;
+
+const mapsUrl = v.googleMapsUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${v.name} ${v.address} Iceland`)}`;
 
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Restaurant",
-  name: venue.name,
-  address: { "@type": "PostalAddress", streetAddress: venue.address, addressCountry: "IS" },
-  description: venue.description,
+  name: v.name,
+  address: { "@type": "PostalAddress", streetAddress: v.address, addressCountry: "IS" },
+  description: v.description,
 };
 
 // Only show free venues in "More in" section — don't give away paid content
 const nearby = allVenues
-  .filter((v) => v.id !== venue!.id && v.guideSlug === venue!.guideSlug && v.sectionTitle === venue!.sectionTitle && v.isFree)
+  .filter((av) => av.id !== v.id && av.guideSlug === v.guideSlug && av.sectionTitle === v.sectionTitle && av.isFree)
   .slice(0, 3);
 
-const otherSections = guideSectionNames.filter((s) => s !== venue!.sectionTitle);
+const otherSections = guideSectionNames.filter((s) => s !== v.sectionTitle);
 
 // Find related blog posts that mention this venue by name (editorials already fetched above)
 const venuNameLower = venue.name.toLowerCase().replace(/[!?]/g, "");

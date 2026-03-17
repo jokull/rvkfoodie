@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { getHomePage, getAboutPage, getAllGuides, getSiteSettings } from "../../lib/cms";
+import { getHomePage, getAboutPage, getAllGuides, getAllEditorials, getSiteSettings } from "../../lib/cms";
 import { dastToHtml } from "../../lib/dast";
 
 export const GET: APIRoute = async ({ url }) => {
@@ -13,6 +13,10 @@ export const GET: APIRoute = async ({ url }) => {
       const data = await getAboutPage();
       const bioHtml = dastToHtml(data.bio);
       return json({ ok: true, title: data.title, bioLength: bioHtml.length });
+    }
+    if (test === "editorials") {
+      const editorials = await getAllEditorials();
+      return json({ ok: true, count: editorials.length, first: editorials[0]?.title });
     }
     if (test === "guides") {
       const guides = await getAllGuides();

@@ -7,5 +7,8 @@
     "deploy:site": "pnpm --filter @rvkfoodie/site run build && pnpm --filter @rvkfoodie/site exec wrangler deploy",
     "deploy:cms": "pnpm --filter @rvkfoodie/cms deploy",
     "deploy": "pnpm deploy:cms && pnpm deploy:site"
+  },
+  "dependencies": {
+    "@datocms/astro": "^0.6.11"
   }
 }

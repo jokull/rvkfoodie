@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicolo-ribaudo/oxlint-config-schema/main/src/v1/schema.json",
+  "ignorePatterns": ["src/layouts/Layout.astro", "src/env.d.ts"],
+  "rules": {
+    "no-unused-vars": "warn",
+    "no-explicit-any": "error",
+    "no-non-null-assertion": "warn",
+    "prefer-const": "warn",
+    "eqeqeq": "error",
+    "no-var": "error"
+  }
+}

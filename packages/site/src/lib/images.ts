@@ -7,6 +7,6 @@ const R2_MEDIA_URL = "https://media.rvkfoodie.is";
  */
 export function mediaUrl(urlOrFilename: string): string {
   // Extract just the filename from any path format
-  const filename = urlOrFilename.split("/").pop()!;
+  const filename = urlOrFilename.split("/").pop() ?? urlOrFilename;
   return `${R2_MEDIA_URL}/${filename}`;
 }

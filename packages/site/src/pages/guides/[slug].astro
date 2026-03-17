@@ -11,7 +11,7 @@ const { slug } = Astro.params;
 
 // Parallelize all independent fetches
 const [guide, allGuides, editorials, sessionProducts, unlockToken] = await Promise.all([
-  getGuideBySlug(slug!),
+  getGuideBySlug(slug ?? ""),
   getAllGuides(),
   getAllEditorials(),
   Astro.session?.get("unlockedProducts").catch(() => null) as Promise<string[] | null>,
@@ -20,7 +20,7 @@ const [guide, allGuides, editorials, sessionProducts, unlockToken] = await Promi
 if (!guide) return Astro.redirect("/");
 
 const otherGuides = allGuides.filter((g) => g.slug !== guide.slug);
-let unlockedProducts: string[] = sessionProducts ?? [];
+const unlockedProducts: string[] = sessionProducts ?? [];
 if (unlockToken && !unlockedProducts.includes(guide.gumroadProductId)) {
   const kv = env.PURCHASES;
   const raw = await kv.get(`unlock:${unlockToken}`);

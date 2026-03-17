@@ -24,7 +24,10 @@ export const POST: APIRoute = async ({ request, session, redirect }) => {
       },
     );
 
-    const data = await response.json();
+    const data = (await response.json()) as {
+      success: boolean;
+      purchase?: { refunded?: boolean; chargebacked?: boolean };
+    };
 
     if (
       data.success &&

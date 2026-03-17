@@ -1,13 +1,14 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import RestaurantCallout from "../../components/RestaurantCallout.astro";
+import ImageBlock from "../../components/ImageBlock.astro";
 import { getEditorialBySlug, getAllEditorials, getAllGuides, type SectionBlock } from "../../lib/cms";
 import { dastToHtml } from "../../lib/dast";
 import { mediaUrl } from "../../lib/images";
 
 const { slug } = Astro.params;
 const [post, allGuides, allEditorials] = await Promise.all([
-  getEditorialBySlug(slug!),
+  getEditorialBySlug(slug ?? ""),
   getAllGuides(),
   getAllEditorials(),
 ]);
@@ -32,8 +33,15 @@ for (const guide of allGuides) {
 const otherPosts = allEditorials.filter((p) => p.slug !== post.slug).slice(0, 3);
 
 const dateStr = new Date(post.date).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
-const contentHtml = dastToHtml(post.content);
 const heroUrl = post.image ? mediaUrl(post.image.filename || post.image.url) : null;
+
+// Parse content DAST nodes and image blocks
+type ContentNode = { type: string; item?: string; [k: string]: unknown };
+
+const contentValue = post.content?.value as { document?: { children?: ContentNode[] } } | undefined;
+const contentBlocks = post.content?.blocks ?? [];
+const contentBlocksById = new Map(contentBlocks.map(b => [b.id, b]));
+const contentNodes = contentValue?.document?.children ?? [];
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -62,7 +70,15 @@ const jsonLd = {
     )}
 
     <div class="prose-custom">
-      <Fragment set:html={contentHtml} />
+      {contentNodes.map((node) => {
+        if (node.type === "block" && node.item) {
+          const block = contentBlocksById.get(node.item);
+          if (block?.image) return <ImageBlock block={block} />;
+          return null;
+        }
+        const html = dastToHtml({ value: { schema: "dast", document: { type: "root", children: [node] } } });
+        return html ? <Fragment set:html={html} /> : null;
+      })}
     </div>
   </article>
 

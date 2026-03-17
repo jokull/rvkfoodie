@@ -1,7 +1,7 @@
 {
   "name": "rvkfoodie",
-  "compatibility_date": "2026-03-01",
-  "compatibility_flags": ["global_fetch_strictly_public"],
+  "compatibility_date": "2026-03-17",
+  "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "observability": {
     "enabled": true

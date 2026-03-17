@@ -680,9 +680,9 @@ type Query {
   allEditorials(locale: String, fallbackLocales: [String!], filter: EditorialFilter, orderBy: [EditorialOrderBy!], first: Int, skip: Int): [Editorial!]!
   editorial(locale: String, fallbackLocales: [String!], id: ID, filter: EditorialFilter): Editorial
   _allEditorialsMeta(filter: EditorialFilter): EditorialMeta!
-  allChangelogEntrys(locale: String, fallbackLocales: [String!], filter: ChangelogEntryFilter, orderBy: [ChangelogEntryOrderBy!], first: Int, skip: Int): [ChangelogEntry!]!
+  allChangelogEntries(locale: String, fallbackLocales: [String!], filter: ChangelogEntryFilter, orderBy: [ChangelogEntryOrderBy!], first: Int, skip: Int): [ChangelogEntry!]!
   changelogEntry(locale: String, fallbackLocales: [String!], id: ID, filter: ChangelogEntryFilter): ChangelogEntry
-  _allChangelogEntrysMeta(filter: ChangelogEntryFilter): ChangelogEntryMeta!
+  _allChangelogEntriesMeta(filter: ChangelogEntryFilter): ChangelogEntryMeta!
   allHomePages(locale: String, fallbackLocales: [String!], filter: HomePageFilter, orderBy: [HomePageOrderBy!], first: Int, skip: Int): [HomePage!]!
   homePage(locale: String, fallbackLocales: [String!], id: ID, filter: HomePageFilter): HomePage
   _allHomePagesMeta(filter: HomePageFilter): HomePageMeta!
