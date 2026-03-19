@@ -1,12 +1,12 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "rvkfoodie-agent-cms",
-  "main": "src/index.ts",
-  "compatibility_date": "2024-12-01",
+  "name": "rvkfoodie",
+  "compatibility_date": "2026-03-17",
   "compatibility_flags": ["nodejs_compat"],
-  "observability": {
-    "enabled": true
-  },
+  "workers_dev": true,
+  "observability": { "enabled": true },
+  "kv_namespaces": [
+    { "binding": "PURCHASES", "id": "782842e31e944c38af1413c73fdcced2" }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
@@ -16,20 +16,12 @@
     }
   ],
   "r2_buckets": [
-    {
-      "binding": "ASSETS",
-      "bucket_name": "rvkfoodie-cms"
-    }
+    { "binding": "R2_ASSETS", "bucket_name": "rvkfoodie-cms" }
   ],
   "vectorize": [
-    {
-      "binding": "VECTORIZE",
-      "index_name": "rvkfoodie-content"
-    }
+    { "binding": "VECTORIZE", "index_name": "rvkfoodie-content" }
   ],
-  "ai": {
-    "binding": "AI"
-  },
+  "ai": { "binding": "AI" },
   "vars": {
     "ENVIRONMENT": "production",
     "ASSET_BASE_URL": "https://media.rvkfoodie.is"
