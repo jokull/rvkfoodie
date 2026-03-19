@@ -2,8 +2,12 @@
   "name": "rvkfoodie",
   "compatibility_date": "2026-03-17",
   "compatibility_flags": ["nodejs_compat"],
-  "workers_dev": true,
+  "main": "./worker/index.ts",
   "observability": { "enabled": true },
+  "assets": {
+    "not_found_handling": "none",
+    "directory": "dist/client"
+  },
   "kv_namespaces": [
     { "binding": "PURCHASES", "id": "782842e31e944c38af1413c73fdcced2" }
   ],

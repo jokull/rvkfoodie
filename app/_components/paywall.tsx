@@ -1,0 +1,82 @@
+export function Paywall({
+  gumroadUrl,
+  price,
+  hiddenCount,
+  slug,
+  productId,
+  prefillKey,
+  error,
+  pending,
+}: {
+  gumroadUrl: string;
+  price: number;
+  hiddenCount: number;
+  slug: string;
+  productId: string;
+  prefillKey?: string;
+  error?: string;
+  pending?: boolean;
+}) {
+  const checkoutUrl = `/api/checkout?slug=${slug}&url=${encodeURIComponent(gumroadUrl)}`;
+
+  return (
+    <div className="relative mt-4 mb-16">
+      <div className="absolute inset-x-0 -top-32 h-32 bg-gradient-to-t from-cream to-transparent pointer-events-none" />
+      <div className="border border-ink/10 rounded-2xl p-8 text-center">
+        <p className="font-display text-[1.75rem] leading-tight mb-2">
+          +{hiddenCount} more spots inside
+        </p>
+        <p className="text-ink-light mb-8">
+          Unlock the full guide with all venues, tips, and Google Maps pins.
+        </p>
+
+        <a
+          href={checkoutUrl}
+          className="inline-block bg-blue text-white font-medium px-8 py-3 rounded-full hover:opacity-90 transition-opacity mb-8"
+        >
+          Get the guide — ${price}
+        </a>
+
+        {pending && (
+          <p className="text-tiny text-blue mb-4">
+            Purchase received — your guide is being unlocked. Refresh this page
+            in a moment.
+          </p>
+        )}
+
+        <div className="border-t border-ink/10 pt-6">
+          <p className="text-tiny text-ink-light mb-3">
+            Already purchased? Enter your license key
+          </p>
+          <form
+            method="POST"
+            action="/api/unlock"
+            className="flex gap-2 max-w-sm mx-auto"
+          >
+            <input type="hidden" name="product_id" value={productId} />
+            <input type="hidden" name="slug" value={slug} />
+            <input
+              type="text"
+              name="license_key"
+              placeholder="XXXX-XXXX-XXXX-XXXX"
+              defaultValue={prefillKey}
+              required
+              className="flex-1 border border-ink/15 rounded-lg px-4 py-2 text-tiny bg-white focus:outline-none focus:border-blue placeholder:text-ink/30"
+            />
+            <button
+              type="submit"
+              className="bg-ink text-cream text-tiny font-medium px-5 py-2 rounded-lg hover:opacity-90 transition-opacity"
+            >
+              Unlock
+            </button>
+          </form>
+          {error && (
+            <p className="text-tiny text-red-600 mt-2">
+              Invalid license key. Please try again.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

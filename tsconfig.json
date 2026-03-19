@@ -1,12 +1,29 @@
 {
-  "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "paths": {
+      "@/*": ["./*"]
+    },
+    "target": "ES2017",
     "plugins": [
       {
         "name": "@0no-co/graphqlsp",
-        "schema": "./src/lib/graphql-schema.graphql",
-        "tadaOutputLocation": "./src/lib/graphql-env.d.ts"
+        "schema": "./lib/graphql-schema.graphql",
+        "tadaOutputLocation": "./lib/graphql-env.d.ts"
       }
     ]
-  }
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules"]
 }

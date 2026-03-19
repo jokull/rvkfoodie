@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #FCF8EC;
+  --color-blue: #5071FE;
+  --color-ink: #1a1a1a;
+  --color-ink-light: #666;
+
+  --font-display: "Instrument Serif", serif;
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+
+  --text-tiny: 0.75rem;
+  --text-tiny--line-height: 1.4;
+  --text-normal: 1.125rem;
+  --text-normal--line-height: 1.7;
+  --text-huge: clamp(2.5rem, 5vw, 4.5rem);
+  --text-huge--line-height: 1.1;
+
+  --leading-tiny: 1.4;
+  --leading-normal: 1.7;
+  --leading-huge: 1.1;
+}
+
+/* Prose styles for blog posts */
+.prose-custom p { margin-bottom: 1.25rem; }
+.prose-custom strong { font-weight: 500; }
+.prose-custom h2 { font-family: "Instrument Serif", serif; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.15; margin-top: 3rem; margin-bottom: 1rem; }
+.prose-custom a { color: var(--color-blue); text-decoration: underline; text-underline-offset: 2px; }
+.prose-custom blockquote { border-left: 3px solid var(--color-blue); padding-left: 1.25rem; margin: 1.5rem 0; font-style: italic; color: var(--color-ink-light); }
+
+/* Prose styles for guide intros */
+.prose-intro p { margin-bottom: 1rem; color: var(--color-ink-light); }
+.prose-intro h3 { font-weight: 500; margin-top: 1.5rem; margin-bottom: 0.5rem; color: var(--color-ink); }
+.prose-intro ul { list-style: disc; padding-left: 1.25rem; color: var(--color-ink-light); }
+.prose-intro li { margin-bottom: 0.25rem; }
+.prose-intro strong { font-weight: 500; color: var(--color-ink); }
+
+/* Prose styles for about page */
+.prose-about p { margin-bottom: 1.5rem; }
+.prose-about a { color: var(--color-blue); }
+.prose-about a:hover { opacity: 0.8; }
+.prose-about p:last-child { font-size: 0.75rem; color: var(--color-ink-light); }
