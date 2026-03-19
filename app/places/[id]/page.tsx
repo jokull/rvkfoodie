@@ -162,7 +162,7 @@ export default async function PlacePage({
         href={`/guides/${venue.guideSlug}`}
         className="text-tiny text-ink-light hover:text-blue transition-colors mb-8 inline-block"
       >
-        &larr; {venue.guideTitle}
+        ← {venue.guideTitle}
       </a>
 
       <article>
@@ -209,7 +209,7 @@ export default async function PlacePage({
             rel="noopener"
             className="text-tiny text-ink-light hover:text-blue transition-colors inline-block mb-4"
           >
-            {venue.address} &nearr;
+            {venue.address} ↗
           </a>
         )}
         {venue.openingHours && (
@@ -249,7 +249,7 @@ export default async function PlacePage({
             rel="noopener"
             className="inline-block border border-ink/15 rounded-full px-5 py-2 text-tiny hover:border-blue hover:text-blue transition-colors"
           >
-            Open in Google Maps &nearr;
+            Open in Google Maps ↗
           </a>
         </div>
       </article>
@@ -263,7 +263,7 @@ export default async function PlacePage({
           {venue.name} is one of {guideVenueCount} hand-picked spots
         </h2>
         <p className="text-ink-light mb-2">
-          The full guide covers {guideSectionNames.join(", ")} &mdash; every
+          The full guide covers {guideSectionNames.join(", ")} — every
           spot personally vetted by a local.
         </p>
         <p className="text-ink-light mb-6 text-tiny">
@@ -274,7 +274,7 @@ export default async function PlacePage({
           href={`/guides/${venue.guideSlug}`}
           className="inline-block bg-blue text-white font-medium px-6 py-2.5 rounded-full text-tiny hover:opacity-90 transition-opacity"
         >
-          See the full guide &mdash; ${venue.guidePrice}
+          See the full guide — ${venue.guidePrice}
         </a>
       </div>
 

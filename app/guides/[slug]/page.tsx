@@ -152,7 +152,7 @@ export default async function GuidePage({
         href="/"
         className="text-tiny text-ink-light hover:text-blue transition-colors mb-8 inline-block"
       >
-        &larr; All guides
+        ← All guides
       </a>
 
       <CmsField fieldApiKey="title" value={guide.title}>
@@ -240,7 +240,7 @@ export default async function GuidePage({
             rel="noopener"
             className="inline-block bg-blue text-white font-medium px-6 py-2.5 rounded-full text-tiny hover:opacity-90 transition-opacity"
           >
-            Open pin list in Google Maps &nearr;
+            Open pin list in Google Maps ↗
           </a>
         </div>
       )}
@@ -266,7 +266,7 @@ export default async function GuidePage({
               href="/about"
               className="text-blue hover:opacity-80 transition-opacity"
             >
-              About the author &rarr;
+              About the author →
             </a>
           </p>
         </aside>

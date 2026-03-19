@@ -138,7 +138,7 @@ export default async function BlogPostPage({
         href="/"
         className="text-tiny text-ink-light hover:text-blue transition-colors mb-8 inline-block"
       >
-        &larr; Home
+        ← Home
       </a>
 
       <article>
@@ -251,7 +251,7 @@ export default async function BlogPostPage({
               href={`/guides/${guide.slug}`}
               className="border border-ink/10 rounded-full px-4 py-1.5 text-tiny hover:border-blue hover:text-blue transition-colors"
             >
-              {guide.title} &mdash; ${guide.price}
+              {guide.title} — ${guide.price}
             </a>
           ))}
         </div>

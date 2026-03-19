@@ -72,7 +72,7 @@ export default async function ChangelogPage() {
                         href={`/guides/${entry.guide.slug}`}
                         className="text-tiny text-blue hover:opacity-80 transition-opacity mt-1 inline-block"
                       >
-                        {entry.guide.title} &rarr;
+                        {entry.guide.title} →
                       </a>
                     )}
                   </div>

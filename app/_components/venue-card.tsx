@@ -93,7 +93,7 @@ export function VenueCard({
               rel="noopener"
               className="text-tiny leading-tiny text-ink-light hover:text-blue transition-colors"
             >
-              {address} &nearr;
+              {address} ↗
             </a>
           )}
           <p className="mt-3">{description}</p>

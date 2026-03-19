@@ -254,7 +254,7 @@ export default async function HomePage() {
                 href="/about"
                 className="text-blue hover:opacity-80 transition-opacity"
               >
-                Read more &rarr;
+                Read more →
               </a>
             </p>
           </CmsField>

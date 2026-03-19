@@ -15,7 +15,7 @@ export async function RestaurantCallout() {
         href={`mailto:${settings.restaurantCalloutEmail}`}
         className="text-tiny text-blue hover:opacity-80 transition-opacity"
       >
-        {settings.restaurantCalloutEmail} &rarr;
+        {settings.restaurantCalloutEmail} →
       </a>
     </div>
   );
