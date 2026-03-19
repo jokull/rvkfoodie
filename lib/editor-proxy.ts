@@ -2,12 +2,6 @@ import { createEditorMcpProxy } from "agent-cms";
 import { getCmsHandler } from "./cms-handler";
 import { env } from "cloudflare:workers";
 
-const cmsEnv = env as typeof env & {
-  CMS_WRITE_KEY?: string;
-  OAUTH_SECRET?: string;
-  EDITOR_PASSWORD?: string;
-};
-
 const APP_BASE_URL = "https://www.rvkfoodie.is";
 
 let cached: ReturnType<typeof createEditorMcpProxy> | null = null;
@@ -60,8 +54,8 @@ export function getEditorProxy() {
   cached = createEditorMcpProxy({
     appBaseUrl: APP_BASE_URL,
     cmsBaseUrl: APP_BASE_URL + "/cms",
-    cmsWriteKey: cmsEnv.CMS_WRITE_KEY ?? "",
-    oauthSecret: cmsEnv.OAUTH_SECRET ?? crypto.randomUUID(),
+    cmsWriteKey: env.CMS_WRITE_KEY,
+    oauthSecret: env.OAUTH_SECRET,
     fetch: inProcessFetch,
     mountPath: "/editor-access",
     getEditor: async (request: Request) => {
@@ -86,6 +80,6 @@ export function getEditorProxy() {
 }
 
 export function getEditorPassword(): string {
-  return cmsEnv.EDITOR_PASSWORD ?? "";
+  return env.EDITOR_PASSWORD;
 }
 

@@ -1,24 +1,54 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   CmsEditProvider,
   CmsRecord,
+  CmsField as CmsFieldBase,
+  CmsText as CmsTextBase,
+  CmsImage as CmsImageBase,
 } from "@agent-cms/visual-edit-react";
 
-export { CmsField, CmsText, CmsImage } from "@agent-cms/visual-edit-react";
+declare global {
+  interface Window {
+    __EDITOR__?: { name: string; token: string };
+  }
+}
 
-function getEditorCookie(): { name: string; token: string } | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(/editor_session=([^;]+)/);
-  if (!match) return null;
-  const decoded = decodeURIComponent(match[1]);
-  const colonIdx = decoded.indexOf(":");
-  if (colonIdx === -1) return null;
-  const name = decoded.slice(0, colonIdx);
-  const token = decoded.slice(colonIdx + 1);
-  if (!name || !token.startsWith("etk_")) return null;
-  return { name, token };
+function getEditor(): { name: string; token: string } | null {
+  if (typeof window === "undefined") return null;
+  return window.__EDITOR__ ?? null;
+}
+
+/** CmsField that calls router.refresh() after save */
+export function CmsField(props: React.ComponentProps<typeof CmsFieldBase>) {
+  const router = useRouter();
+  const onSaved = useCallback(() => {
+    props.onSaved?.();
+    router.refresh();
+  }, [props.onSaved, router]);
+  return <CmsFieldBase {...props} onSaved={onSaved} />;
+}
+
+/** CmsText that calls router.refresh() after save */
+export function CmsText(props: React.ComponentProps<typeof CmsTextBase>) {
+  const router = useRouter();
+  const onSaved = useCallback(() => {
+    props.onSaved?.();
+    router.refresh();
+  }, [props.onSaved, router]);
+  return <CmsTextBase {...props} onSaved={onSaved} />;
+}
+
+/** CmsImage that calls router.refresh() after replacement */
+export function CmsImage(props: React.ComponentProps<typeof CmsImageBase>) {
+  const router = useRouter();
+  const onReplaced = useCallback(() => {
+    props.onReplaced?.();
+    router.refresh();
+  }, [props.onReplaced, router]);
+  return <CmsImageBase {...props} onReplaced={onReplaced} />;
 }
 
 export function EditWrapper({
@@ -30,13 +60,18 @@ export function EditWrapper({
   modelApiKey: string;
   children: React.ReactNode;
 }) {
-  const editor = useMemo(() => getEditorCookie(), []);
+  const editor = useMemo(() => getEditor(), []);
+  const router = useRouter();
 
   if (!editor) return <>{children}</>;
 
   return (
     <CmsEditProvider endpoint="/cms" token={editor.token}>
-      <CmsRecord recordId={recordId} modelApiKey={modelApiKey}>
+      <CmsRecord
+        recordId={recordId}
+        modelApiKey={modelApiKey}
+        onPublished={() => router.refresh()}
+      >
         {children}
       </CmsRecord>
     </CmsEditProvider>
@@ -44,7 +79,7 @@ export function EditWrapper({
 }
 
 export function EditBar() {
-  const editor = useMemo(() => getEditorCookie(), []);
+  const editor = useMemo(() => getEditor(), []);
   if (!editor) return null;
 
   return (
