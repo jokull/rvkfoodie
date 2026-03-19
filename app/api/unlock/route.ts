@@ -1,8 +1,10 @@
+import { cookies } from "next/headers";
 import { env } from "cloudflare:workers";
 import {
   getSessionData,
   setSessionData,
-  sessionCookieHeader,
+  SESSION_COOKIE,
+  SESSION_TTL,
 } from "@/lib/session";
 
 /**
@@ -10,7 +12,7 @@ import {
  * Looks up their unlock token in KV, unlocks the guide in their session.
  */
 export async function GET(request: Request) {
-  const kv = env.PURCHASES as KVNamespace;
+  const kv = env.PURCHASES;
   const url = new URL(request.url);
 
   const token = url.searchParams.get("token");
@@ -20,10 +22,8 @@ export async function GET(request: Request) {
     return Response.redirect(new URL(`/guides/${fallbackSlug}`, url.origin));
   }
 
-  // Look up purchase by unlock token
   const raw = await kv.get(`unlock:${token}`);
   if (!raw) {
-    // Token not found — Ping may not have arrived yet, or token expired.
     return Response.redirect(
       new URL(`/guides/${fallbackSlug}?pending=true`, url.origin),
     );
@@ -34,28 +34,36 @@ export async function GET(request: Request) {
     slug: string;
   };
 
-  // Unlock all products from this purchase
-  const unlocked: string[] =
-    (await getSessionData<string[]>("unlockedProducts")) ?? [];
+  const cookieStore = await cookies();
+  const existingId = cookieStore.get(SESSION_COOKIE)?.value ?? null;
+
+  const unlocked: string[] = existingId
+    ? ((await getSessionData<string[]>(existingId, "unlockedProducts")) ?? [])
+    : [];
   for (const pid of purchase.productIds) {
     if (!unlocked.includes(pid)) {
       unlocked.push(pid);
     }
   }
-  const { sessionId, isNew } = await setSessionData(
+  const sessionId = await setSessionData(
+    existingId,
     "unlockedProducts",
     unlocked,
   );
 
-  // Clean up the token (one-time use)
   await kv.delete(`unlock:${token}`);
 
-  const headers = new Headers({
-    Location: new URL(`/guides/${purchase.slug}`, url.origin).toString(),
-  });
-  if (isNew) {
-    headers.set("Set-Cookie", sessionCookieHeader(sessionId));
+  if (!existingId) {
+    cookieStore.set(SESSION_COOKIE, sessionId, {
+      path: "/",
+      httpOnly: true,
+      sameSite: "Lax",
+      secure: true,
+      maxAge: SESSION_TTL,
+    });
   }
 
-  return new Response(null, { status: 302, headers });
+  return Response.redirect(
+    new URL(`/guides/${purchase.slug}`, url.origin).toString(),
+  );
 }

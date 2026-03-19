@@ -5,7 +5,8 @@ import {
   type Editorial,
 } from "@/lib/cms";
 import { mediaUrl } from "@/lib/images";
-import { getSessionData } from "@/lib/session";
+import { cookies } from "next/headers";
+import { getSessionData, SESSION_COOKIE } from "@/lib/session";
 import { Icon } from "@/app/_components/icon";
 import { EditWrapper, EditBar, CmsField } from "@/app/_components/visual-edit";
 
@@ -30,12 +31,17 @@ const guideIcon: Record<
 };
 
 export default async function HomePage() {
+  const cookieStore = await cookies();
+  const sessionId = cookieStore.get(SESSION_COOKIE)?.value;
+
   const [guides, editorials, home, unlockedProducts] =
     await Promise.all([
       getAllGuides(),
       getAllEditorials(),
       getHomePage(),
-      getSessionData<string[]>("unlockedProducts").then((v) => v ?? []),
+      sessionId
+        ? getSessionData<string[]>(sessionId, "unlockedProducts").then((v) => v ?? [])
+        : Promise.resolve([]),
     ]);
 
   const collagePhotos = editorials

@@ -13,7 +13,8 @@
     "jsx": "react-jsx",
     "incremental": true,
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "next/*": ["./node_modules/vinext/dist/shims/*"]
     },
     "target": "ES2017",
     "plugins": [

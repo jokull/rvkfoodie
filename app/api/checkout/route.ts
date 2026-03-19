@@ -1,4 +1,5 @@
-import { setSessionData, sessionCookieHeader } from "@/lib/session";
+import { cookies } from "next/headers";
+import { setSessionData, SESSION_COOKIE, SESSION_TTL } from "@/lib/session";
 
 /**
  * Generates a unique unlock token, stores it in the user's session,
@@ -14,20 +15,24 @@ export async function GET(request: Request) {
     return Response.redirect(new URL("/", url.origin));
   }
 
-  // Generate a random token
+  const cookieStore = await cookies();
+  const existingId = cookieStore.get(SESSION_COOKIE)?.value ?? null;
+
   const token = crypto.randomUUID();
+  const sessionId = await setSessionData(existingId, "unlockToken", token);
 
-  // Store in session so we can match later
-  const { sessionId, isNew } = await setSessionData("unlockToken", token);
-
-  // Redirect to Gumroad with ?wanted=true and the unlock token
   const sep = gumroadUrl.includes("?") ? "&" : "?";
   const location = `${gumroadUrl}${sep}wanted=true&unlock_token=${token}`;
 
-  const headers = new Headers({ Location: location });
-  if (isNew) {
-    headers.set("Set-Cookie", sessionCookieHeader(sessionId));
+  if (!existingId) {
+    cookieStore.set(SESSION_COOKIE, sessionId, {
+      path: "/",
+      httpOnly: true,
+      sameSite: "Lax",
+      secure: true,
+      maxAge: SESSION_TTL,
+    });
   }
 
-  return new Response(null, { status: 302, headers });
+  return Response.redirect(location);
 }

@@ -12,7 +12,8 @@ import {
   type TextBlock,
 } from "@/lib/cms";
 import { dastToHtml } from "@/lib/dast";
-import { getSessionData, setSessionData } from "@/lib/session";
+import { cookies } from "next/headers";
+import { getSessionData, setSessionData, SESSION_COOKIE } from "@/lib/session";
 import { EditWrapper, EditBar, CmsField, CmsText } from "@/app/_components/visual-edit";
 
 export async function generateMetadata({
@@ -44,30 +45,37 @@ export default async function GuidePage({
   const { error, key: prefillKey = "", pending: pendingParam } =
     await searchParams;
 
+  const cookieStore = await cookies();
+  const sessionId = cookieStore.get(SESSION_COOKIE)?.value ?? null;
+
   // Parallelize all independent fetches
   const [guide, allGuides, editorials, sessionProducts, unlockToken] =
     await Promise.all([
       getGuideBySlug(slug),
       getAllGuides(),
       getAllEditorials(),
-      getSessionData<string[]>("unlockedProducts").catch(() => null),
-      getSessionData<string>("unlockToken").catch(() => null),
+      sessionId
+        ? getSessionData<string[]>(sessionId, "unlockedProducts").catch(() => null)
+        : Promise.resolve(null),
+      sessionId
+        ? getSessionData<string>(sessionId, "unlockToken").catch(() => null)
+        : Promise.resolve(null),
     ]);
   if (!guide) notFound();
 
   const otherGuides = allGuides.filter((g) => g.slug !== guide.slug);
   const unlockedProducts: string[] = sessionProducts ?? [];
   if (unlockToken && !unlockedProducts.includes(guide.gumroadProductId)) {
-    const kv = (env as unknown as { PURCHASES: KVNamespace }).PURCHASES;
+    const kv = env.PURCHASES;
     const raw = await kv.get(`unlock:${unlockToken}`);
     if (raw) {
       const purchase = JSON.parse(raw) as { productIds: string[] };
       for (const pid of purchase.productIds) {
         if (!unlockedProducts.includes(pid)) unlockedProducts.push(pid);
       }
-      await setSessionData("unlockedProducts", unlockedProducts);
+      await setSessionData(sessionId, "unlockedProducts", unlockedProducts);
       await kv.delete(`unlock:${unlockToken}`);
-      await setSessionData("unlockToken", null);
+      await setSessionData(sessionId, "unlockToken", null);
     }
   }
 

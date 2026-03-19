@@ -1,7 +1,9 @@
+import { cookies } from "next/headers";
 import {
   getSessionData,
   setSessionData,
-  sessionCookieHeader,
+  SESSION_COOKIE,
+  SESSION_TTL,
 } from "@/lib/session";
 
 export async function POST(request: Request) {
@@ -41,21 +43,29 @@ export async function POST(request: Request) {
       !data.purchase?.refunded &&
       !data.purchase?.chargebacked
     ) {
-      const unlocked: string[] =
-        (await getSessionData<string[]>("unlockedProducts")) ?? [];
+      const cookieStore = await cookies();
+      const existingId = cookieStore.get(SESSION_COOKIE)?.value ?? null;
+
+      const unlocked: string[] = existingId
+        ? ((await getSessionData<string[]>(existingId, "unlockedProducts")) ??
+          [])
+        : [];
       if (!unlocked.includes(productId)) {
         unlocked.push(productId);
-        const { sessionId, isNew } = await setSessionData(
+        const sessionId = await setSessionData(
+          existingId,
           "unlockedProducts",
           unlocked,
         );
-        const headers = new Headers({
-          Location: new URL(`/guides/${slug}`, url.origin).toString(),
-        });
-        if (isNew) {
-          headers.set("Set-Cookie", sessionCookieHeader(sessionId));
+        if (!existingId) {
+          cookieStore.set(SESSION_COOKIE, sessionId, {
+            path: "/",
+            httpOnly: true,
+            sameSite: "Lax",
+            secure: true,
+            maxAge: SESSION_TTL,
+          });
         }
-        return new Response(null, { status: 302, headers });
       }
       return Response.redirect(new URL(`/guides/${slug}`, url.origin));
     }
