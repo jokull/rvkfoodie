@@ -7,6 +7,7 @@ import {
 import { mediaUrl } from "@/lib/images";
 import { getSessionData } from "@/lib/session";
 import { Icon } from "@/app/_components/icon";
+import { EditWrapper, EditBar, CmsField } from "@/app/_components/visual-edit";
 
 const collageCards = [
   { x: -280, y: 10, rot: "-6deg", z: 4, w: 150 },
@@ -29,12 +30,13 @@ const guideIcon: Record<
 };
 
 export default async function HomePage() {
-  const [guides, editorials, home, unlockedProducts] = await Promise.all([
-    getAllGuides(),
-    getAllEditorials(),
-    getHomePage(),
-    getSessionData<string[]>("unlockedProducts").then((v) => v ?? []),
-  ]);
+  const [guides, editorials, home, unlockedProducts] =
+    await Promise.all([
+      getAllGuides(),
+      getAllEditorials(),
+      getHomePage(),
+      getSessionData<string[]>("unlockedProducts").then((v) => v ?? []),
+    ]);
 
   const collagePhotos = editorials
     .filter(
@@ -57,7 +59,7 @@ export default async function HomePage() {
     },
   };
 
-  return (
+  const content = (
     <>
       <script
         type="application/ld+json"
@@ -66,11 +68,19 @@ export default async function HomePage() {
 
       <div className="mb-12">
         <h1 className="font-display text-huge leading-huge mb-6">
-          {home.headline}
+          <CmsField fieldApiKey="headline" value={home.headline ?? ""}>
+            <span>{home.headline}</span>
+          </CmsField>
           <br />
-          {home.headlineEmphasis && <em>{home.headlineEmphasis}</em>}
+          {home.headlineEmphasis && (
+            <CmsField fieldApiKey="headlineEmphasis" value={home.headlineEmphasis}>
+              <em>{home.headlineEmphasis}</em>
+            </CmsField>
+          )}
         </h1>
-        <p className="text-ink-light max-w-md">{home.subtext}</p>
+        <CmsField fieldApiKey="subtext" value={home.subtext ?? ""}>
+          <p className="text-ink-light max-w-md">{home.subtext}</p>
+        </CmsField>
       </div>
 
       {collagePhotos.length > 0 && (
@@ -152,14 +162,21 @@ export default async function HomePage() {
 
       <div className="border border-ink/10 rounded-2xl p-8 mb-20">
         <div className="flex items-start justify-between gap-4 mb-3">
-          <h2 className="font-display text-[1.75rem] leading-tight">
-            {home.bundleTitle}
-          </h2>
+          <CmsField fieldApiKey="bundleTitle" value={home.bundleTitle ?? ""}>
+            <h2 className="font-display text-[1.75rem] leading-tight">
+              {home.bundleTitle}
+            </h2>
+          </CmsField>
           <span className="text-tiny text-ink-light whitespace-nowrap mt-1">
             ${home.bundlePrice}
           </span>
         </div>
-        <p className="text-ink-light mb-4">{home.bundleDescription}</p>
+        <CmsField
+          fieldApiKey="bundleDescription"
+          value={home.bundleDescription ?? ""}
+        >
+          <p className="text-ink-light mb-4">{home.bundleDescription}</p>
+        </CmsField>
         <a
           href={`/api/checkout?slug=food-guide&url=${encodeURIComponent(home.bundleGumroadUrl)}`}
           className="inline-block bg-blue text-white font-medium px-6 py-2.5 rounded-full text-tiny hover:opacity-90 transition-opacity"
@@ -224,17 +241,26 @@ export default async function HomePage() {
             className="w-14 h-18 rounded-lg object-cover"
             loading="lazy"
           />
-          <p className="text-ink-light">
-            {home.authorBlurb}{" "}
-            <a
-              href="/about"
-              className="text-blue hover:opacity-80 transition-opacity"
-            >
-              Read more &rarr;
-            </a>
-          </p>
+          <CmsField fieldApiKey="authorBlurb" value={home.authorBlurb ?? ""}>
+            <p className="text-ink-light">
+              {home.authorBlurb}{" "}
+              <a
+                href="/about"
+                className="text-blue hover:opacity-80 transition-opacity"
+              >
+                Read more &rarr;
+              </a>
+            </p>
+          </CmsField>
         </div>
       </section>
     </>
+  );
+
+  return (
+    <EditWrapper recordId={home.id} modelApiKey="home_page">
+      {content}
+      <EditBar />
+    </EditWrapper>
   );
 }

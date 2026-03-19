@@ -1,8 +1,10 @@
 import {
   getEditorProxy,
   getEditorPassword,
-  sha256,
 } from "@/lib/editor-proxy";
+import { getCmsHandler } from "@/lib/cms-handler";
+import { env } from "cloudflare:workers";
+import { corsPreflightResponse, withCors } from "@/lib/cors";
 
 function loginPage(returnTo: string, error?: string): Response {
   return new Response(
@@ -24,13 +26,17 @@ ${error ? `<p class="error">${error}</p>` : ""}
 </body></html>`,
     {
       status: error ? 401 : 200,
-      headers: { "Content-Type": "text/html" },
+      headers: { "Content-Type": "text/html; charset=utf-8" },
     },
   );
 }
 
 async function handler(request: Request) {
   const url = new URL(request.url);
+
+  if (request.method === "OPTIONS") {
+    return corsPreflightResponse(request);
+  }
 
   if (url.pathname === "/editor-access/login") {
     if (request.method === "POST") {
@@ -41,11 +47,29 @@ async function handler(request: Request) {
       if (!name || password !== getEditorPassword()) {
         return loginPage(returnTo, "Wrong password");
       }
-      const hash = await sha256(name + ":" + getEditorPassword());
+
+      // Mint a 1-year editor token and store it in the cookie
+      const writeKey = (env as typeof env & { CMS_WRITE_KEY?: string }).CMS_WRITE_KEY;
+      const cms = getCmsHandler();
+      const tokenResponse = await cms.fetch(
+        new Request("http://localhost/api/tokens", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${writeKey}`,
+          },
+          body: JSON.stringify({ name, expiresIn: 31_536_000 }),
+        }),
+      );
+      if (!tokenResponse.ok) {
+        return loginPage(returnTo, "Failed to create editor token");
+      }
+      const { token } = (await tokenResponse.json()) as { token: string };
+
       return new Response(null, {
         status: 302,
         headers: {
-          "Set-Cookie": `editor_session=${encodeURIComponent(name + ":" + hash)}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=3600`,
+          "Set-Cookie": `editor_session=${encodeURIComponent(name + ":" + token)}; Path=/; SameSite=Lax; Secure; Max-Age=31536000`,
           Location: returnTo,
         },
       });
@@ -64,9 +88,52 @@ async function handler(request: Request) {
     });
   }
 
-  return getEditorProxy().fetch(request);
+  const rid = Math.random().toString(36).slice(2, 8);
+  const t0 = performance.now();
+  const auth = request.headers.get("authorization");
+  const authSummary = auth
+    ? `${auth.slice(0, 15)}...${auth.slice(-10)} (${auth.length} chars)`
+    : "none";
+  const contentType = request.headers.get("content-type") ?? "none";
+  const accept = request.headers.get("accept") ?? "none";
+  const contentLength = request.headers.get("content-length") ?? "unknown";
+  const hasBody = request.body !== null;
+  const bodyIsStream = request.body instanceof ReadableStream;
+  const origin = request.headers.get("origin") ?? "none";
+
+  console.log(
+    `[editor-mcp:${rid}] ▶ ${request.method} ${url.pathname}` +
+    ` | origin=${origin} auth=${authSummary}` +
+    ` | ct=${contentType} accept=${accept}` +
+    ` | cl=${contentLength} body=${hasBody} stream=${bodyIsStream}`,
+  );
+
+  try {
+    const response = await getEditorProxy().fetch(request);
+    const elapsed = (performance.now() - t0).toFixed(0);
+    const respCt = response.headers.get("content-type") ?? "none";
+    const respHasBody = response.body !== null;
+    console.log(
+      `[editor-mcp:${rid}] ◀ ${response.status} in ${elapsed}ms` +
+      ` | ct=${respCt} body=${respHasBody}`,
+    );
+    return withCors(response);
+  } catch (error) {
+    const elapsed = (performance.now() - t0).toFixed(0);
+    console.error(
+      `[editor-mcp:${rid}] ✘ threw after ${elapsed}ms:`,
+      error,
+    );
+    return withCors(
+      new Response(JSON.stringify({ error: String(error) }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
 }
 
 export const GET = handler;
 export const POST = handler;
 export const OPTIONS = handler;
+export const DELETE = handler;

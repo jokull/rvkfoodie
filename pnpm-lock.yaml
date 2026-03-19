@@ -11,6 +11,12 @@ importers:
       '@0no-co/graphqlsp':
         specifier: ^1.15.2
         version: 1.15.2(graphql@16.13.1)(typescript@5.9.3)
+      '@agent-cms/visual-edit':
+        specifier: link:../agent-cms/packages/visual-edit
+        version: link:../agent-cms/packages/visual-edit
+      '@agent-cms/visual-edit-react':
+        specifier: link:../agent-cms/packages/visual-edit-react
+        version: link:../agent-cms/packages/visual-edit-react
       '@cloudflare/vite-plugin':
         specifier: ^1.0.0
         version: 1.29.1(vite@7.3.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(yaml@2.8.2))(workerd@1.20260317.1)(wrangler@4.75.0(@cloudflare/workers-types@4.20260317.1))
@@ -70,7 +76,7 @@ importers:
         specifier: ^7.0.0
         version: 7.3.1(@types/node@22.19.15)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(yaml@2.8.2)
       wrangler:
-        specifier: ^4.0.0
+        specifier: ^4.75.0
         version: 4.75.0(@cloudflare/workers-types@4.20260317.1)
 
 packages:

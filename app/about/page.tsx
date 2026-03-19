@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getAllGuides, getAboutPage } from "@/lib/cms";
 import { dastToHtml } from "@/lib/dast";
 import { RestaurantCallout } from "@/app/_components/restaurant-callout";
+import { EditWrapper, EditBar, CmsField, CmsText } from "@/app/_components/visual-edit";
 
 export async function generateMetadata(): Promise<Metadata> {
   const about = await getAboutPage();
@@ -24,13 +25,18 @@ export default async function AboutPage() {
     sameAs: ["https://instagram.com/rvkfoodie"],
   };
 
-  return (
+  const content = (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <h1 className="font-display text-huge leading-huge mb-8">{about.title}</h1>
+
+      <CmsField fieldApiKey="title" value={about.title ?? ""}>
+        <h1 className="font-display text-huge leading-huge mb-8">
+          {about.title}
+        </h1>
+      </CmsField>
 
       <div className="mb-10">
         <img
@@ -40,10 +46,12 @@ export default async function AboutPage() {
         />
       </div>
 
-      <div
-        className="space-y-6 mb-16 prose-about"
-        dangerouslySetInnerHTML={{ __html: bioHtml }}
-      />
+      <CmsText fieldApiKey="bio" value={about.bio?.value as import("@agent-cms/visual-edit").DastDocument}>
+        <div
+          className="space-y-6 mb-16 prose-about"
+          dangerouslySetInnerHTML={{ __html: bioHtml }}
+        />
+      </CmsText>
 
       <section className="border-t border-ink/10 pt-8">
         <h2 className="font-display text-[1.75rem] leading-tight mb-6">
@@ -74,5 +82,12 @@ export default async function AboutPage() {
         <RestaurantCallout />
       </div>
     </>
+  );
+
+  return (
+    <EditWrapper recordId={about.id} modelApiKey="about_page">
+      {content}
+      <EditBar />
+    </EditWrapper>
   );
 }

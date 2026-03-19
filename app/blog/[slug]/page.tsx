@@ -9,6 +9,7 @@ import {
 } from "@/lib/cms";
 import { dastToHtml } from "@/lib/dast";
 import { mediaUrl } from "@/lib/images";
+import { EditWrapper, EditBar, CmsField, CmsText, CmsImage } from "@/app/_components/visual-edit";
 
 type ContentNode = { type: string; item?: string; [k: string]: unknown };
 
@@ -126,7 +127,7 @@ export default async function BlogPostPage({
     ...(heroUrl ? { image: heroUrl } : {}),
   };
 
-  return (
+  const content = (
     <>
       <script
         type="application/ld+json"
@@ -142,39 +143,46 @@ export default async function BlogPostPage({
 
       <article>
         <p className="text-tiny leading-tiny text-ink-light mb-4">{dateStr}</p>
-        <h1 className="font-display text-huge leading-huge mb-10">
-          {post.title}
-        </h1>
+        <CmsField fieldApiKey="title" value={post.title}>
+          <h1 className="font-display text-huge leading-huge mb-10">
+            {post.title}
+          </h1>
+        </CmsField>
 
-        {heroUrl && (
-          <div className="mb-12 rounded-2xl overflow-hidden">
-            <img
-              src={heroUrl}
-              alt={post.image?.alt || post.title}
-              className="w-full rounded-2xl"
-              loading="eager"
-            />
-          </div>
+        {heroUrl && post.image && (
+          <CmsImage assetId={post.image.id} fieldApiKey="image">
+            <div className="mb-12 rounded-2xl overflow-hidden">
+              <img
+                src={heroUrl}
+                alt={post.image.alt || post.title}
+                className="w-full rounded-2xl"
+                loading="eager"
+              />
+            </div>
+          </CmsImage>
         )}
 
-        <div className="prose-custom">
-          {contentNodes.map((node, i) => {
-            if (node.type === "block" && node.item) {
-              const block = contentBlocksById.get(node.item);
-              if (block?.image) return <ImageBlock key={node.item} block={block} />;
-              return null;
-            }
-            const html = dastToHtml({
-              value: {
-                schema: "dast",
-                document: { type: "root", children: [node] },
-              },
-            });
-            return html ? (
-              <div key={i} dangerouslySetInnerHTML={{ __html: html }} />
-            ) : null;
-          })}
-        </div>
+        <CmsText fieldApiKey="content" value={post.content?.value as import("@agent-cms/visual-edit").DastDocument}>
+          <div className="prose-custom">
+            {contentNodes.map((node, i) => {
+              if (node.type === "block" && node.item) {
+                const block = contentBlocksById.get(node.item);
+                if (block?.image)
+                  return <ImageBlock key={node.item} block={block} />;
+                return null;
+              }
+              const html = dastToHtml({
+                value: {
+                  schema: "dast",
+                  document: { type: "root", children: [node] },
+                },
+              });
+              return html ? (
+                <div key={i} dangerouslySetInnerHTML={{ __html: html }} />
+              ) : null;
+            })}
+          </div>
+        </CmsText>
       </article>
 
       {mentionedVenues.length > 0 && (
@@ -249,5 +257,12 @@ export default async function BlogPostPage({
         </div>
       </aside>
     </>
+  );
+
+  return (
+    <EditWrapper recordId={post.id} modelApiKey="editorial">
+      {content}
+      <EditBar />
+    </EditWrapper>
   );
 }

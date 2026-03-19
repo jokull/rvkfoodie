@@ -153,6 +153,7 @@ const ChangelogQuery = graphql(`
 const HomePageQuery = graphql(`
   query HomePage {
     homePage {
+      id
       headline headlineEmphasis subtext
       bundleTitle bundleDescription bundlePrice bundleGumroadUrl
       authorBlurb
@@ -162,13 +163,14 @@ const HomePageQuery = graphql(`
 
 const AboutPageQuery = graphql(`
   query AboutPage {
-    aboutPage { title metaDescription bio { value } }
+    aboutPage { id title metaDescription bio { value } }
   }
 `);
 
 const SiteSettingsQuery = graphql(`
   query SiteSettings {
     siteSettings {
+      id
       defaultMetaDescription restaurantCalloutTitle
       restaurantCalloutText restaurantCalloutEmail
       changelogSubtitle

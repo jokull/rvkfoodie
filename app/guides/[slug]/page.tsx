@@ -13,6 +13,7 @@ import {
 } from "@/lib/cms";
 import { dastToHtml } from "@/lib/dast";
 import { getSessionData, setSessionData } from "@/lib/session";
+import { EditWrapper, EditBar, CmsField, CmsText } from "@/app/_components/visual-edit";
 
 export async function generateMetadata({
   params,
@@ -132,7 +133,7 @@ export default async function GuidePage({
       : {}),
   };
 
-  return (
+  const content = (
     <>
       <script
         type="application/ld+json"
@@ -146,16 +147,22 @@ export default async function GuidePage({
         &larr; All guides
       </a>
 
-      <h1 className="font-display text-huge leading-huge mb-2">
-        {guide.title}
-      </h1>
-      <p className="text-tiny text-ink-light mb-8">{guide.subtitle}</p>
+      <CmsField fieldApiKey="title" value={guide.title}>
+        <h1 className="font-display text-huge leading-huge mb-2">
+          {guide.title}
+        </h1>
+      </CmsField>
+      <CmsField fieldApiKey="subtitle" value={guide.subtitle}>
+        <p className="text-tiny text-ink-light mb-8">{guide.subtitle}</p>
+      </CmsField>
 
       {introHtml && (
-        <div
-          className="mb-12 prose-intro"
-          dangerouslySetInnerHTML={{ __html: introHtml }}
-        />
+        <CmsText fieldApiKey="intro" value={guide.intro?.value as import("@agent-cms/visual-edit").DastDocument}>
+          <div
+            className="mb-12 prose-intro"
+            dangerouslySetInnerHTML={{ __html: introHtml }}
+          />
+        </CmsText>
       )}
 
       {guide.content.map((block) => {
@@ -292,5 +299,12 @@ export default async function GuidePage({
         <RestaurantCallout />
       </div>
     </>
+  );
+
+  return (
+    <EditWrapper recordId={guide.id} modelApiKey="guide">
+      {content}
+      <EditBar />
+    </EditWrapper>
   );
 }
