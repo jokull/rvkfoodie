@@ -1,6 +1,11 @@
 import { getEditorProxy } from "@/lib/editor-proxy";
+import { corsPreflightResponse, withCors } from "@/lib/cors";
 
 async function handler(request: Request) {
+  if (request.method === "OPTIONS") {
+    return corsPreflightResponse(request);
+  }
+
   // Rewrite rewrites /.well-known/* to /api/well-known/* — we need to
   // reconstruct the original /.well-known/ URL for the editor proxy
   const url = new URL(request.url);
@@ -10,7 +15,8 @@ async function handler(request: Request) {
     method: request.method,
     headers: request.headers,
   });
-  return getEditorProxy().fetch(proxiedRequest);
+  return withCors(await getEditorProxy().fetch(proxiedRequest));
 }
 
 export const GET = handler;
+export const OPTIONS = handler;

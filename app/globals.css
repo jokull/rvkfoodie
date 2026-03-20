@@ -26,7 +26,7 @@
 .prose-custom strong { font-weight: 500; }
 .prose-custom h2 { font-family: "Instrument Serif", serif; font-size: clamp(2rem, 4vw, 3rem); line-height: 1.15; margin-top: 3rem; margin-bottom: 1rem; }
 .prose-custom a { color: var(--color-blue); text-decoration: underline; text-underline-offset: 2px; }
-.prose-custom blockquote { border-left: 3px solid var(--color-blue); padding-left: 1.25rem; margin: 1.5rem 0; font-style: italic; color: var(--color-ink-light); }
+.prose-custom blockquote { border-left: 3px solid var(--color-blue); padding-left: 1.25rem; margin: 1.5rem 0; color: var(--color-ink-light); }
 
 /* Prose styles for guide intros */
 .prose-intro p { margin-bottom: 1rem; color: var(--color-ink-light); }

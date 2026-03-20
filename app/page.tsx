@@ -4,7 +4,7 @@ import {
   getHomePage,
   type Editorial,
 } from "@/lib/cms";
-import { mediaUrl } from "@/lib/images";
+
 import { cookies } from "next/headers";
 import { getSessionData, SESSION_COOKIE } from "@/lib/session";
 import { Icon } from "@/app/_components/icon";
@@ -95,9 +95,7 @@ export default async function HomePage() {
             {collagePhotos.map((photo, i) => {
               const card = collageCards[i];
               if (!card) return null;
-              const imgUrl = mediaUrl(
-                photo.image.filename || photo.image.url,
-              );
+              const imgUrl = photo.image.url;
               return (
                 <div
                   key={photo.id}
@@ -198,9 +196,7 @@ export default async function HomePage() {
           </h2>
           <div className="space-y-6">
             {editorials.map((post) => {
-              const imgUrl = post.image
-                ? mediaUrl(post.image.filename || post.image.url)
-                : null;
+              const imgUrl = post.image?.url ?? null;
               return (
                 <a
                   key={post.slug}

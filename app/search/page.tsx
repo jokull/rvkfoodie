@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Icon } from "@/app/_components/icon";
 import { getAllGuides, getAllEditorials } from "@/lib/cms";
-import { mediaUrl } from "@/lib/images";
+
 
 export const metadata: Metadata = {
   title: "Search",
@@ -112,7 +112,7 @@ export default async function SearchPage({
               title: ed.title,
               subtitle: ed.excerpt ?? "",
               url: `/blog/${ed.slug}`,
-              image: ed.image?.url ? mediaUrl(ed.image.url) : undefined,
+              image: ed.image?.url ? ed.image.url : undefined,
               score: sr.rank,
             });
           }
@@ -130,7 +130,7 @@ export default async function SearchPage({
           title: venue.name,
           subtitle: `${venue.address} · ${section} · ${guide.title}`,
           url: `/places/${venue.id}`,
-          image: venue.image?.url ? mediaUrl(venue.image.url) : undefined,
+          image: venue.image?.url ? venue.image.url : undefined,
           badge: venue.bestOfAward || undefined,
         });
       }
@@ -146,7 +146,7 @@ export default async function SearchPage({
             title: ed.title,
             subtitle: ed.excerpt ?? "",
             url: `/blog/${ed.slug}`,
-            image: ed.image?.url ? mediaUrl(ed.image.url) : undefined,
+            image: ed.image?.url ? ed.image.url : undefined,
           });
         }
       }

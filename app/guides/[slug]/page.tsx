@@ -191,7 +191,7 @@ export default async function GuidePage({
                     <VenueCard key={venue.id} {...venue} />
                   ))
                 : gatedVenues.length > 0 && (
-                    <p className="py-6 text-ink-light text-tiny italic">
+                    <p className="py-6 text-blue text-tiny font-medium">
                       +{gatedVenues.length} more in the full guide
                     </p>
                   )}

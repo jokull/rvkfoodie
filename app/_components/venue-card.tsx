@@ -1,5 +1,5 @@
 import { Icon } from "./icon";
-import { mediaUrl } from "@/lib/images";
+
 
 export function VenueCard({
   id,
@@ -28,12 +28,12 @@ export function VenueCard({
   phone?: string;
   bestOfAward?: string;
   grapevineUrl?: string;
-  image?: { url: string; filename: string; alt?: string };
+  image?: { url: string; alt?: string };
 }) {
   const mapsUrl =
     googleMapsUrl ||
     `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name} ${address} Iceland`)}`;
-  const imgUrl = image ? mediaUrl(image.filename || image.url) : null;
+  const imgUrl = image?.url ?? null;
 
   return (
     <article className="py-8 border-b border-ink/5 last:border-0">
@@ -98,7 +98,7 @@ export function VenueCard({
           )}
           <p className="mt-3">{description}</p>
           {note && (
-            <p className="mt-2 text-tiny leading-tiny text-ink-light italic">
+            <p className="mt-2 text-tiny leading-tiny text-ink-light/70">
               {note}
             </p>
           )}

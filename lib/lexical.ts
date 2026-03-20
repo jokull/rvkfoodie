@@ -1,4 +1,4 @@
-import { mediaUrl } from "./images";
+
 
 /** Convert Payload Lexical JSON to HTML string */
 export function lexicalToHtml(data: unknown): string {
@@ -57,10 +57,9 @@ function renderNode(node: unknown): string {
 
   if (type === "upload") {
     const value = n.value as Record<string, unknown> | undefined;
-    const filename = value?.filename as string || value?.url as string;
+    const src = value?.url as string;
     const alt = value?.alt as string || "";
-    if (!filename) return "";
-    const src = mediaUrl(filename);
+    if (!src) return "";
     return `<figure class="my-8 rounded-2xl overflow-hidden"><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" class="w-full rounded-2xl" loading="lazy" /></figure>`;
   }
 

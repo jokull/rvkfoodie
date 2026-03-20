@@ -8,7 +8,7 @@ import {
   type Venue,
   type SectionBlock,
 } from "@/lib/cms";
-import { mediaUrl } from "@/lib/images";
+
 
 interface VenueWithContext extends Venue {
   sectionTitle: string;
@@ -32,7 +32,7 @@ export async function generateMetadata({
       for (const v of (block as SectionBlock).venues) {
         if (v.id === id) {
           const imgUrl = v.image
-            ? mediaUrl(v.image.filename || v.image.url)
+            ? v.image.url
             : null;
           return {
             title: v.name,
@@ -148,7 +148,7 @@ export default async function PlacePage({
     .slice(0, 3);
 
   const venueImgUrl = venue.image
-    ? mediaUrl(venue.image.filename || venue.image.url)
+    ? venue.image.url
     : null;
 
   return (
@@ -239,7 +239,7 @@ export default async function PlacePage({
         )}
         <p className="mb-6">{venue.description}</p>
         {venue.note && (
-          <p className="text-tiny text-ink-light italic mb-8">{venue.note}</p>
+          <p className="text-tiny text-ink-light/70 mb-8">{venue.note}</p>
         )}
 
         <div className="flex flex-wrap gap-3 mb-12">

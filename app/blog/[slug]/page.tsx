@@ -8,7 +8,7 @@ import {
   type SectionBlock,
 } from "@/lib/cms";
 import { dastToHtml } from "@/lib/dast";
-import { mediaUrl } from "@/lib/images";
+
 import { EditWrapper, EditBar, CmsField, CmsText, CmsImage } from "@/app/_components/visual-edit";
 
 type ContentNode = { type: string; item?: string; [k: string]: unknown };
@@ -22,7 +22,7 @@ export async function generateMetadata({
   const post = await getEditorialBySlug(slug);
   if (!post) return {};
   const heroUrl = post.image
-    ? mediaUrl(post.image.filename || post.image.url)
+    ? post.image.url
     : null;
   return {
     title: post.title,
@@ -90,7 +90,7 @@ export default async function BlogPostPage({
     year: "numeric",
   });
   const heroUrl = post.image
-    ? mediaUrl(post.image.filename || post.image.url)
+    ? post.image.url
     : null;
 
   // Parse content DAST nodes and image blocks

@@ -105,14 +105,14 @@ const AllEditorialsQuery = graphql(`
   query AllEditorials {
     allEditorials(orderBy: [date_DESC]) {
       id title slug excerpt date
-      image { id url alt width height filename }
+      image { id url alt width height }
       content {
         value
         blocks {
           __typename
           ... on ImageBlockRecord {
             id
-            image { id url alt width height filename }
+            image { id url alt width height }
             caption
           }
         }
@@ -125,14 +125,14 @@ const EditorialBySlugQuery = graphql(`
   query EditorialBySlug($slug: String!) {
     editorial(filter: { slug: { eq: $slug } }) {
       id title slug excerpt date
-      image { id url alt width height filename }
+      image { id url alt width height }
       content {
         value
         blocks {
           __typename
           ... on ImageBlockRecord {
             id
-            image { id url alt width height filename }
+            image { id url alt width height }
             caption
           }
         }
