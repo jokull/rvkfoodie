@@ -1,12 +1,26 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicolo-ribaudo/oxlint-config-schema/main/src/v1/schema.json",
-  "ignorePatterns": ["src/layouts/Layout.astro", "src/env.d.ts"],
+  "ignorePatterns": ["types/**"],
   "rules": {
-    "no-unused-vars": "warn",
+    "no-unused-vars": "error",
     "no-explicit-any": "error",
-    "no-non-null-assertion": "warn",
-    "prefer-const": "warn",
+    "no-non-null-assertion": "error",
+    "prefer-const": "error",
     "eqeqeq": "error",
-    "no-var": "error"
+    "no-var": "error",
+    "no-base-to-string": "off",
+    "no-unnecessary-type-assertion": "error",
+    "no-unnecessary-type-constraint": "error",
+    "no-unnecessary-boolean-literal-compare": "error",
+    "no-unnecessary-template-expression": "error",
+    "no-unnecessary-type-arguments": "error",
+    "no-redundant-type-constituents": "error",
+    "no-floating-promises": "error",
+    "no-misused-promises": "error",
+    "no-confusing-non-null-assertion": "error",
+    "no-unsafe-type-assertion": "off",
+    "no-useless-empty-export": "error",
+    "prefer-nullish-coalescing": "error",
+    "consistent-type-imports": "error"
   }
 }

@@ -6,7 +6,6 @@ import {
   getAllGuides,
   getAllEditorials,
   type Venue,
-  type SectionBlock,
 } from "@/lib/cms";
 
 
@@ -29,7 +28,7 @@ export async function generateMetadata({
   for (const guide of allGuides) {
     for (const block of guide.content) {
       if (block.blockType !== "section") continue;
-      for (const v of (block as SectionBlock).venues) {
+      for (const v of (block).venues) {
         if (v.id === id) {
           const imgUrl = v.image
             ? v.image.url
@@ -71,7 +70,7 @@ export default async function PlacePage({
     const sectionNames: string[] = [];
     for (const block of guide.content) {
       if (block.blockType === "section") {
-        const section = block as SectionBlock;
+        const section = block;
         sectionNames.push(section.title);
         venueCountForGuide += section.venues.length;
         for (const v of section.venues) {
@@ -105,7 +104,7 @@ export default async function PlacePage({
   const v = venue;
 
   const mapsUrl =
-    v.googleMapsUrl ||
+    v.googleMapsUrl ??
     `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${v.name} ${v.address} Iceland`)}`;
 
   const jsonLd = {
@@ -130,8 +129,6 @@ export default async function PlacePage({
         av.isFree,
     )
     .slice(0, 3);
-
-  const otherSections = guideSectionNames.filter((s) => s !== v.sectionTitle);
 
   // Find related blog posts that mention this venue by name
   const venueNameLower = venue.name.toLowerCase().replace(/[!?]/g, "");
@@ -170,7 +167,7 @@ export default async function PlacePage({
           <div className="mb-8 rounded-2xl overflow-hidden">
             <img
               src={venueImgUrl}
-              alt={venue.image?.alt || venue.name}
+              alt={venue.image?.alt ?? venue.name}
               className="w-full rounded-2xl"
               loading="eager"
             />
@@ -218,7 +215,7 @@ export default async function PlacePage({
         {venue.time && (
           <p className="text-tiny text-ink-light mb-4">{venue.time}</p>
         )}
-        {(venue.phone || venue.website) && (
+        {(venue.phone ?? venue.website) && (
           <div className="flex gap-4 text-tiny text-ink-light mb-6">
             {venue.phone && <span>{venue.phone}</span>}
             {venue.website && (
@@ -291,11 +288,11 @@ export default async function PlacePage({
                 className="block border border-ink/10 rounded-xl p-5 hover:border-ink/25 transition-colors group"
               >
                 <p className="text-tiny text-ink-light mb-1">
-                  {new Date(p.date).toLocaleDateString("en-GB", {
+                  {p.date ? new Date(p.date).toLocaleDateString("en-GB", {
                     day: "numeric",
                     month: "long",
                     year: "numeric",
-                  })}
+                  }) : ""}
                 </p>
                 <h3 className="font-display text-[1.25rem] leading-tight group-hover:text-blue transition-colors">
                   {p.title}

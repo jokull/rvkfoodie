@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
+import type { DastDocument } from "@agent-cms/visual-edit";
 import { notFound } from "next/navigation";
 import { ImageBlock } from "@/app/_components/image-block";
 import {
   getEditorialBySlug,
   getAllEditorials,
   getAllGuides,
-  type SectionBlock,
 } from "@/lib/cms";
 import { dastToHtml } from "@/lib/dast";
 
@@ -61,7 +61,7 @@ export default async function BlogPostPage({
   for (const guide of allGuides) {
     for (const block of guide.content) {
       if (block.blockType !== "section") continue;
-      for (const v of (block as SectionBlock).venues) {
+      for (const v of (block).venues) {
         const vName = v.name.toLowerCase().replace(/[!?]/g, "");
         if (
           postText.includes(vName) ||
@@ -84,11 +84,11 @@ export default async function BlogPostPage({
     .filter((p) => p.slug !== post.slug)
     .slice(0, 3);
 
-  const dateStr = new Date(post.date).toLocaleDateString("en-GB", {
+  const dateStr = post.date ? new Date(post.date).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "long",
     year: "numeric",
-  });
+  }) : "";
   const heroUrl = post.image
     ? post.image.url
     : null;
@@ -97,7 +97,13 @@ export default async function BlogPostPage({
   const contentValue = post.content?.value as
     | { document?: { children?: ContentNode[] } }
     | undefined;
-  const contentBlocks = post.content?.blocks ?? [];
+  type ImageBlockData = {
+    __typename: string;
+    id: string;
+    image: { url: string; alt: string | null; width: number | null; height: number | null } | null;
+    caption: string | null;
+  };
+  const contentBlocks: ImageBlockData[] = (post.content?.blocks ?? []) as ImageBlockData[];
   const contentBlocksById = new Map(
     contentBlocks.map((b) => [b.id, b]),
   );
@@ -143,7 +149,7 @@ export default async function BlogPostPage({
 
       <article>
         <p className="text-tiny leading-tiny text-ink-light mb-4">{dateStr}</p>
-        <CmsField fieldApiKey="title" value={post.title}>
+        <CmsField fieldApiKey="title" value={post.title ?? ""}>
           <h1 className="font-display text-huge leading-huge mb-10">
             {post.title}
           </h1>
@@ -154,7 +160,7 @@ export default async function BlogPostPage({
             <div className="mb-12 rounded-2xl overflow-hidden">
               <img
                 src={heroUrl}
-                alt={post.image.alt || post.title}
+                alt={(post.image.alt ?? post.title) ?? ""}
                 className="w-full rounded-2xl"
                 loading="eager"
               />
@@ -162,7 +168,7 @@ export default async function BlogPostPage({
           </CmsImage>
         )}
 
-        <CmsText fieldApiKey="content" value={post.content?.value as import("@agent-cms/visual-edit").DastDocument}>
+        <CmsText fieldApiKey="content" value={post.content?.value as DastDocument}>
           <div className="prose-custom">
             {contentNodes.map((node, i) => {
               if (node.type === "block" && node.item) {
@@ -227,11 +233,11 @@ export default async function BlogPostPage({
                 className="block border border-ink/10 rounded-xl p-5 hover:border-ink/25 transition-colors group"
               >
                 <p className="text-tiny text-ink-light mb-1">
-                  {new Date(p.date).toLocaleDateString("en-GB", {
+                  {p.date ? new Date(p.date).toLocaleDateString("en-GB", {
                     day: "numeric",
                     month: "long",
                     year: "numeric",
-                  })}
+                  }) : ""}
                 </p>
                 <h3 className="font-display text-[1.25rem] leading-tight group-hover:text-blue transition-colors">
                   {p.title}

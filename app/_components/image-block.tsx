@@ -18,7 +18,7 @@ export function ImageBlock({
     <figure className="my-8 rounded-2xl overflow-hidden">
       <img
         src={block.image.url}
-        alt={block.image.alt || block.caption || ""}
+        alt={(block.image.alt ?? block.caption) ?? ""}
         className="w-full rounded-2xl"
         loading="lazy"
       />

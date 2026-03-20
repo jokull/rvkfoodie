@@ -37,7 +37,7 @@ function renderNode(node: unknown): string {
 
   if (type === "link") {
     const fields = n.fields as Record<string, unknown> | undefined;
-    const url = fields?.url || (n.url as string) || "#";
+    const url = (fields?.url ?? (n.url as string)) || "#";
     const target = fields?.newTab ? ' target="_blank" rel="noopener"' : "";
     return `<a href="${escapeHtml(String(url))}"${target}>${renderChildren(n)}</a>`;
   }

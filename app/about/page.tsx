@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { DastDocument } from "@agent-cms/visual-edit";
 import { getAllGuides, getAboutPage } from "@/lib/cms";
 import { dastToHtml } from "@/lib/dast";
 import { RestaurantCallout } from "@/app/_components/restaurant-callout";
@@ -46,7 +47,7 @@ export default async function AboutPage() {
         />
       </div>
 
-      <CmsText fieldApiKey="bio" value={about.bio?.value as import("@agent-cms/visual-edit").DastDocument}>
+      <CmsText fieldApiKey="bio" value={about.bio?.value as DastDocument}>
         <div
           className="space-y-6 mb-16 prose-about"
           dangerouslySetInnerHTML={{ __html: bioHtml }}

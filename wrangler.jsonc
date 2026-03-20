@@ -3,6 +3,7 @@
   "compatibility_date": "2026-03-17",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./worker/index.ts",
+  "workers_dev": true,
   "observability": { "enabled": true },
   "assets": {
     "not_found_handling": "none",
@@ -29,5 +30,8 @@
   "vars": {
     "ENVIRONMENT": "production",
     "ASSET_BASE_URL": "https://media.rvkfoodie.is"
-  }
+  },
+  "routes": [
+    { "pattern": "www.rvkfoodie.is", "custom_domain": true }
+  ]
 }

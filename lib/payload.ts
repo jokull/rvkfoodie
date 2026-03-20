@@ -12,7 +12,7 @@ export async function payloadFetch<T>(
   }
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`Payload API error: ${res.status}`);
-  return res.json() as Promise<T>;
+  return res.json();
 }
 
 // ============ TYPES ============
@@ -182,7 +182,7 @@ async function getGlobal<T>(slug: string): Promise<T> {
   const url = new URL(`${PAYLOAD_URL}/api/globals/${slug}`);
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`Global ${slug} fetch error: ${res.status}`);
-  return res.json() as Promise<T>;
+  return res.json();
 }
 
 export const getHomePage = () => getGlobal<HomePageData>("homePage");

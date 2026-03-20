@@ -57,7 +57,7 @@ export function dastToHtml(st: { value?: unknown } | DastDocument | null | undef
         renderBlock: () => "", // Skip blocks — handled by templates
       },
     );
-    return result || "";
+    return result ?? "";
   } catch {
     // Fallback: manual render if the library can't handle the format
     return manualRender(doc);
@@ -71,8 +71,8 @@ function escapeHtml(s: string): string {
 function renderInline(node: DastNode): string {
   if (!node) return "";
   if (node.type === "span") {
-    let html = escapeHtml(node.value || "");
-    for (const mark of node.marks || []) {
+    let html = escapeHtml(node.value ?? "");
+    for (const mark of node.marks ?? []) {
       if (mark === "strong") html = `<strong>${html}</strong>`;
       else if (mark === "emphasis") html = `<em>${html}</em>`;
       else if (mark === "underline") html = `<u>${html}</u>`;
@@ -81,31 +81,31 @@ function renderInline(node: DastNode): string {
     return html;
   }
   if (node.type === "link") {
-    return `<a href="${escapeHtml(node.url || "")}">${(node.children || []).map(renderInline).join("")}</a>`;
+    return `<a href="${escapeHtml(node.url ?? "")}">${(node.children ?? []).map(renderInline).join("")}</a>`;
   }
   return node.value ? escapeHtml(node.value) : "";
 }
 
 function renderNode(node: DastNode): string {
   if (!node) return "";
-  if (node.type === "paragraph") return `<p>${(node.children || []).map(renderInline).join("")}</p>`;
+  if (node.type === "paragraph") return `<p>${(node.children ?? []).map(renderInline).join("")}</p>`;
   if (node.type === "heading") {
-    const tag = `h${node.level || 2}`;
-    return `<${tag}>${(node.children || []).map(renderInline).join("")}</${tag}>`;
+    const tag = `h${node.level ?? 2}`;
+    return `<${tag}>${(node.children ?? []).map(renderInline).join("")}</${tag}>`;
   }
   if (node.type === "list") {
     const tag = node.style === "numbered" ? "ol" : "ul";
-    return `<${tag}>${(node.children || []).map((li) =>
-      `<li>${(li.children || []).map(renderNode).join("")}</li>`
+    return `<${tag}>${(node.children ?? []).map((li) =>
+      `<li>${(li.children ?? []).map(renderNode).join("")}</li>`
     ).join("")}</${tag}>`;
   }
-  if (node.type === "blockquote") return `<blockquote>${(node.children || []).map(renderNode).join("")}</blockquote>`;
+  if (node.type === "blockquote") return `<blockquote>${(node.children ?? []).map(renderNode).join("")}</blockquote>`;
   if (node.type === "block") return ""; // Skip blocks
   return "";
 }
 
 function manualRender(doc: DastDocument): string {
-  const document = doc.document || doc;
+  const document = doc.document ?? doc;
   const children = (document as { children?: DastNode[] }).children;
   if (!children) return "";
   return children.map(renderNode).join("\n");

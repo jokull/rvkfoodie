@@ -8,21 +8,12 @@ import { print } from "graphql";
 import { getCmsHandler } from "./cms-handler";
 
 async function execute<T>(document: { kind: "Document" }, variables?: Record<string, unknown>): Promise<T> {
-  const t0 = performance.now();
   const queryString = print(document as Parameters<typeof print>[0]);
-  const tPrint = performance.now();
-
-  const opMatch = queryString.match(/(?:query|mutation)\s+(\w+)/);
-  const opName = opMatch?.[1] ?? "anonymous";
-
   const result = await getCmsHandler().execute(queryString, variables);
-  const tExec = performance.now();
 
   if (result.errors?.length) {
     throw new Error(`GraphQL: ${result.errors.map((e) => e.message).join(", ")}`);
   }
-
-  console.log(`[cms] ${opName}: print=${(tPrint - t0).toFixed(0)}ms execute=${(tExec - tPrint).toFixed(0)}ms total=${(tExec - t0).toFixed(0)}ms`);
 
   return result.data as T;
 }
@@ -271,18 +262,18 @@ function mapVenue(v: RawVenue) {
     name: v.name ?? "",
     address: v.address ?? "",
     description: v.description ?? "",
-    note: v.note,
-    time: v.time,
+    note: v.note ?? undefined,
+    time: v.time ?? undefined,
     isFree: v.isFree ?? false,
     latitude: v.location?.latitude ?? undefined,
     longitude: v.location?.longitude ?? undefined,
-    openingHours: v.openingHours,
-    googleMapsUrl: v.googleMapsUrl,
-    website: v.website,
-    phone: v.phone,
-    bestOfAward: v.bestOfAward,
-    grapevineUrl: v.grapevineUrl,
-    image: v.image,
+    openingHours: v.openingHours ?? undefined,
+    googleMapsUrl: v.googleMapsUrl ?? undefined,
+    website: v.website ?? undefined,
+    phone: v.phone ?? undefined,
+    bestOfAward: v.bestOfAward ?? undefined,
+    grapevineUrl: v.grapevineUrl ?? undefined,
+    image: v.image ? { ...v.image, alt: v.image.alt ?? undefined } : undefined,
   };
 }
 

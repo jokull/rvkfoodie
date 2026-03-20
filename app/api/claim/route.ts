@@ -33,10 +33,10 @@ export async function POST(request: Request) {
       },
     );
 
-    const data = (await response.json()) as {
+    const data: {
       success: boolean;
       purchase?: { refunded?: boolean; chargebacked?: boolean };
-    };
+    } = await response.json();
 
     if (
       data.success &&

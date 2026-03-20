@@ -42,11 +42,11 @@ export default async function ChangelogPage() {
           {entries.map((entry, i) => {
             const prev = entries[i - 1];
             const showDate = !prev || prev.date !== entry.date;
-            const dateStr = new Date(entry.date).toLocaleDateString("en-GB", {
+            const dateStr = entry.date ? new Date(entry.date).toLocaleDateString("en-GB", {
               day: "numeric",
               month: "long",
               year: "numeric",
-            });
+            }) : "";
             return (
               <div key={entry.id}>
                 {showDate && (
@@ -56,9 +56,9 @@ export default async function ChangelogPage() {
                 )}
                 <div className="flex items-start gap-3 pb-4">
                   <span
-                    className={`text-tiny font-medium px-2 py-0.5 rounded ${typeColor[entry.changeType] ?? ""}`}
+                    className={`text-tiny font-medium px-2 py-0.5 rounded ${entry.changeType ? typeColor[entry.changeType] ?? "" : ""}`}
                   >
-                    {typeLabel[entry.changeType]}
+                    {entry.changeType ? typeLabel[entry.changeType] : ""}
                   </span>
                   <div className="flex-1">
                     <p className="font-medium">{entry.title}</p>

@@ -25,7 +25,7 @@ const BUNDLE_PRODUCTS = [
 ];
 
 export async function POST(request: Request) {
-  const kv = env.PURCHASES as KVNamespace;
+  const kv = env.PURCHASES;
 
   const formData = await request.formData();
   const productId = formData.get("product_id")?.toString();

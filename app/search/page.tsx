@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Icon } from "@/app/_components/icon";
-import { getAllGuides, getAllEditorials } from "@/lib/cms";
+import { getAllGuides, getAllEditorials, type Venue } from "@/lib/cms";
 
 
 export const metadata: Metadata = {
@@ -33,7 +33,7 @@ export default async function SearchPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q: rawQ } = await searchParams;
-  const query = rawQ?.trim() || "";
+  const query = rawQ?.trim() ?? "";
 
   let results: SearchResult[] = [];
 
@@ -50,11 +50,7 @@ export default async function SearchPage({
     const venueMap = new Map<
       string,
       {
-        venue: (typeof guides)[0]["content"][0] extends {
-          venues: (infer V)[];
-        }
-          ? V
-          : never;
+        venue: Venue;
         section: string;
         guide: (typeof guides)[0];
       }
@@ -81,10 +77,8 @@ export default async function SearchPage({
         body: JSON.stringify({ query, mode: "semantic", first: 20 }),
       });
       if (res.ok) {
-        const data = (await res.json()) as {
-          results: typeof semanticResults;
-        };
-        semanticResults = data.results || [];
+        const data: { results: typeof semanticResults } = await res.json();
+        semanticResults = data.results ?? [];
       }
     } catch {
       // Semantic search failed, fall through to client-side
@@ -109,10 +103,10 @@ export default async function SearchPage({
           if (ed) {
             results.push({
               type: "editorial",
-              title: ed.title,
+              title: ed.title ?? "",
               subtitle: ed.excerpt ?? "",
               url: `/blog/${ed.slug}`,
-              image: ed.image?.url ? ed.image.url : undefined,
+              image: ed.image?.url ?? undefined,
               score: sr.rank,
             });
           }
@@ -123,15 +117,15 @@ export default async function SearchPage({
     // Always add client-side venue search (venues aren't indexed in Vectorize)
     for (const [, { venue, section, guide }] of venueMap) {
       const text =
-        `${venue.name} ${venue.address} ${venue.description} ${venue.bestOfAward || ""}`.toLowerCase();
+        `${venue.name} ${venue.address} ${venue.description} ${venue.bestOfAward ?? ""}`.toLowerCase();
       if (text.includes(q)) {
         results.push({
           type: "venue",
           title: venue.name,
           subtitle: `${venue.address} · ${section} · ${guide.title}`,
           url: `/places/${venue.id}`,
-          image: venue.image?.url ? venue.image.url : undefined,
-          badge: venue.bestOfAward || undefined,
+          image: venue.image?.url ?? undefined,
+          badge: venue.bestOfAward ?? undefined,
         });
       }
     }
@@ -143,10 +137,10 @@ export default async function SearchPage({
         if (text.includes(q)) {
           results.push({
             type: "editorial",
-            title: ed.title,
+            title: ed.title ?? "",
             subtitle: ed.excerpt ?? "",
             url: `/blog/${ed.slug}`,
-            image: ed.image?.url ? ed.image.url : undefined,
+            image: ed.image?.url ?? undefined,
           });
         }
       }

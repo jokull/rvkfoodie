@@ -1,4 +1,4 @@
-import { getAllGuides, getAllEditorials, type SectionBlock } from "@/lib/cms";
+import { getAllGuides, getAllEditorials } from "@/lib/cms";
 
 export async function GET() {
   const [guides, editorials] = await Promise.all([
@@ -28,7 +28,7 @@ export async function GET() {
     });
     for (const block of guide.content) {
       if (block.blockType === "section") {
-        for (const venue of (block as SectionBlock).venues) {
+        for (const venue of (block).venues) {
           urls.push({
             loc: `/places/${venue.id}`,
             priority: "0.7",

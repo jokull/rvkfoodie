@@ -112,7 +112,7 @@ export default async function HomePage() {
                 >
                   <img
                     src={imgUrl}
-                    alt={photo.image.alt || photo.title}
+                    alt={(photo.image.alt ?? photo.title) ?? ""}
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -137,7 +137,7 @@ export default async function HomePage() {
                 <div className="flex items-start justify-between gap-4 mb-2">
                   <div className="flex items-center gap-3">
                     <Icon
-                      name={guideIcon[guide.slug] || "book-open"}
+                      name={guideIcon[guide.slug] ?? "book-open"}
                       className="w-7 h-7 text-blue shrink-0"
                     />
                     <h3 className="font-display text-[1.75rem] leading-tight group-hover:text-blue transition-colors">
@@ -182,7 +182,7 @@ export default async function HomePage() {
           <p className="text-ink-light mb-4">{home.bundleDescription}</p>
         </CmsField>
         <a
-          href={`/api/checkout?slug=food-guide&url=${encodeURIComponent(home.bundleGumroadUrl)}`}
+          href={`/api/checkout?slug=food-guide&url=${encodeURIComponent(home.bundleGumroadUrl ?? "")}`}
           className="inline-block bg-blue text-white font-medium px-6 py-2.5 rounded-full text-tiny hover:opacity-90 transition-opacity"
         >
           Get the bundle — ${home.bundlePrice}
@@ -207,7 +207,7 @@ export default async function HomePage() {
                     <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl overflow-hidden shrink-0">
                       <img
                         src={imgUrl}
-                        alt={post.image?.alt || post.title}
+                        alt={(post.image?.alt ?? post.title) ?? ""}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         loading="lazy"
                       />
@@ -215,11 +215,11 @@ export default async function HomePage() {
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-tiny text-ink-light mb-1">
-                      {new Date(post.date).toLocaleDateString("en-GB", {
+                      {post.date ? new Date(post.date).toLocaleDateString("en-GB", {
                         day: "numeric",
                         month: "long",
                         year: "numeric",
-                      })}
+                      }) : ""}
                     </p>
                     <h3 className="font-display text-[1.5rem] leading-tight group-hover:text-blue transition-colors mb-2">
                       {post.title}

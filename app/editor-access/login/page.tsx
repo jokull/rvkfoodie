@@ -43,13 +43,13 @@ export default async function EditorLoginPage({
       );
     }
 
-    const { token } = (await tokenResponse.json()) as { token: string };
+    const { token }: { token: string } = await tokenResponse.json();
 
     const cookieStore = await cookies();
     cookieStore.set("editor_session", `${name}:${token}`, {
       path: "/",
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: "Lax",
       secure: true,
       maxAge: 31_536_000, // 1 year
     });

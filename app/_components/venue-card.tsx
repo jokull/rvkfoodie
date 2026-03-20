@@ -10,8 +10,6 @@ export function VenueCard({
   time,
   openingHours,
   googleMapsUrl,
-  website,
-  phone,
   bestOfAward,
   grapevineUrl,
   image,
@@ -24,14 +22,12 @@ export function VenueCard({
   time?: string;
   openingHours?: string;
   googleMapsUrl?: string;
-  website?: string;
-  phone?: string;
   bestOfAward?: string;
   grapevineUrl?: string;
   image?: { url: string; alt?: string };
 }) {
   const mapsUrl =
-    googleMapsUrl ||
+    googleMapsUrl ??
     `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name} ${address} Iceland`)}`;
   const imgUrl = image?.url ?? null;
 
@@ -67,7 +63,7 @@ export function VenueCard({
           <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl overflow-hidden shrink-0">
             <img
               src={imgUrl}
-              alt={image?.alt || name}
+              alt={image?.alt ?? name}
               className="w-full h-full object-cover"
               loading="lazy"
             />

@@ -4,8 +4,7 @@ import { env } from "cloudflare:workers";
 let cached: ReturnType<typeof createCMSHandler> | null = null;
 
 export function getCmsHandler() {
-  if (!cached) {
-    cached = createCMSHandler({
+  cached ??= createCMSHandler({
       bindings: {
         db: env.DB,
         assets: env.R2_ASSETS,
@@ -16,6 +15,5 @@ export function getCmsHandler() {
         vectorize: env.VECTORIZE,
       },
     });
-  }
   return cached;
 }

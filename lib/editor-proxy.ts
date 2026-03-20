@@ -14,40 +14,20 @@ export function getEditorProxy() {
   // Route CMS calls in-process instead of over the network
   const inProcessFetch: typeof globalThis.fetch = async (input, init) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    const method = input instanceof Request ? input.method : (init?.method ?? "GET");
-    const hasBody = input instanceof Request ? input.body !== null : init?.body != null;
-    const bodyIsStream = input instanceof Request
-      ? input.body instanceof ReadableStream
-      : init?.body instanceof ReadableStream;
-    const duplex = (init as Record<string, unknown>)?.duplex;
-
-    console.log(`[inProcessFetch] ${method} ${url} body=${hasBody} bodyIsStream=${bodyIsStream} duplex=${duplex}`);
 
     if (url.startsWith(APP_BASE_URL + "/cms/") || url.startsWith("http://cms/")) {
       const cmsPath = url.replace(APP_BASE_URL + "/cms", "").replace("http://cms", "") || "/";
       const internalUrl = new URL(cmsPath, "http://localhost");
-      console.log(`[inProcessFetch] → in-process cms.fetch(${internalUrl.pathname})`);
-      const t0 = performance.now();
-      try {
-        const request = new Request(
-          internalUrl,
-          init ?? (input instanceof Request ? input : undefined),
-        );
-        const response = await cms.fetch(request);
-        const elapsed = (performance.now() - t0).toFixed(0);
-        console.log(`[inProcessFetch] ← cms.fetch ${response.status} in ${elapsed}ms, body=${response.body !== null}`);
-        return response;
-      } catch (err) {
-        const elapsed = (performance.now() - t0).toFixed(0);
-        console.error(`[inProcessFetch] ← cms.fetch threw after ${elapsed}ms:`, err);
-        throw err;
-      }
+      const request = new Request(
+        internalUrl,
+        init ?? (input instanceof Request ? input : undefined),
+      );
+      return cms.fetch(request);
     }
     // Catch any request to our own origin to avoid self-referencing fetch (causes 522)
     if (url.startsWith(APP_BASE_URL + "/")) {
-      console.warn(`[inProcessFetch] ⚠ FALLING THROUGH to external fetch for same-origin: ${url}`);
+      console.warn(`[inProcessFetch] unexpected same-origin fetch: ${url}`);
     }
-    console.log(`[inProcessFetch] → external fetch(${url})`);
     return fetch(input, init);
   };
 

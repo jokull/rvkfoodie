@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { DastDocument } from "@agent-cms/visual-edit";
 import { notFound } from "next/navigation";
 import { env } from "cloudflare:workers";
 import { VenueCard } from "@/app/_components/venue-card";
@@ -8,8 +9,6 @@ import {
   getGuideBySlug,
   getAllGuides,
   getAllEditorials,
-  type SectionBlock,
-  type TextBlock,
 } from "@/lib/cms";
 import { dastToHtml } from "@/lib/dast";
 import { cookies } from "next/headers";
@@ -85,7 +84,7 @@ export default async function GuidePage({
   let totalHidden = 0;
   for (const block of guide.content) {
     if (block.blockType === "section") {
-      totalHidden += (block as SectionBlock).venues.filter(
+      totalHidden += (block).venues.filter(
         (v) => !v.isFree,
       ).length;
     }
@@ -94,7 +93,7 @@ export default async function GuidePage({
   const totalVenues = guide.content.reduce(
     (n, b) =>
       b.blockType === "section"
-        ? n + (b as SectionBlock).venues.length
+        ? n + (b).venues.length
         : n,
     0,
   );
@@ -104,7 +103,7 @@ export default async function GuidePage({
   // Find blog posts that mention venues from this guide
   const venueNames = guide.content.flatMap((b) =>
     b.blockType === "section"
-      ? (b as SectionBlock).venues.map((v) =>
+      ? (b).venues.map((v) =>
           v.name.toLowerCase().replace(/[!?]/g, ""),
         )
       : [],
@@ -165,7 +164,7 @@ export default async function GuidePage({
       </CmsField>
 
       {introHtml && (
-        <CmsText fieldApiKey="intro" value={guide.intro?.value as import("@agent-cms/visual-edit").DastDocument}>
+        <CmsText fieldApiKey="intro" value={guide.intro?.value as DastDocument}>
           <div
             className="mb-12 prose-intro"
             dangerouslySetInnerHTML={{ __html: introHtml }}
@@ -175,7 +174,7 @@ export default async function GuidePage({
 
       {guide.content.map((block) => {
         if (block.blockType === "section") {
-          const section = block as SectionBlock;
+          const section = block;
           const freeVenues = section.venues.filter((v) => v.isFree);
           const gatedVenues = section.venues.filter((v) => !v.isFree);
           return (
@@ -199,9 +198,9 @@ export default async function GuidePage({
           );
         }
         if (block.blockType === "textBlock") {
-          const textBlock = block as TextBlock;
+          const textBlock = block;
           if (!unlocked && !textBlock.isFree) return null;
-          const html = dastToHtml(textBlock.content);
+          const html = dastToHtml(textBlock.content as Parameters<typeof dastToHtml>[0]);
           return (
             <section key={textBlock.id} className="mb-12 prose-custom">
               {textBlock.heading && (
@@ -285,11 +284,11 @@ export default async function GuidePage({
                 className="block border border-ink/10 rounded-xl p-5 hover:border-ink/25 transition-colors group"
               >
                 <p className="text-tiny text-ink-light mb-1">
-                  {new Date(p.date).toLocaleDateString("en-GB", {
+                  {p.date ? new Date(p.date).toLocaleDateString("en-GB", {
                     day: "numeric",
                     month: "long",
                     year: "numeric",
-                  })}
+                  }) : ""}
                 </p>
                 <h3 className="font-display text-[1.25rem] leading-tight group-hover:text-blue transition-colors">
                   {p.title}

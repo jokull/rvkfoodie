@@ -15,7 +15,7 @@ function json(data: unknown) {
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const test = url.searchParams.get("t") || "home";
+  const test = url.searchParams.get("t") ?? "home";
   try {
     if (test === "home") {
       const data = await getHomePage();
