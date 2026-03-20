@@ -5,8 +5,8 @@
   "main": "./worker/index.ts",
   "workers_dev": true,
   "observability": { "enabled": true },
-  // Co-locate Worker with D1 (WEUR/LIS) — D1 is in Lisbon, Madrid is closest cloud region
-  "placement": { "region": "gcp:europe-southwest1" },
+  // Co-locate Worker with D1 — both at LHR (London)
+  "placement": { "region": "aws:eu-west-2" },
   "assets": {
     "not_found_handling": "none",
     "directory": "dist/client"
@@ -17,8 +17,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "rvkfoodie-cms-v3",
-      "database_id": "505b1ce8-1c92-418a-b25e-bd180efe7897",
+      "database_name": "rvkfoodie-cms-v4b",
+      "database_id": "a243733a-4334-43d6-b22b-fc90ad2fc371",
       "migrations_dir": "migrations"
     }
   ],
