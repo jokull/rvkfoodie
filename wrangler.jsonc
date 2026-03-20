@@ -5,9 +5,8 @@
   "main": "./worker/index.ts",
   "workers_dev": true,
   "observability": { "enabled": true },
-  // Smart Placement — D1 in WEUR, but co-location doesn't help
-  // (bottleneck is agent-cms resolver overhead, not D1 RTT — see jokull/agent-cms#25)
-  "placement": { "mode": "smart" },
+  // Co-locate Worker with D1 (WEUR/LIS) — D1 is in Lisbon, Madrid is closest cloud region
+  "placement": { "region": "gcp:europe-southwest1" },
   "assets": {
     "not_found_handling": "none",
     "directory": "dist/client"

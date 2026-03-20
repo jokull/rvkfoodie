@@ -1,94 +1,107 @@
 import { getCmsHandler } from "@/lib/cms-handler";
+import { env } from "cloudflare:workers";
 import { print } from "graphql";
 import { graphql } from "gql.tada";
 
 /**
  * Diagnostic endpoint — traces GraphQL query waterfall.
- * Measures total time, schema build, and per-query timings.
- *
- * Usage: /api/trace?t=home|guides|editorials|page-home|page-guide
+ * Compares raw D1, fast-path eligible, and full Yoga queries.
  */
 
-const queryDefs = {
-  home: graphql(`query HomePage { homePage { id headline } }`),
-  settings: graphql(`query SiteSettings { siteSettings { id defaultMetaDescription } }`),
-  guides: graphql(`query AllGuides { allGuides { id title slug content { value blocks { __typename ... on SectionRecord { id title venues { value blocks { __typename ... on VenueRecord { id name address description image { id url } } } } } ... on TextBlockRecord { id heading content { value } } } } } }`),
-  editorials: graphql(`query AllEditorials { allEditorials { id title slug excerpt date image { id url alt } content { value blocks { __typename ... on ImageBlockRecord { id image { id url } caption } } } } }`),
-  changelog: graphql(`query Changelog { allChangelogEntries { id date title changeType guide { id title slug } } }`),
-  guideBySlug: graphql(`query GuideBySlug { guide(filter: { slug: { eq: "food-guide" } }) { id title slug content { value blocks { __typename ... on SectionRecord { id title venues { value blocks { __typename ... on VenueRecord { id name address description image { id url } } } } } ... on TextBlockRecord { id heading content { value } } } } } }`),
+const simpleDefs = {
+  home: graphql(`query HomePage { homePage { id headline headlineEmphasis subtext bundleTitle bundlePrice } }`),
+  settings: graphql(`query SiteSettings { siteSettings { id defaultMetaDescription changelogSubtitle } }`),
+  guidesFlat: graphql(`query AllGuidesFlat { allGuides { id title slug subtitle description price gumroadProductId gumroadUrl } }`),
+  editorialsFlat: graphql(`query AllEditorialsFlat { allEditorials { id title slug excerpt date } }`),
+};
+
+const fullDefs = {
+  guidesFull: graphql(`query AllGuides { allGuides { id title slug content { value blocks { __typename ... on SectionRecord { id title venues { value blocks { __typename ... on VenueRecord { id name address description image { id url } } } } } ... on TextBlockRecord { id heading content { value } } } } } }`),
+  editorialsFull: graphql(`query AllEditorials { allEditorials { id title slug excerpt date image { id url alt } content { value blocks { __typename ... on ImageBlockRecord { id image { id url } caption } } } } }`),
 };
 
 export async function GET() {
   const cms = getCmsHandler();
+  const db = env.DB;
 
-  // Warm up schema
+  // 1. Raw D1 queries — baseline for D1 latency
+  const raw: Record<string, number> = {};
+
+  const rawT0 = performance.now();
+  await db.prepare("SELECT 1").first();
+  raw["SELECT 1"] = ms(rawT0);
+
+  const rawT1 = performance.now();
+  await db.prepare("SELECT count(*) FROM models").first();
+  raw["count models"] = ms(rawT1);
+
+  const rawT2 = performance.now();
+  await db.prepare("SELECT * FROM content_home_page LIMIT 1").first();
+  raw["home row"] = ms(rawT2);
+
+  const rawT3 = performance.now();
+  await db.prepare("SELECT _published_snapshot FROM content_guide").all();
+  raw["guide snapshots"] = ms(rawT3);
+
+  const rawT4 = performance.now();
+  await db.prepare("SELECT _published_snapshot FROM content_editorial").all();
+  raw["editorial snapshots"] = ms(rawT4);
+
+  // 2. Warm schema
   const schemaT0 = performance.now();
   await cms.execute("{ __typename }");
   const schemaWarmMs = ms(schemaT0);
 
-  // Trace individual queries
-  const results: Record<string, { ms: number; rowCount: number }> = {};
-  for (const [name, doc] of Object.entries(queryDefs)) {
-    const query = print(doc);
+  // 3. Simple queries (fast-path eligible)
+  const simple: Record<string, number> = {};
+  for (const [name, doc] of Object.entries(simpleDefs)) {
     const t0 = performance.now();
-    const result = await cms.execute(query);
-    const elapsed = ms(t0);
-    const data = result.data as Record<string, unknown>;
-    const firstKey = Object.keys(data)[0];
-    const val = data[firstKey];
-    const rowCount = Array.isArray(val) ? val.length : val ? 1 : 0;
-    results[name] = { ms: elapsed, rowCount };
+    await cms.execute(print(doc));
+    simple[name] = ms(t0);
   }
 
-  // Simulate page-home: 3 parallel queries
-  const pageHomeT0 = performance.now();
-  const [r1, r2, r3] = await Promise.all([
-    timed(() => cms.execute(print(queryDefs.home))),
-    timed(() => cms.execute(print(queryDefs.guides))),
-    timed(() => cms.execute(print(queryDefs.editorials))),
-  ]);
-  const pageHomeTotalMs = ms(pageHomeT0);
+  // 4. Full queries (Yoga fallback)
+  const full: Record<string, number> = {};
+  for (const [name, doc] of Object.entries(fullDefs)) {
+    const t0 = performance.now();
+    await cms.execute(print(doc));
+    full[name] = ms(t0);
+  }
 
-  // Simulate page-guide: 3 parallel queries
-  const pageGuideT0 = performance.now();
-  const [g1, g2, g3] = await Promise.all([
-    timed(() => cms.execute(print(queryDefs.guideBySlug))),
-    timed(() => cms.execute(print(queryDefs.guides))),
-    timed(() => cms.execute(print(queryDefs.editorials))),
+  // 5. Page simulations
+  const pageHomeSimpleT0 = performance.now();
+  await Promise.all([
+    cms.execute(print(simpleDefs.home)),
+    cms.execute(print(simpleDefs.guidesFlat)),
+    cms.execute(print(simpleDefs.editorialsFlat)),
   ]);
-  const pageGuideTotalMs = ms(pageGuideT0);
+  const pageHomeSimpleMs = ms(pageHomeSimpleT0);
+
+  const pageHomeFullT0 = performance.now();
+  await Promise.all([
+    cms.execute(print(simpleDefs.home)),
+    cms.execute(print(fullDefs.guidesFull)),
+    cms.execute(print(fullDefs.editorialsFull)),
+  ]);
+  const pageHomeFullMs = ms(pageHomeFullT0);
 
   return new Response(
-    JSON.stringify(
-      {
-        placement: "check cf-placement header",
-        schemaWarmMs,
-        individual: results,
-        pageHome: {
-          totalMs: pageHomeTotalMs,
-          queries: { home: r1.ms, guides: r2.ms, editorials: r3.ms },
-          slowest: Math.max(r1.ms, r2.ms, r3.ms),
-          note: "3 queries in parallel — total ≈ slowest",
-        },
-        pageGuide: {
-          totalMs: pageGuideTotalMs,
-          queries: { guideBySlug: g1.ms, allGuides: g2.ms, editorials: g3.ms },
-          slowest: Math.max(g1.ms, g2.ms, g3.ms),
-        },
+    JSON.stringify({
+      rawD1: raw,
+      schemaWarmMs,
+      simple,
+      full,
+      pageSimulation: { homeSimple: pageHomeSimpleMs, homeFull: pageHomeFullMs },
+      analysis: {
+        d1Latency: `${raw["SELECT 1"]}ms per round-trip`,
+        fastPathOverhead: `${Math.round(simple.home - raw["SELECT 1"])}ms over raw D1`,
+        yogaOverhead: `${Math.round(full.guidesFull - simple.guidesFlat)}ms for structured text resolution`,
       },
-      null,
-      2,
-    ),
+    }, null, 2),
     { headers: { "Content-Type": "application/json" } },
   );
 }
 
 function ms(t0: number) {
   return Number((performance.now() - t0).toFixed(1));
-}
-
-async function timed<T>(fn: () => Promise<T>) {
-  const t0 = performance.now();
-  const result = await fn();
-  return { result, ms: ms(t0) };
 }
