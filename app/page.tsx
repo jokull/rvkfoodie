@@ -1,7 +1,5 @@
 import {
-  getAllGuides,
-  getAllEditorials,
-  getHomePage,
+  getHomePageData,
   type Editorial,
 } from "@/lib/cms";
 
@@ -34,11 +32,9 @@ export default async function HomePage() {
   const cookieStore = await cookies();
   const sessionId = cookieStore.get(SESSION_COOKIE)?.value;
 
-  const [guides, editorials, home, unlockedProducts] =
+  const [{ home, guides, editorials }, unlockedProducts] =
     await Promise.all([
-      getAllGuides(),
-      getAllEditorials(),
-      getHomePage(),
+      getHomePageData(),
       sessionId
         ? getSessionData<string[]>(sessionId, "unlockedProducts").then((v) => v ?? [])
         : Promise.resolve([]),

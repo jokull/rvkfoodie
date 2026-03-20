@@ -192,21 +192,321 @@ export type Guide = ReturnType<typeof mapGuide>;
 // Legacy compat
 export type PayloadImage = NonNullable<Editorial["image"]>;
 
-// ============ FETCHERS ============
+// ============ COMBINED QUERIES (single execute per page) ============
 
-export async function getAllGuides() {
-  const data = await execute<ResultOf<typeof AllGuidesQuery>>(AllGuidesQuery);
-  return data.allGuides.map(mapGuide);
-}
+const HomePageDataQuery = graphql(`
+  query HomePageData {
+    homePage {
+      id
+      headline headlineEmphasis subtext
+      bundleTitle bundleDescription bundlePrice bundleGumroadUrl
+      authorBlurb
+    }
+    allGuides(orderBy: [price_DESC]) {
+      id title slug subtitle description price
+      gumroadProductId gumroadUrl googleMapsUrl
+      intro { value }
+      content {
+        value
+        blocks {
+          __typename
+          ... on SectionRecord {
+            id title
+            venues {
+              value
+              blocks {
+                __typename
+                ... on VenueRecord {
+                  id name address description note time isFree
+                  location { latitude longitude }
+                  openingHours googleMapsUrl website phone
+                  bestOfAward grapevineUrl
+                  image { id url alt width height }
+                }
+              }
+            }
+          }
+          ... on TextBlockRecord {
+            id heading isFree
+            content { value }
+          }
+        }
+      }
+    }
+    allEditorials(orderBy: [date_DESC]) {
+      id title slug excerpt date
+      image { id url alt width height }
+      content {
+        value
+        blocks {
+          __typename
+          ... on ImageBlockRecord {
+            id
+            image { id url alt width height }
+            caption
+          }
+        }
+      }
+    }
+  }
+`);
+
+const GuidePageDataQuery = graphql(`
+  query GuidePageData($slug: String!) {
+    guide(filter: { slug: { eq: $slug } }) {
+      id title slug subtitle description price
+      gumroadProductId gumroadUrl googleMapsUrl
+      intro { value }
+      content {
+        value
+        blocks {
+          __typename
+          ... on SectionRecord {
+            id title
+            venues {
+              value
+              blocks {
+                __typename
+                ... on VenueRecord {
+                  id name address description note time isFree
+                  location { latitude longitude }
+                  openingHours googleMapsUrl website phone
+                  bestOfAward grapevineUrl
+                  image { id url alt width height }
+                }
+              }
+            }
+          }
+          ... on TextBlockRecord {
+            id heading isFree
+            content { value }
+          }
+        }
+      }
+    }
+    allGuides(orderBy: [price_DESC]) {
+      id title slug subtitle description price
+      gumroadProductId gumroadUrl googleMapsUrl
+      intro { value }
+      content {
+        value
+        blocks {
+          __typename
+          ... on SectionRecord {
+            id title
+            venues {
+              value
+              blocks {
+                __typename
+                ... on VenueRecord {
+                  id name address description note time isFree
+                  location { latitude longitude }
+                  openingHours googleMapsUrl website phone
+                  bestOfAward grapevineUrl
+                  image { id url alt width height }
+                }
+              }
+            }
+          }
+          ... on TextBlockRecord {
+            id heading isFree
+            content { value }
+          }
+        }
+      }
+    }
+    allEditorials(orderBy: [date_DESC]) {
+      id title slug excerpt date
+      image { id url alt width height }
+      content {
+        value
+        blocks {
+          __typename
+          ... on ImageBlockRecord {
+            id
+            image { id url alt width height }
+            caption
+          }
+        }
+      }
+    }
+  }
+`);
+
+const BlogPageDataQuery = graphql(`
+  query BlogPageData($slug: String!) {
+    editorial(filter: { slug: { eq: $slug } }) {
+      id title slug excerpt date
+      image { id url alt width height }
+      content {
+        value
+        blocks {
+          __typename
+          ... on ImageBlockRecord {
+            id
+            image { id url alt width height }
+            caption
+          }
+        }
+      }
+    }
+    allGuides(orderBy: [price_DESC]) {
+      id title slug subtitle description price
+      gumroadProductId gumroadUrl googleMapsUrl
+      intro { value }
+      content {
+        value
+        blocks {
+          __typename
+          ... on SectionRecord {
+            id title
+            venues {
+              value
+              blocks {
+                __typename
+                ... on VenueRecord {
+                  id name address description note time isFree
+                  location { latitude longitude }
+                  openingHours googleMapsUrl website phone
+                  bestOfAward grapevineUrl
+                  image { id url alt width height }
+                }
+              }
+            }
+          }
+          ... on TextBlockRecord {
+            id heading isFree
+            content { value }
+          }
+        }
+      }
+    }
+    allEditorials(orderBy: [date_DESC]) {
+      id title slug excerpt date
+      image { id url alt width height }
+      content {
+        value
+        blocks {
+          __typename
+          ... on ImageBlockRecord {
+            id
+            image { id url alt width height }
+            caption
+          }
+        }
+      }
+    }
+  }
+`);
+
+const GuidesAndEditorialsQuery = graphql(`
+  query GuidesAndEditorials {
+    allGuides(orderBy: [price_DESC]) {
+      id title slug subtitle description price
+      gumroadProductId gumroadUrl googleMapsUrl
+      intro { value }
+      content {
+        value
+        blocks {
+          __typename
+          ... on SectionRecord {
+            id title
+            venues {
+              value
+              blocks {
+                __typename
+                ... on VenueRecord {
+                  id name address description note time isFree
+                  location { latitude longitude }
+                  openingHours googleMapsUrl website phone
+                  bestOfAward grapevineUrl
+                  image { id url alt width height }
+                }
+              }
+            }
+          }
+          ... on TextBlockRecord {
+            id heading isFree
+            content { value }
+          }
+        }
+      }
+    }
+    allEditorials(orderBy: [date_DESC]) {
+      id title slug excerpt date
+      image { id url alt width height }
+      content {
+        value
+        blocks {
+          __typename
+          ... on ImageBlockRecord {
+            id
+            image { id url alt width height }
+            caption
+          }
+        }
+      }
+    }
+  }
+`);
+
+const ChangelogPageDataQuery = graphql(`
+  query ChangelogPageData {
+    allChangelogEntries(orderBy: [date_DESC]) {
+      id date title description changeType
+      guide { id title slug }
+    }
+    siteSettings {
+      id
+      defaultMetaDescription restaurantCalloutTitle
+      restaurantCalloutText restaurantCalloutEmail
+      changelogSubtitle
+    }
+  }
+`);
+
+const AboutPageDataQuery = graphql(`
+  query AboutPageData {
+    aboutPage { id title metaDescription bio { value } }
+    allGuides(orderBy: [price_DESC]) {
+      id title slug subtitle description price
+      gumroadProductId gumroadUrl googleMapsUrl
+      intro { value }
+      content {
+        value
+        blocks {
+          __typename
+          ... on SectionRecord {
+            id title
+            venues {
+              value
+              blocks {
+                __typename
+                ... on VenueRecord {
+                  id name address description note time isFree
+                  location { latitude longitude }
+                  openingHours googleMapsUrl website phone
+                  bestOfAward grapevineUrl
+                  image { id url alt width height }
+                }
+              }
+            }
+          }
+          ... on TextBlockRecord {
+            id heading isFree
+            content { value }
+          }
+        }
+      }
+    }
+  }
+`);
+
+// ============ SINGLE-QUERY FETCHERS (for metadata / components) ============
 
 export async function getGuideBySlug(slug: string) {
   const data = await execute<ResultOf<typeof GuideBySlugQuery>>(GuideBySlugQuery, { slug });
   return data.guide ? mapGuide(data.guide) : null;
-}
-
-export async function getAllEditorials() {
-  const data = await execute<ResultOf<typeof AllEditorialsQuery>>(AllEditorialsQuery);
-  return data.allEditorials;
 }
 
 export async function getEditorialBySlug(slug: string) {
@@ -214,9 +514,14 @@ export async function getEditorialBySlug(slug: string) {
   return data.editorial ?? null;
 }
 
-export async function getChangelog() {
-  const data = await execute<ResultOf<typeof ChangelogQuery>>(ChangelogQuery);
-  return data.allChangelogEntries;
+export async function getAllGuides() {
+  const data = await execute<ResultOf<typeof AllGuidesQuery>>(AllGuidesQuery);
+  return data.allGuides.map(mapGuide);
+}
+
+export async function getAllEditorials() {
+  const data = await execute<ResultOf<typeof AllEditorialsQuery>>(AllEditorialsQuery);
+  return data.allEditorials;
 }
 
 export async function getHomePage() {
@@ -235,6 +540,62 @@ export async function getSiteSettings() {
   const data = await execute<ResultOf<typeof SiteSettingsQuery>>(SiteSettingsQuery);
   if (!data.siteSettings) throw new Error("SiteSettings singleton not found in CMS");
   return data.siteSettings;
+}
+
+// ============ COMBINED PAGE FETCHERS (single execute per page) ============
+
+export async function getHomePageData() {
+  const data = await execute<ResultOf<typeof HomePageDataQuery>>(HomePageDataQuery);
+  if (!data.homePage) throw new Error("HomePage singleton not found in CMS");
+  return {
+    home: data.homePage,
+    guides: data.allGuides.map(mapGuide),
+    editorials: data.allEditorials,
+  };
+}
+
+export async function getGuidePageData(slug: string) {
+  const data = await execute<ResultOf<typeof GuidePageDataQuery>>(GuidePageDataQuery, { slug });
+  return {
+    guide: data.guide ? mapGuide(data.guide) : null,
+    allGuides: data.allGuides.map(mapGuide),
+    editorials: data.allEditorials,
+  };
+}
+
+export async function getBlogPageData(slug: string) {
+  const data = await execute<ResultOf<typeof BlogPageDataQuery>>(BlogPageDataQuery, { slug });
+  return {
+    post: data.editorial ?? null,
+    allGuides: data.allGuides.map(mapGuide),
+    allEditorials: data.allEditorials,
+  };
+}
+
+export async function getGuidesAndEditorials() {
+  const data = await execute<ResultOf<typeof GuidesAndEditorialsQuery>>(GuidesAndEditorialsQuery);
+  return {
+    guides: data.allGuides.map(mapGuide),
+    editorials: data.allEditorials,
+  };
+}
+
+export async function getChangelogPageData() {
+  const data = await execute<ResultOf<typeof ChangelogPageDataQuery>>(ChangelogPageDataQuery);
+  if (!data.siteSettings) throw new Error("SiteSettings singleton not found in CMS");
+  return {
+    entries: data.allChangelogEntries,
+    settings: data.siteSettings,
+  };
+}
+
+export async function getAboutPageData() {
+  const data = await execute<ResultOf<typeof AboutPageDataQuery>>(AboutPageDataQuery);
+  if (!data.aboutPage) throw new Error("AboutPage singleton not found in CMS");
+  return {
+    about: data.aboutPage,
+    guides: data.allGuides.map(mapGuide),
+  };
 }
 
 // ============ MAPPERS ============

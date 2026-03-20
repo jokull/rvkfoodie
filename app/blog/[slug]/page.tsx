@@ -4,8 +4,7 @@ import { notFound } from "next/navigation";
 import { ImageBlock } from "@/app/_components/image-block";
 import {
   getEditorialBySlug,
-  getAllEditorials,
-  getAllGuides,
+  getBlogPageData,
 } from "@/lib/cms";
 import { dastToHtml } from "@/lib/dast";
 
@@ -42,11 +41,7 @@ export default async function BlogPostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [post, allGuides, allEditorials] = await Promise.all([
-    getEditorialBySlug(slug),
-    getAllGuides(),
-    getAllEditorials(),
-  ]);
+  const { post, allGuides, allEditorials } = await getBlogPageData(slug);
   if (!post) notFound();
 
   // Find venues mentioned in this post (match by name in title/excerpt/content)

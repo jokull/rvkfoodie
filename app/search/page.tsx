@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Icon } from "@/app/_components/icon";
-import { getAllGuides, getAllEditorials, type Venue } from "@/lib/cms";
+import { getGuidesAndEditorials, type Venue } from "@/lib/cms";
 
 
 export const metadata: Metadata = {
@@ -39,10 +39,7 @@ export default async function SearchPage({
 
   if (query.length >= 2) {
     const q = query.toLowerCase();
-    const [guides, editorials] = await Promise.all([
-      getAllGuides(),
-      getAllEditorials(),
-    ]);
+    const { guides, editorials } = await getGuidesAndEditorials();
 
     // Build lookup maps
     const guideById = new Map(guides.map((g) => [g.id, g]));

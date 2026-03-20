@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import type { DastDocument } from "@agent-cms/visual-edit";
-import { getAllGuides, getAboutPage } from "@/lib/cms";
+import { getAboutPageData } from "@/lib/cms";
 import { dastToHtml } from "@/lib/dast";
 import { RestaurantCallout } from "@/app/_components/restaurant-callout";
 import { EditWrapper, EditBar, CmsField, CmsText } from "@/app/_components/visual-edit";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const about = await getAboutPage();
+  const { about } = await getAboutPageData();
   return {
     title: about.title,
     description: about.metaDescription,
@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AboutPage() {
-  const [guides, about] = await Promise.all([getAllGuides(), getAboutPage()]);
+  const { about, guides } = await getAboutPageData();
   const bioHtml = about.bio ? dastToHtml(about.bio) : "";
 
   const jsonLd = {

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getChangelog, getSiteSettings } from "@/lib/cms";
+import { getChangelogPageData } from "@/lib/cms";
 
 export const metadata: Metadata = {
   title: "Guide Updates",
@@ -19,10 +19,7 @@ const typeColor: Record<string, string> = {
 };
 
 export default async function ChangelogPage() {
-  const [entries, settings] = await Promise.all([
-    getChangelog(),
-    getSiteSettings(),
-  ]);
+  const { entries, settings } = await getChangelogPageData();
 
   return (
     <>

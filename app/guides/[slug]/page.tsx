@@ -7,8 +7,7 @@ import { Paywall } from "@/app/_components/paywall";
 import { RestaurantCallout } from "@/app/_components/restaurant-callout";
 import {
   getGuideBySlug,
-  getAllGuides,
-  getAllEditorials,
+  getGuidePageData,
 } from "@/lib/cms";
 import { dastToHtml } from "@/lib/dast";
 import { cookies } from "next/headers";
@@ -48,11 +47,9 @@ export default async function GuidePage({
   const sessionId = cookieStore.get(SESSION_COOKIE)?.value ?? null;
 
   // Parallelize all independent fetches
-  const [guide, allGuides, editorials, sessionProducts, unlockToken] =
+  const [{ guide, allGuides, editorials }, sessionProducts, unlockToken] =
     await Promise.all([
-      getGuideBySlug(slug),
-      getAllGuides(),
-      getAllEditorials(),
+      getGuidePageData(slug),
       sessionId
         ? getSessionData<string[]>(sessionId, "unlockedProducts").catch(() => null)
         : Promise.resolve(null),

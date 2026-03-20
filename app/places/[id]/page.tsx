@@ -4,7 +4,7 @@ import { Icon } from "@/app/_components/icon";
 import { RestaurantCallout } from "@/app/_components/restaurant-callout";
 import {
   getAllGuides,
-  getAllEditorials,
+  getGuidesAndEditorials,
   type Venue,
 } from "@/lib/cms";
 
@@ -55,10 +55,7 @@ export default async function PlacePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [allGuides, editorials] = await Promise.all([
-    getAllGuides(),
-    getAllEditorials(),
-  ]);
+  const { guides: allGuides, editorials } = await getGuidesAndEditorials();
 
   let venue: VenueWithContext | null = null;
   let guideVenueCount = 0;
