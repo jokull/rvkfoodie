@@ -5,7 +5,8 @@
   "main": "./worker/index.ts",
   "workers_dev": true,
   "observability": { "enabled": true },
-  "placement": { "mode": "smart" },
+  // Pin Worker near D1 (WEUR) to eliminate ~80ms RTT per query
+  "placement": { "region": "aws:eu-west-1" },
   "assets": {
     "not_found_handling": "none",
     "directory": "dist/client"
