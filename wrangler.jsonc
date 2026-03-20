@@ -5,8 +5,9 @@
   "main": "./worker/index.ts",
   "workers_dev": true,
   "observability": { "enabled": true },
-  // Pin Worker near D1 (WEUR) to eliminate ~80ms RTT per query
-  "placement": { "region": "aws:eu-west-1" },
+  // Smart Placement — D1 in WEUR, but co-location doesn't help
+  // (bottleneck is agent-cms resolver overhead, not D1 RTT — see jokull/agent-cms#25)
+  "placement": { "mode": "smart" },
   "assets": {
     "not_found_handling": "none",
     "directory": "dist/client"
@@ -17,8 +18,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "rvkfoodie-cms-v2",
-      "database_id": "c4e9eb97-ee8e-42ae-bf22-97b27e54cc6f",
+      "database_name": "rvkfoodie-cms-v3",
+      "database_id": "505b1ce8-1c92-418a-b25e-bd180efe7897",
       "migrations_dir": "migrations"
     }
   ],

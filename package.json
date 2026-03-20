@@ -5,10 +5,10 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "deploy": "wrangler d1 migrations apply rvkfoodie-cms-v2 --remote && vite build && wrangler deploy",
+    "deploy": "wrangler d1 migrations apply rvkfoodie-cms-v3 --remote && vite build && wrangler deploy",
     "check": "oxlint --config oxlintrc.json --type-aware --type-check app/ lib/",
-    "db:migrate": "wrangler d1 migrations apply rvkfoodie-cms-v2 --local",
-    "db:migrate:remote": "wrangler d1 migrations apply rvkfoodie-cms-v2 --remote"
+    "db:migrate": "wrangler d1 migrations apply rvkfoodie-cms-v3 --local",
+    "db:migrate:remote": "wrangler d1 migrations apply rvkfoodie-cms-v3 --remote"
   },
   "dependencies": {
     "@0no-co/graphqlsp": "^1.15.2",
