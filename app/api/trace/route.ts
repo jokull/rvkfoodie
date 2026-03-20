@@ -1,105 +1,111 @@
 import { getCmsHandler } from "@/lib/cms-handler";
 import { env } from "cloudflare:workers";
-import { print } from "graphql";
-import { graphql } from "gql.tada";
 
 /**
- * Diagnostic endpoint — traces GraphQL query waterfall.
- * Compares raw D1, fast-path eligible, and full Yoga queries.
+ * Diagnostic: waterfall trace comparing fast-path vs Yoga for real queries.
  */
 
-const simpleDefs = {
-  home: graphql(`query HomePage { homePage { id headline headlineEmphasis subtext bundleTitle bundlePrice } }`),
-  settings: graphql(`query SiteSettings { siteSettings { id defaultMetaDescription changelogSubtitle } }`),
-  guidesFlat: graphql(`query AllGuidesFlat { allGuides { id title slug subtitle description price gumroadProductId gumroadUrl } }`),
-  editorialsFlat: graphql(`query AllEditorialsFlat { allEditorials { id title slug excerpt date } }`),
-};
+const editorialsFullQuery = `query AllEditorials {
+  allEditorials(orderBy: [date_DESC]) {
+    id title slug excerpt date
+    image { id url alt width height }
+    content { value blocks { __typename ... on ImageBlockRecord { id image { id url alt width height } caption } } }
+  }
+}`;
 
-const fullDefs = {
-  guidesFull: graphql(`query AllGuides { allGuides { id title slug content { value blocks { __typename ... on SectionRecord { id title venues { value blocks { __typename ... on VenueRecord { id name address description image { id url } } } } } ... on TextBlockRecord { id heading content { value } } } } } }`),
-  editorialsFull: graphql(`query AllEditorials { allEditorials { id title slug excerpt date image { id url alt } content { value blocks { __typename ... on ImageBlockRecord { id image { id url } caption } } } } }`),
-};
+const homePageCombinedQuery = `query HomePageData {
+  homePage { id headline headlineEmphasis subtext bundleTitle bundleDescription bundlePrice bundleGumroadUrl authorBlurb }
+  allGuides(orderBy: [price_DESC]) {
+    id title slug subtitle description price gumroadProductId gumroadUrl googleMapsUrl
+    intro { value }
+    content { value blocks { __typename ... on SectionRecord { id title venues { value blocks { __typename ... on VenueRecord { id name address description note time isFree location { latitude longitude } openingHours googleMapsUrl website phone bestOfAward grapevineUrl image { id url alt width height } } } } } ... on TextBlockRecord { id heading isFree content { value } } } }
+  }
+  allEditorials(orderBy: [date_DESC]) {
+    id title slug excerpt date
+    image { id url alt width height }
+    content { value blocks { __typename ... on ImageBlockRecord { id image { id url alt width height } caption } } }
+  }
+}`;
+
+async function traceViaHttp(label: string, query: string, headers: Record<string, string> = {}) {
+  const cms = getCmsHandler();
+  const t0 = performance.now();
+  const response = await cms.fetch(
+    new Request("http://localhost/graphql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${env.CMS_WRITE_KEY}`,
+        ...headers,
+      },
+      body: JSON.stringify({ query }),
+    }),
+  );
+  const body = await response.text();
+  const elapsed = ms(t0);
+  const h: Record<string, string> = {};
+  response.headers.forEach((v, k) => { if (k.startsWith("x-") || k === "server-timing") h[k] = v; });
+  return { label, elapsed, status: response.status, headers: h, bodyLength: body.length };
+}
+
+async function traceViaExecute(label: string, query: string) {
+  const cms = getCmsHandler();
+  const t0 = performance.now();
+  const result = await cms.execute(query);
+  const elapsed = ms(t0);
+  const hasData = result.data !== null && result.data !== undefined;
+  const hasErrors = (result.errors?.length ?? 0) > 0;
+  return { label, elapsed, hasData, hasErrors, errors: result.errors?.map(e => e.message) };
+}
 
 export async function GET() {
-  const cms = getCmsHandler();
   const db = env.DB;
 
-  // 1. Raw D1 queries — baseline for D1 latency
-  const raw: Record<string, number> = {};
-
-  const rawT0 = performance.now();
+  // Raw D1 baseline
+  const d1t0 = performance.now();
   await db.prepare("SELECT 1").first();
-  raw["SELECT 1"] = ms(rawT0);
+  const d1Latency = ms(d1t0);
 
-  const rawT1 = performance.now();
-  await db.prepare("SELECT count(*) FROM models").first();
-  raw["count models"] = ms(rawT1);
-
-  const rawT2 = performance.now();
-  await db.prepare("SELECT * FROM content_home_page LIMIT 1").first();
-  raw["home row"] = ms(rawT2);
-
-  const rawT3 = performance.now();
-  await db.prepare("SELECT _published_snapshot FROM content_guide").all();
-  raw["guide snapshots"] = ms(rawT3);
-
-  const rawT4 = performance.now();
-  await db.prepare("SELECT _published_snapshot FROM content_editorial").all();
-  raw["editorial snapshots"] = ms(rawT4);
-
-  // 2. Warm schema
-  const schemaT0 = performance.now();
+  // Warm schema + fast path metadata
+  const cms = getCmsHandler();
   await cms.execute("{ __typename }");
-  const schemaWarmMs = ms(schemaT0);
 
-  // 3. Simple queries (fast-path eligible)
-  const simple: Record<string, number> = {};
-  for (const [name, doc] of Object.entries(simpleDefs)) {
-    const t0 = performance.now();
-    await cms.execute(print(doc));
-    simple[name] = ms(t0);
-  }
+  // --- Via execute() (uses fast path if available) ---
+  const execEditorials = await traceViaExecute("editorialsFull via execute()", editorialsFullQuery);
+  const execCombined = await traceViaExecute("homePageCombined via execute()", homePageCombinedQuery);
 
-  // 4. Full queries (Yoga fallback)
-  const full: Record<string, number> = {};
-  for (const [name, doc] of Object.entries(fullDefs)) {
-    const t0 = performance.now();
-    await cms.execute(print(doc));
-    full[name] = ms(t0);
-  }
+  // --- Via HTTP with X-Bench-Trace:1 (forces Yoga, gets SQL metrics) ---
+  const yogaEditorials = await traceViaHttp("editorialsFull via Yoga", editorialsFullQuery, { "X-Bench-Trace": "1" });
+  const yogaCombined = await traceViaHttp("homePageCombined via Yoga", homePageCombinedQuery, { "X-Bench-Trace": "1" });
 
-  // 5. Page simulations
-  const pageHomeSimpleT0 = performance.now();
-  await Promise.all([
-    cms.execute(print(simpleDefs.home)),
-    cms.execute(print(simpleDefs.guidesFlat)),
-    cms.execute(print(simpleDefs.editorialsFlat)),
-  ]);
-  const pageHomeSimpleMs = ms(pageHomeSimpleT0);
+  // --- Via HTTP without trace header (goes through fast path if matched) ---
+  const fpEditorials = await traceViaHttp("editorialsFull via HTTP (fast path?)", editorialsFullQuery);
+  const fpCombined = await traceViaHttp("homePageCombined via HTTP (fast path?)", homePageCombinedQuery);
 
-  const pageHomeFullT0 = performance.now();
-  await Promise.all([
-    cms.execute(print(simpleDefs.home)),
-    cms.execute(print(fullDefs.guidesFull)),
-    cms.execute(print(fullDefs.editorialsFull)),
-  ]);
-  const pageHomeFullMs = ms(pageHomeFullT0);
-
-  return new Response(
-    JSON.stringify({
-      rawD1: raw,
-      schemaWarmMs,
-      simple,
-      full,
-      pageSimulation: { homeSimple: pageHomeSimpleMs, homeFull: pageHomeFullMs },
-      analysis: {
-        d1Latency: `${raw["SELECT 1"]}ms per round-trip`,
-        fastPathOverhead: `${Math.round(simple.home - raw["SELECT 1"])}ms over raw D1`,
-        yogaOverhead: `${Math.round(full.guidesFull - simple.guidesFlat)}ms for structured text resolution`,
+  return Response.json({
+    d1Latency,
+    execute: { execEditorials, execCombined },
+    yoga: { yogaEditorials, yogaCombined },
+    fastPathHttp: { fpEditorials, fpCombined },
+    comparison: {
+      editorials: {
+        execute: execEditorials.elapsed,
+        yoga: yogaEditorials.elapsed,
+        httpFastPath: fpEditorials.elapsed,
+        yogaSqlStatements: yogaEditorials.headers["x-sql-statement-count"],
+        yogaSqlTotalMs: yogaEditorials.headers["x-sql-total-ms"],
+        httpFpSqlStatements: fpEditorials.headers["x-sql-statement-count"] ?? "n/a (fast path)",
       },
-    }, null, 2),
-    { headers: { "Content-Type": "application/json" } },
-  );
+      combined: {
+        execute: execCombined.elapsed,
+        yoga: yogaCombined.elapsed,
+        httpFastPath: fpCombined.elapsed,
+        yogaSqlStatements: yogaCombined.headers["x-sql-statement-count"],
+        yogaSqlTotalMs: yogaCombined.headers["x-sql-total-ms"],
+        httpFpSqlStatements: fpCombined.headers["x-sql-statement-count"] ?? "n/a (fast path)",
+      },
+    },
+  }, { headers: { "Content-Type": "application/json" } });
 }
 
 function ms(t0: number) {
