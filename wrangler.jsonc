@@ -5,6 +5,7 @@
   "main": "./worker/index.ts",
   "workers_dev": true,
   "observability": { "enabled": true },
+  "placement": { "mode": "smart" },
   "assets": {
     "not_found_handling": "none",
     "directory": "dist/client"
