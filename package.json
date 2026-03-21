@@ -23,20 +23,20 @@
     "graphql": "^16.13.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "vinext": "^0.0.26"
+    "vinext": "^0.0.33"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.2",
-    "@types/node": "^22.19.15",
+    "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@typescript/native-preview": "7.0.0-dev.20260320.1",
+    "@typescript/native-preview": "7.0.0-dev.20260321.1",
     "lucide-static": "^0.577.0",
     "oxlint": "^1.56.0",
     "oxlint-tsgolint": "^0.17.1",
     "tailwindcss": "^4.2.2",
     "typescript": "^5.9.3",
-    "vite": "^7.3.1",
+    "vite": "^8.0.1",
     "wrangler": "^4.76.0"
   },
   "pnpm": {

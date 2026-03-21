@@ -16,11 +16,11 @@ export default async function EditorLoginPage({
 
     const name = formData.get("name")?.toString().trim();
     const password = formData.get("password")?.toString();
-    const returnTo = formData.get("returnTo")?.toString() ?? "/";
+    const destination = formData.get("returnTo")?.toString() ?? "/";
 
     if (!name || password !== getEditorPassword()) {
       redirect(
-        `/editor-access/login?returnTo=${encodeURIComponent(returnTo)}&error=${encodeURIComponent("Wrong password")}`,
+        `/editor-access/login?returnTo=${encodeURIComponent(destination)}&error=${encodeURIComponent("Wrong password")}`,
       );
     }
 
@@ -39,7 +39,7 @@ export default async function EditorLoginPage({
 
     if (!tokenResponse.ok) {
       redirect(
-        `/editor-access/login?returnTo=${encodeURIComponent(returnTo)}&error=${encodeURIComponent("Failed to create editor token")}`,
+        `/editor-access/login?returnTo=${encodeURIComponent(destination)}&error=${encodeURIComponent("Failed to create editor token")}`,
       );
     }
 
@@ -54,7 +54,7 @@ export default async function EditorLoginPage({
       maxAge: 31_536_000, // 1 year
     });
 
-    redirect(returnTo);
+    redirect(destination);
   }
 
   return (
