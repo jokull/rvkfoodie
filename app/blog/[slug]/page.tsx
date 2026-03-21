@@ -6,6 +6,7 @@ import {
   getEditorialBySlug,
   getBlogPageData,
 } from "@/lib/cms";
+import { seoTagsToMetadata } from "@/lib/seo";
 import { dastToHtml } from "@/lib/dast";
 
 import { EditWrapper, EditBar, CmsField, CmsText, CmsImage } from "@/app/_components/visual-edit";
@@ -20,17 +21,14 @@ export async function generateMetadata({
   const { slug } = await params;
   const post = await getEditorialBySlug(slug);
   if (!post) return {};
-  const heroUrl = post.image
-    ? post.image.url
-    : null;
+  const seo = seoTagsToMetadata(post._seoMetaTags);
   return {
-    title: post.title,
-    description: post.excerpt,
+    ...seo,
     alternates: { canonical: `/blog/${post.slug}` },
     openGraph: {
+      ...seo.openGraph,
       type: "article",
       publishedTime: post.date,
-      ...(heroUrl ? { images: [{ url: heroUrl }] } : {}),
     },
   };
 }

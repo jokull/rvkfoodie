@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { DastDocument } from "@agent-cms/visual-edit";
 import { getAboutPageData } from "@/lib/cms";
+import { seoTagsToMetadata } from "@/lib/seo";
 import { dastToHtml } from "@/lib/dast";
 import { RestaurantCallout } from "@/app/_components/restaurant-callout";
 import { EditWrapper, EditBar, CmsField, CmsText } from "@/app/_components/visual-edit";
@@ -8,8 +9,7 @@ import { EditWrapper, EditBar, CmsField, CmsText } from "@/app/_components/visua
 export async function generateMetadata(): Promise<Metadata> {
   const { about } = await getAboutPageData();
   return {
-    title: about.title,
-    description: about.metaDescription,
+    ...seoTagsToMetadata(about._seoMetaTags),
     alternates: { canonical: "/about" },
   };
 }

@@ -7,6 +7,10 @@ import { graphql, type ResultOf } from "gql.tada";
 import { print } from "graphql";
 import { getCmsHandler } from "./cms-handler";
 
+// Store the last execute trace for diagnostics
+let _lastTrace: Record<string, unknown> | undefined;
+export function getLastExecuteTrace() { return _lastTrace; }
+
 async function execute<T>(document: { kind: "Document" }, variables?: Record<string, unknown>): Promise<T> {
   const queryString = print(document as Parameters<typeof print>[0]);
   const result = await getCmsHandler().execute(queryString, variables);
@@ -14,6 +18,9 @@ async function execute<T>(document: { kind: "Document" }, variables?: Record<str
   if (result.errors?.length) {
     throw new Error(`GraphQL: ${result.errors.map((e) => e.message).join(", ")}`);
   }
+
+  // Capture trace from agent-cms execute()
+  _lastTrace = (result as { _trace?: Record<string, unknown> })._trace;
 
   return result.data as T;
 }
@@ -61,6 +68,7 @@ const GuideBySlugQuery = graphql(`
     guide(filter: { slug: { eq: $slug } }) {
       id title slug subtitle description price
       gumroadProductId gumroadUrl googleMapsUrl
+      _seoMetaTags { tag attributes content }
       intro { value }
       content {
         value
@@ -116,6 +124,7 @@ const EditorialBySlugQuery = graphql(`
   query EditorialBySlug($slug: String!) {
     editorial(filter: { slug: { eq: $slug } }) {
       id title slug excerpt date
+      _seoMetaTags { tag attributes content }
       image { id url alt width height }
       content {
         value
@@ -154,7 +163,7 @@ const HomePageQuery = graphql(`
 
 const AboutPageQuery = graphql(`
   query AboutPage {
-    aboutPage { id title metaDescription bio { value } }
+    aboutPage { id title metaDescription bio { value } _seoMetaTags { tag attributes content } }
   }
 `);
 
@@ -467,7 +476,7 @@ const ChangelogPageDataQuery = graphql(`
 
 const AboutPageDataQuery = graphql(`
   query AboutPageData {
-    aboutPage { id title metaDescription bio { value } }
+    aboutPage { id title metaDescription bio { value } _seoMetaTags { tag attributes content } }
     allGuides(orderBy: [price_DESC]) {
       id title slug subtitle description price
       gumroadProductId gumroadUrl googleMapsUrl
@@ -506,7 +515,8 @@ const AboutPageDataQuery = graphql(`
 
 export async function getGuideBySlug(slug: string) {
   const data = await execute<ResultOf<typeof GuideBySlugQuery>>(GuideBySlugQuery, { slug });
-  return data.guide ? mapGuide(data.guide) : null;
+  if (!data.guide) return null;
+  return { ...mapGuide(data.guide), _seoMetaTags: data.guide._seoMetaTags };
 }
 
 export async function getEditorialBySlug(slug: string) {

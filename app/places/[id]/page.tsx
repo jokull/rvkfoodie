@@ -104,6 +104,16 @@ export default async function PlacePage({
     v.googleMapsUrl ??
     `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${v.name} ${v.address} Iceland`)}`;
 
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://www.rvkfoodie.is" },
+      { "@type": "ListItem", position: 2, name: v.guideTitle, item: `https://www.rvkfoodie.is/guides/${v.guideSlug}` },
+      { "@type": "ListItem", position: 3, name: v.name, item: `https://www.rvkfoodie.is/places/${v.id}` },
+    ],
+  };
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Restaurant",
@@ -147,6 +157,10 @@ export default async function PlacePage({
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

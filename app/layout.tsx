@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     siteName: "Reykjavík Foodie",
     locale: "en_US",
     type: "website",
-    images: [{ url: "/og-default.jpg", width: 1200, height: 630 }],
+    images: [{ url: "/og-default.png", width: 1200, height: 1200 }],
   },
 };
 

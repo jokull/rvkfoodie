@@ -9,6 +9,7 @@ import {
   getGuideBySlug,
   getGuidePageData,
 } from "@/lib/cms";
+import { seoTagsToMetadata } from "@/lib/seo";
 import { dastToHtml } from "@/lib/dast";
 import { cookies } from "next/headers";
 import { getSessionData, setSessionData, SESSION_COOKIE } from "@/lib/session";
@@ -23,10 +24,10 @@ export async function generateMetadata({
   const guide = await getGuideBySlug(slug);
   if (!guide) return {};
   return {
-    title: guide.title,
-    description: guide.description,
+    ...seoTagsToMetadata(guide._seoMetaTags),
     alternates: { canonical: `/guides/${guide.slug}` },
     openGraph: {
+      ...seoTagsToMetadata(guide._seoMetaTags).openGraph,
       images: [{ url: `/og-${guide.slug}.jpg` }],
     },
   };
@@ -112,6 +113,15 @@ export default async function GuidePage({
     })
     .slice(0, 3);
 
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://www.rvkfoodie.is" },
+      { "@type": "ListItem", position: 2, name: guide.title, item: `https://www.rvkfoodie.is/guides/${guide.slug}` },
+    ],
+  };
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -139,6 +149,10 @@ export default async function GuidePage({
 
   const content = (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

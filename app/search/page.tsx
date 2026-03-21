@@ -5,6 +5,7 @@ import { getGuidesAndEditorials, type Venue } from "@/lib/cms";
 
 export const metadata: Metadata = {
   title: "Search",
+  robots: { index: false, follow: true },
 };
 
 const CMS_URL = "https://rvkfoodie-agent-cms.solberg.workers.dev";
