@@ -5,6 +5,8 @@ import { RestaurantCallout } from "@/app/_components/restaurant-callout";
 import {
   getAllGuides,
   getGuidesAndEditorials,
+  venueUrl,
+  parseVenueParam,
   type Venue,
 } from "@/lib/cms";
 
@@ -20,9 +22,9 @@ interface VenueWithContext extends Venue {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const { id } = await params;
+  const id = parseVenueParam((await params).slug);
   const allGuides = await getAllGuides();
 
   for (const guide of allGuides) {
@@ -36,7 +38,7 @@ export async function generateMetadata({
           return {
             title: v.name,
             description: v.description.slice(0, 160),
-            alternates: { canonical: `/places/${v.id}` },
+            alternates: { canonical: venueUrl(v) },
             ...(imgUrl
               ? { openGraph: { images: [{ url: imgUrl }] } }
               : {}),
@@ -52,9 +54,9 @@ export async function generateMetadata({
 export default async function PlacePage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-  const { id } = await params;
+  const id = parseVenueParam((await params).slug);
   const { guides: allGuides, editorials } = await getGuidesAndEditorials();
 
   let venue: VenueWithContext | null = null;
@@ -110,7 +112,7 @@ export default async function PlacePage({
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: "https://www.rvkfoodie.is" },
       { "@type": "ListItem", position: 2, name: v.guideTitle, item: `https://www.rvkfoodie.is/guides/${v.guideSlug}` },
-      { "@type": "ListItem", position: 3, name: v.name, item: `https://www.rvkfoodie.is/places/${v.id}` },
+      { "@type": "ListItem", position: 3, name: v.name, item: `https://www.rvkfoodie.is${venueUrl(v)}` },
     ],
   };
 
@@ -332,7 +334,7 @@ export default async function PlacePage({
             {nearby.map((nv) => (
               <a
                 key={nv.id}
-                href={`/places/${nv.id}`}
+                href={venueUrl(nv)}
                 className="block border border-ink/10 rounded-xl p-5 hover:border-ink/25 transition-colors group"
               >
                 <h3 className="font-display text-[1.25rem] leading-tight group-hover:text-blue transition-colors">

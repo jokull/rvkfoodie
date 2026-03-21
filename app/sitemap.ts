@@ -1,4 +1,4 @@
-import { getAllGuides, getAllEditorials } from "@/lib/cms";
+import { getAllGuides, getAllEditorials, venueUrl } from "@/lib/cms";
 
 interface SitemapEntry {
   url: string;
@@ -32,7 +32,7 @@ export default async function sitemap(): Promise<SitemapEntry[]> {
       if (block.blockType === "section") {
         for (const venue of block.venues) {
           entries.push({
-            url: `https://www.rvkfoodie.is/places/${venue.id}`,
+            url: `https://www.rvkfoodie.is${venueUrl(venue)}`,
             lastModified: today,
             changeFrequency: "monthly",
             priority: 0.7,

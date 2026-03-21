@@ -1,4 +1,5 @@
 import { Icon } from "./icon";
+import { venueUrl } from "@/lib/cms";
 
 
 export function VenueCard({
@@ -73,7 +74,7 @@ export function VenueCard({
           <h3 className="font-display text-[1.75rem] leading-tight mb-1">
             {id ? (
               <a
-                href={`/places/${id}`}
+                href={venueUrl({ id, name })}
                 className="hover:text-blue transition-colors"
               >
                 {name}

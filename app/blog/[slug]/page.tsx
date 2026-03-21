@@ -5,6 +5,7 @@ import { ImageBlock } from "@/app/_components/image-block";
 import {
   getEditorialBySlug,
   getBlogPageData,
+  venueUrl,
 } from "@/lib/cms";
 import { seoTagsToMetadata } from "@/lib/seo";
 import { dastToHtml } from "@/lib/dast";
@@ -193,7 +194,7 @@ export default async function BlogPostPage({
             {mentionedVenues.map((v) => (
               <a
                 key={v.id}
-                href={`/places/${v.id}`}
+                href={venueUrl(v)}
                 className="flex items-center justify-between border border-ink/10 rounded-xl p-5 hover:border-ink/25 transition-colors group"
               >
                 <div>

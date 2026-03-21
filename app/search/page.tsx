@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Icon } from "@/app/_components/icon";
-import { getGuidesAndEditorials, type Venue } from "@/lib/cms";
+import { getGuidesAndEditorials, venueUrl, type Venue } from "@/lib/cms";
 
 
 export const metadata: Metadata = {
@@ -121,7 +121,7 @@ export default async function SearchPage({
           type: "venue",
           title: venue.name,
           subtitle: `${venue.address} · ${section} · ${guide.title}`,
-          url: `/places/${venue.id}`,
+          url: venueUrl(venue),
           image: venue.image?.url ?? undefined,
           badge: venue.bestOfAward ?? undefined,
         });
