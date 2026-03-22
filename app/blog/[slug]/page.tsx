@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import type { DastDocument } from "@agent-cms/visual-edit";
+
 import { notFound } from "next/navigation";
 import { ImageBlock } from "@/app/_components/image-block";
 import {
@@ -162,7 +162,7 @@ export default async function BlogPostPage({
           </CmsImage>
         )}
 
-        <CmsText fieldApiKey="content" value={post.content?.value as DastDocument}>
+        <CmsText fieldApiKey="content" value={post.content?.value}>
           <div className="prose-custom">
             {contentNodes.map((node, i) => {
               if (node.type === "block" && node.item) {

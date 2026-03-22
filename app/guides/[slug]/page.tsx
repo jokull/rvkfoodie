@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import type { DastDocument } from "@agent-cms/visual-edit";
+
 import { notFound } from "next/navigation";
 import { env } from "cloudflare:workers";
 import { VenueCard } from "@/app/_components/venue-card";
@@ -175,7 +175,7 @@ export default async function GuidePage({
       </CmsField>
 
       {introHtml && (
-        <CmsText fieldApiKey="intro" value={guide.intro?.value as DastDocument}>
+        <CmsText fieldApiKey="intro" value={guide.intro?.value}>
           <div
             className="mb-12 prose-intro"
             dangerouslySetInnerHTML={{ __html: introHtml }}
