@@ -3,7 +3,7 @@
  * Uses gql.tada for statically typed queries with in-process execute().
  */
 
-import { graphql, type ResultOf } from "gql.tada";
+import { graphql, type ResultOf, type FragmentOf } from "gql.tada";
 import { print } from "graphql";
 import { cookies } from "next/headers";
 import { getCmsHandler } from "./cms-handler";
@@ -37,9 +37,34 @@ async function execute<T>(document: { kind: "Document" }, variables?: Record<str
   return result.data as T;
 }
 
-// Inline responsive image selection — used across all image fields
-// responsiveImage(imgixParams: { w: 800 }) generates Cloudflare Image Resizing URLs
-// with srcSet breakpoints at 320, 640, 800w and webp variants
+// ============ FRAGMENTS ============
+
+const ResponsiveImageFragment = graphql(`
+  fragment ResponsiveImageFields on Asset @_unmask {
+    id url alt width height
+    responsiveImage(imgixParams: { w: 800 }) {
+      src srcSet webpSrcSet width height sizes
+    }
+  }
+`);
+
+const VenueFragment = graphql(`
+  fragment VenueFields on VenueRecord @_unmask {
+    id name address description note time isFree
+    location { latitude longitude }
+    openingHours googleMapsUrl website phone
+    bestOfAward grapevineUrl
+    image { ...ResponsiveImageFields }
+  }
+`, [ResponsiveImageFragment]);
+
+const ImageBlockFragment = graphql(`
+  fragment ImageBlockFields on ImageBlockRecord @_unmask {
+    id
+    image { ...ResponsiveImageFields }
+    caption
+  }
+`, [ResponsiveImageFragment]);
 
 // ============ QUERIES ============
 
@@ -55,29 +80,14 @@ const AllGuidesQuery = graphql(`
           __typename
           ... on SectionRecord {
             id title
-            venues {
-              value
-              blocks {
-                __typename
-                ... on VenueRecord {
-                  id name address description note time isFree
-                  location { latitude longitude }
-                  openingHours googleMapsUrl website phone
-                  bestOfAward grapevineUrl
-                  image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-                }
-              }
-            }
+            venues { value blocks { __typename ...VenueFields } }
           }
-          ... on TextBlockRecord {
-            id heading isFree
-            content { value }
-          }
+          ... on TextBlockRecord { id heading isFree content { value } }
         }
       }
     }
   }
-`);
+`, [VenueFragment]);
 
 const GuideBySlugQuery = graphql(`
   query GuideBySlug($slug: String!) {
@@ -92,70 +102,35 @@ const GuideBySlugQuery = graphql(`
           __typename
           ... on SectionRecord {
             id title
-            venues {
-              value
-              blocks {
-                __typename
-                ... on VenueRecord {
-                  id name address description note time isFree
-                  location { latitude longitude }
-                  openingHours googleMapsUrl website phone
-                  bestOfAward grapevineUrl
-                  image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-                }
-              }
-            }
+            venues { value blocks { __typename ...VenueFields } }
           }
-          ... on TextBlockRecord {
-            id heading isFree
-            content { value }
-          }
+          ... on TextBlockRecord { id heading isFree content { value } }
         }
       }
     }
   }
-`);
+`, [VenueFragment]);
 
 const AllEditorialsQuery = graphql(`
   query AllEditorials {
     allEditorials(orderBy: [date_DESC]) {
       id title slug excerpt date
-      image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-      content {
-        value
-        blocks {
-          __typename
-          ... on ImageBlockRecord {
-            id
-            image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-            caption
-          }
-        }
-      }
+      image { ...ResponsiveImageFields }
+      content { value blocks { __typename ...ImageBlockFields } }
     }
   }
-`);
+`, [ResponsiveImageFragment, ImageBlockFragment]);
 
 const EditorialBySlugQuery = graphql(`
   query EditorialBySlug($slug: String!) {
     editorial(filter: { slug: { eq: $slug } }) {
       id title slug excerpt date
       _seoMetaTags { tag attributes content }
-      image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-      content {
-        value
-        blocks {
-          __typename
-          ... on ImageBlockRecord {
-            id
-            image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-            caption
-          }
-        }
-      }
+      image { ...ResponsiveImageFields }
+      content { value blocks { __typename ...ImageBlockFields } }
     }
   }
-`);
+`, [ResponsiveImageFragment, ImageBlockFragment]);
 
 const ChangelogQuery = graphql(`
   query Changelog {
@@ -169,8 +144,7 @@ const ChangelogQuery = graphql(`
 const HomePageQuery = graphql(`
   query HomePage {
     homePage {
-      id
-      headline headlineEmphasis subtext
+      id headline headlineEmphasis subtext
       bundleTitle bundleDescription bundlePrice bundleGumroadUrl
       authorBlurb
     }
@@ -186,36 +160,28 @@ const AboutPageQuery = graphql(`
 const SiteSettingsQuery = graphql(`
   query SiteSettings {
     siteSettings {
-      id
-      defaultMetaDescription restaurantCalloutTitle
+      id defaultMetaDescription restaurantCalloutTitle
       restaurantCalloutText restaurantCalloutEmail
       changelogSubtitle
     }
   }
 `);
 
-// ============ TYPES (derived from gql.tada) ============
+// ============ TYPES ============
 
 type RawGuide = NonNullable<ResultOf<typeof AllGuidesQuery>["allGuides"]>[number];
-type RawBlock = NonNullable<RawGuide["content"]>["blocks"][number];
-type RawSection = Extract<RawBlock, { __typename: "SectionRecord" }>;
-type RawVenue = Extract<NonNullable<RawSection["venues"]>["blocks"][number], { __typename: "VenueRecord" }>;
-
+export type ResponsiveImage = FragmentOf<typeof ResponsiveImageFragment>;
 export type Editorial = NonNullable<ResultOf<typeof AllEditorialsQuery>["allEditorials"]>[number];
 export type ChangelogEntry = NonNullable<ResultOf<typeof ChangelogQuery>["allChangelogEntries"]>[number];
 export type HomePageData = NonNullable<ResultOf<typeof HomePageQuery>["homePage"]>;
 export type AboutPageData = NonNullable<ResultOf<typeof AboutPageQuery>["aboutPage"]>;
 export type SiteSettingsData = NonNullable<ResultOf<typeof SiteSettingsQuery>["siteSettings"]>;
 
-// Mapped types with blockType discriminator for templates
 export type Venue = ReturnType<typeof mapVenue>;
 export type SectionBlock = { blockType: "section"; id: string; title: string; venues: Venue[] };
 export type TextBlock = { blockType: "textBlock"; id: string; heading: string | null; content: unknown; isFree: boolean };
 export type ContentBlock = SectionBlock | TextBlock;
 export type Guide = ReturnType<typeof mapGuide>;
-
-// Legacy compat
-export type PayloadImage = NonNullable<Editorial["image"]>;
 
 // ============ COMBINED QUERIES (single execute per page) ============
 
@@ -236,44 +202,19 @@ const HomePageDataQuery = graphql(`
           __typename
           ... on SectionRecord {
             id title
-            venues {
-              value
-              blocks {
-                __typename
-                ... on VenueRecord {
-                  id name address description note time isFree
-                  location { latitude longitude }
-                  openingHours googleMapsUrl website phone
-                  bestOfAward grapevineUrl
-                  image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-                }
-              }
-            }
+            venues { value blocks { __typename ...VenueFields } }
           }
-          ... on TextBlockRecord {
-            id heading isFree
-            content { value }
-          }
+          ... on TextBlockRecord { id heading isFree content { value } }
         }
       }
     }
     allEditorials(orderBy: [date_DESC]) {
       id title slug excerpt date
-      image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-      content {
-        value
-        blocks {
-          __typename
-          ... on ImageBlockRecord {
-            id
-            image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-            caption
-          }
-        }
-      }
+      image { ...ResponsiveImageFields }
+      content { value blocks { __typename ...ImageBlockFields } }
     }
   }
-`);
+`, [VenueFragment, ResponsiveImageFragment, ImageBlockFragment]);
 
 const GuidePageDataQuery = graphql(`
   query GuidePageData($slug: String!) {
@@ -287,24 +228,9 @@ const GuidePageDataQuery = graphql(`
           __typename
           ... on SectionRecord {
             id title
-            venues {
-              value
-              blocks {
-                __typename
-                ... on VenueRecord {
-                  id name address description note time isFree
-                  location { latitude longitude }
-                  openingHours googleMapsUrl website phone
-                  bestOfAward grapevineUrl
-                  image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-                }
-              }
-            }
+            venues { value blocks { __typename ...VenueFields } }
           }
-          ... on TextBlockRecord {
-            id heading isFree
-            content { value }
-          }
+          ... on TextBlockRecord { id heading isFree content { value } }
         }
       }
     }
@@ -318,61 +244,26 @@ const GuidePageDataQuery = graphql(`
           __typename
           ... on SectionRecord {
             id title
-            venues {
-              value
-              blocks {
-                __typename
-                ... on VenueRecord {
-                  id name address description note time isFree
-                  location { latitude longitude }
-                  openingHours googleMapsUrl website phone
-                  bestOfAward grapevineUrl
-                  image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-                }
-              }
-            }
+            venues { value blocks { __typename ...VenueFields } }
           }
-          ... on TextBlockRecord {
-            id heading isFree
-            content { value }
-          }
+          ... on TextBlockRecord { id heading isFree content { value } }
         }
       }
     }
     allEditorials(orderBy: [date_DESC]) {
       id title slug excerpt date
-      image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-      content {
-        value
-        blocks {
-          __typename
-          ... on ImageBlockRecord {
-            id
-            image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-            caption
-          }
-        }
-      }
+      image { ...ResponsiveImageFields }
+      content { value blocks { __typename ...ImageBlockFields } }
     }
   }
-`);
+`, [VenueFragment, ResponsiveImageFragment, ImageBlockFragment]);
 
 const BlogPageDataQuery = graphql(`
   query BlogPageData($slug: String!) {
     editorial(filter: { slug: { eq: $slug } }) {
       id title slug excerpt date
-      image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-      content {
-        value
-        blocks {
-          __typename
-          ... on ImageBlockRecord {
-            id
-            image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-            caption
-          }
-        }
-      }
+      image { ...ResponsiveImageFields }
+      content { value blocks { __typename ...ImageBlockFields } }
     }
     allGuides(orderBy: [price_DESC]) {
       id title slug subtitle description price
@@ -384,44 +275,19 @@ const BlogPageDataQuery = graphql(`
           __typename
           ... on SectionRecord {
             id title
-            venues {
-              value
-              blocks {
-                __typename
-                ... on VenueRecord {
-                  id name address description note time isFree
-                  location { latitude longitude }
-                  openingHours googleMapsUrl website phone
-                  bestOfAward grapevineUrl
-                  image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-                }
-              }
-            }
+            venues { value blocks { __typename ...VenueFields } }
           }
-          ... on TextBlockRecord {
-            id heading isFree
-            content { value }
-          }
+          ... on TextBlockRecord { id heading isFree content { value } }
         }
       }
     }
     allEditorials(orderBy: [date_DESC]) {
       id title slug excerpt date
-      image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-      content {
-        value
-        blocks {
-          __typename
-          ... on ImageBlockRecord {
-            id
-            image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-            caption
-          }
-        }
-      }
+      image { ...ResponsiveImageFields }
+      content { value blocks { __typename ...ImageBlockFields } }
     }
   }
-`);
+`, [VenueFragment, ResponsiveImageFragment, ImageBlockFragment]);
 
 const GuidesAndEditorialsQuery = graphql(`
   query GuidesAndEditorials {
@@ -435,44 +301,19 @@ const GuidesAndEditorialsQuery = graphql(`
           __typename
           ... on SectionRecord {
             id title
-            venues {
-              value
-              blocks {
-                __typename
-                ... on VenueRecord {
-                  id name address description note time isFree
-                  location { latitude longitude }
-                  openingHours googleMapsUrl website phone
-                  bestOfAward grapevineUrl
-                  image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-                }
-              }
-            }
+            venues { value blocks { __typename ...VenueFields } }
           }
-          ... on TextBlockRecord {
-            id heading isFree
-            content { value }
-          }
+          ... on TextBlockRecord { id heading isFree content { value } }
         }
       }
     }
     allEditorials(orderBy: [date_DESC]) {
       id title slug excerpt date
-      image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-      content {
-        value
-        blocks {
-          __typename
-          ... on ImageBlockRecord {
-            id
-            image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-            caption
-          }
-        }
-      }
+      image { ...ResponsiveImageFields }
+      content { value blocks { __typename ...ImageBlockFields } }
     }
   }
-`);
+`, [VenueFragment, ResponsiveImageFragment, ImageBlockFragment]);
 
 const ChangelogPageDataQuery = graphql(`
   query ChangelogPageData {
@@ -501,29 +342,14 @@ const AboutPageDataQuery = graphql(`
           __typename
           ... on SectionRecord {
             id title
-            venues {
-              value
-              blocks {
-                __typename
-                ... on VenueRecord {
-                  id name address description note time isFree
-                  location { latitude longitude }
-                  openingHours googleMapsUrl website phone
-                  bestOfAward grapevineUrl
-                  image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
-                }
-              }
-            }
+            venues { value blocks { __typename ...VenueFields } }
           }
-          ... on TextBlockRecord {
-            id heading isFree
-            content { value }
-          }
+          ... on TextBlockRecord { id heading isFree content { value } }
         }
       }
     }
   }
-`);
+`, [VenueFragment]);
 
 // ============ SINGLE-QUERY FETCHERS (for metadata / components) ============
 
@@ -668,7 +494,7 @@ function mapGuide(raw: RawGuide) {
   };
 }
 
-function mapVenue(v: RawVenue) {
+function mapVenue(v: FragmentOf<typeof VenueFragment>) {
   return {
     blockType: "venue" as const,
     id: v.id,
@@ -700,7 +526,7 @@ function mapContentBlocks(content: RawGuide["content"]): ContentBlock[] {
           id: b.id,
           title: b.title ?? "",
           venues: (b.venues?.blocks ?? [])
-            .filter((v): v is RawVenue => v.__typename === "VenueRecord")
+            .filter((v) => v.__typename === "VenueRecord")
             .map(mapVenue),
         };
       }

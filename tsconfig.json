@@ -19,7 +19,7 @@
     "target": "ES2017",
     "plugins": [
       {
-        "name": "@0no-co/graphqlsp",
+        "name": "gql.tada/ts-plugin",
         "schema": "./lib/graphql-schema.graphql",
         "tadaOutputLocation": "./lib/graphql-env.d.ts"
       }

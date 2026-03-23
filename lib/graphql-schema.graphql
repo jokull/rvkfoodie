@@ -1,5 +1,7 @@
 scalar JSON
 
+scalar ItemId
+
 """Cloudflare Image Resizing transform parameters"""
 input ImageTransformParams {
   width: Int
@@ -9,20 +11,85 @@ input ImageTransformParams {
   format: String
   gravity: String
   dpr: Int
+  zoom: Float
+  background: String
+  blur: Int
+  sharpen: Float
+  rotate: Int
+  anim: Boolean
+  trim: ImageTrimParams
+}
+
+input ImageTrimParams {
+  top: Int
+  right: Int
+  bottom: Int
+  left: Int
+  width: Int
+  height: Int
+}
+
+"""
+Legacy DatoCMS/imgix compatibility shim.
+Accepted only to smooth migrations; values are translated best-effort to
+Cloudflare image transforms and do not imply full imgix parity.
+"""
+input ImgixParamsShim {
+  w: Float
+  h: Float
+  fit: ImgixFitShim
+  auto: [ImgixAutoValueShim!]
+  q: Int
+  dpr: Float
+  blur: Int
+  bg: String
+  rot: Float
+  facepad: Float
+  maxW: Int
+  maxH: Int
+}
+
+enum ImgixFitShim {
+  crop
+  clip
+  fill
+  facearea
+  scale
+  max
+}
+
+enum ImgixAutoValueShim {
+  format
+  compress
 }
 
 type Asset {
   id: ID!
   filename: String!
+  basename: String!
+  format: String!
   mimeType: String!
   size: Int!
   width: Int
   height: Int
   alt: String
   title: String
-  url: String!
+  url(transforms: ImageTransformParams, cfImagesParams: ImageTransformParams, imgixParams: ImgixParamsShim): String!
   blurhash: String
-  responsiveImage(transforms: ImageTransformParams, cfImagesParams: ImageTransformParams): ResponsiveImage
+  focalPoint: FocalPoint
+  customData: JSON
+  tags: [String!]!
+  smartTags: [String!]!
+  _createdAt: String!
+  _updatedAt: String!
+  _createdBy: String
+  _updatedBy: String
+  responsiveImage(transforms: ImageTransformParams, cfImagesParams: ImageTransformParams, imgixParams: ImgixParamsShim): ResponsiveImage
+}
+
+type FocalPoint {
+  x: Float!
+  y: Float!
 }
 
 type ResponsiveImage {
@@ -40,7 +107,18 @@ type ResponsiveImage {
 }
 
 type SiteInfo {
-  locales: [String!]!
+  locales: [SiteLocale!]!
+  faviconMetaTags: [Tag!]!
+  globalSeo(locale: SiteLocale, fallbackLocales: [SiteLocale!]): GlobalSeoField
+  noIndex: Boolean!
+}
+
+type GlobalSeoField {
+  siteName: String
+  titleSuffix: String
+  fallbackSeo: SeoField
+  facebookPageUrl: String
+  twitterAccount: String
 }
 
 """DatoCMS-compatible SEO meta tag"""
@@ -70,6 +148,16 @@ type LatLonField {
   longitude: Float!
 }
 
+type VideoField {
+  url: String
+  title: String
+  provider: String
+  providerUid: String
+  thumbnailUrl: String
+  width: Int
+  height: Int
+}
+
 """DatoCMS-compatible StructuredText response"""
 type StructuredText {
   value: JSON!
@@ -79,23 +167,39 @@ type StructuredText {
 }
 
 type StringMultiLocaleField {
-  locale: String!
+  locale: SiteLocale!
   value: String
 }
 
 type IntMultiLocaleField {
-  locale: String!
+  locale: SiteLocale!
   value: Int
 }
 
 type FloatMultiLocaleField {
-  locale: String!
+  locale: SiteLocale!
   value: Float
 }
 
 type BooleanMultiLocaleField {
-  locale: String!
+  locale: SiteLocale!
   value: Boolean
+}
+
+type JsonMultiLocaleField {
+  locale: SiteLocale!
+  value: JSON
+}
+
+type SeoMultiLocaleField {
+  locale: SiteLocale!
+  value: SeoField
+}
+
+enum ItemStatus {
+  draft
+  published
+  updated
 }
 
 input MatchesFilter {
@@ -148,6 +252,14 @@ input BooleanFilter {
   exists: Boolean
 }
 
+input StatusFilter {
+  eq: ItemStatus
+  neq: ItemStatus
+  in: [ItemStatus!]
+  notIn: [ItemStatus!]
+  exists: Boolean
+}
+
 input DateTimeFilter {
   eq: String
   neq: String
@@ -160,10 +272,10 @@ input DateTimeFilter {
 
 """Filter for single-reference fields (link, media) by record/asset ID"""
 input LinkFilter {
-  eq: ID
-  neq: ID
-  in: [ID!]
-  notIn: [ID!]
+  eq: ItemId
+  neq: ItemId
+  in: [ItemId!]
+  notIn: [ItemId!]
   exists: Boolean
 }
 
@@ -171,10 +283,10 @@ input LinkFilter {
 Filter for multi-reference fields (links, media_gallery) stored as JSON arrays
 """
 input LinksFilter {
-  eq: [ID!]
-  allIn: [ID!]
-  anyIn: [ID!]
-  notIn: [ID!]
+  eq: [ItemId!]
+  allIn: [ItemId!]
+  anyIn: [ItemId!]
+  notIn: [ItemId!]
   exists: Boolean
 }
 
@@ -199,14 +311,14 @@ input ExistsFilter {
 
 """Filter records by which locales have content"""
 input LocalesFilter {
-  allIn: [String!]
-  anyIn: [String!]
-  notIn: [String!]
+  allIn: [SiteLocale!]
+  anyIn: [SiteLocale!]
+  notIn: [SiteLocale!]
 }
 
 """Filter for tree model parent field"""
 input ParentFilter {
-  eq: ID
+  eq: ItemId
   exists: Boolean
 }
 
@@ -219,12 +331,23 @@ input PositionFilter {
   lte: Int
 }
 
-union GuideContentBlock = SectionRecord | TextBlockRecord
+scalar SiteLocale
 
-type GuideContentField {
+union GuideRecordContentBlock = SectionRecord | TextBlockRecord
+
+type GuideRecordContentField {
   value: JSON!
-  blocks: [GuideContentBlock!]!
-  inlineBlocks: [GuideContentBlock!]!
+  blocks: [GuideRecordContentBlock!]!
+  inlineBlocks: [GuideRecordContentBlock!]!
+  links: [JSON!]!
+}
+
+union EditorialRecordContentBlock = ImageBlockRecord
+
+type EditorialRecordContentField {
+  value: JSON!
+  blocks: [EditorialRecordContentBlock!]!
+  inlineBlocks: [EditorialRecordContentBlock!]!
   links: [JSON!]!
 }
 
@@ -271,14 +394,28 @@ type TextBlockRecord {
   isFree: Boolean
 }
 
-type Guide {
+type ImageBlockRecord {
   id: ID!
   _modelApiKey: String!
-  _status: String
+  image: Asset
+  caption: String
+}
+
+type GuideRecord {
+  id: ID!
+  _modelApiKey: String!
+  _status: ItemStatus
+  _isValid: Boolean!
   _createdAt: String
   _updatedAt: String
+  _createdBy: String
+  _updatedBy: String
+  _publishedBy: String
+  _publicationScheduledAt: String
+  _unpublishingScheduledAt: String
   _publishedAt: String
   _firstPublishedAt: String
+  _editingUrl: String!
   _seoMetaTags: [Tag!]!
   title: String
   slug: String
@@ -289,17 +426,138 @@ type Guide {
   gumroadUrl: String
   googleMapsUrl: String
   intro: StructuredText
-  content: GuideContentField
-  _allReferencingChangelogEntrys(filter: ChangelogEntryFilter, orderBy: [ChangelogEntryOrderBy!], first: Int, skip: Int): [ChangelogEntry!]!
+  content: GuideRecordContentField
+  _allReferencingChangelogEntrys(locale: SiteLocale, fallbackLocales: [SiteLocale!], filter: ChangelogEntryFilter, orderBy: [ChangelogEntryOrderBy!], first: Int, skip: Int, through: InverseRelationshipFilterBetweenChangelogEntryAndGuideRecord): [ChangelogEntryRecord!]!
+  _allReferencingChangelogEntrysMeta(locale: SiteLocale, fallbackLocales: [SiteLocale!], filter: ChangelogEntryFilter, through: InverseRelationshipFilterBetweenChangelogEntryAndGuideRecord): ChangelogEntryMeta!
+}
+
+type EditorialRecord {
+  id: ID!
+  _modelApiKey: String!
+  _status: ItemStatus
+  _isValid: Boolean!
+  _createdAt: String
+  _updatedAt: String
+  _createdBy: String
+  _updatedBy: String
+  _publishedBy: String
+  _publicationScheduledAt: String
+  _unpublishingScheduledAt: String
+  _publishedAt: String
+  _firstPublishedAt: String
+  _editingUrl: String!
+  _seoMetaTags: [Tag!]!
+  title: String
+  slug: String
+  excerpt: String
+  date: String
+  image: Asset
+  content: EditorialRecordContentField
+}
+
+type ChangelogEntryRecord {
+  id: ID!
+  _modelApiKey: String!
+  _status: ItemStatus
+  _isValid: Boolean!
+  _createdAt: String
+  _updatedAt: String
+  _createdBy: String
+  _updatedBy: String
+  _publishedBy: String
+  _publicationScheduledAt: String
+  _unpublishingScheduledAt: String
+  _publishedAt: String
+  _firstPublishedAt: String
+  _editingUrl: String!
+  _seoMetaTags: [Tag!]!
+  _position: Int
+  date: String
+  title: String
+  description: String
+  changeType: String
+  guide: GuideRecord
+}
+
+type HomePageRecord {
+  id: ID!
+  _modelApiKey: String!
+  _status: ItemStatus
+  _isValid: Boolean!
+  _createdAt: String
+  _updatedAt: String
+  _createdBy: String
+  _updatedBy: String
+  _publishedBy: String
+  _publicationScheduledAt: String
+  _unpublishingScheduledAt: String
+  _publishedAt: String
+  _firstPublishedAt: String
+  _editingUrl: String!
+  _seoMetaTags: [Tag!]!
+  headline: String
+  headlineEmphasis: String
+  subtext: String
+  bundleTitle: String
+  bundleDescription: String
+  bundlePrice: Int
+  bundleGumroadUrl: String
+  authorBlurb: String
+}
+
+type AboutPageRecord {
+  id: ID!
+  _modelApiKey: String!
+  _status: ItemStatus
+  _isValid: Boolean!
+  _createdAt: String
+  _updatedAt: String
+  _createdBy: String
+  _updatedBy: String
+  _publishedBy: String
+  _publicationScheduledAt: String
+  _unpublishingScheduledAt: String
+  _publishedAt: String
+  _firstPublishedAt: String
+  _editingUrl: String!
+  _seoMetaTags: [Tag!]!
+  title: String
+  metaDescription: String
+  bio: StructuredText
+}
+
+type SiteSettingsRecord {
+  id: ID!
+  _modelApiKey: String!
+  _status: ItemStatus
+  _isValid: Boolean!
+  _createdAt: String
+  _updatedAt: String
+  _createdBy: String
+  _updatedBy: String
+  _publishedBy: String
+  _publicationScheduledAt: String
+  _unpublishingScheduledAt: String
+  _publishedAt: String
+  _firstPublishedAt: String
+  _editingUrl: String!
+  _seoMetaTags: [Tag!]!
+  defaultMetaDescription: String
+  restaurantCalloutTitle: String
+  restaurantCalloutText: String
+  restaurantCalloutEmail: String
+  changelogSubtitle: String
 }
 
 input GuideFilter {
-  id: StringFilter
-  _status: StringFilter
+  id: LinkFilter
+  _status: StatusFilter
   _createdAt: DateTimeFilter
   _updatedAt: DateTimeFilter
   _publishedAt: DateTimeFilter
   _firstPublishedAt: DateTimeFilter
+  _publicationScheduledAt: DateTimeFilter
+  _unpublishingScheduledAt: DateTimeFilter
   title: StringFilter
   slug: StringFilter
   subtitle: StringFilter
@@ -323,6 +581,10 @@ enum GuideOrderBy {
   _publishedAt_DESC
   _firstPublishedAt_ASC
   _firstPublishedAt_DESC
+  _publicationScheduledAt_ASC
+  _publicationScheduledAt_DESC
+  _unpublishingScheduledAt_ASC
+  _unpublishingScheduledAt_DESC
   title_ASC
   title_DESC
   slug_ASC
@@ -349,30 +611,15 @@ type GuideMeta {
   count: Int!
 }
 
-type Editorial {
-  id: ID!
-  _modelApiKey: String!
-  _status: String
-  _createdAt: String
-  _updatedAt: String
-  _publishedAt: String
-  _firstPublishedAt: String
-  _seoMetaTags: [Tag!]!
-  title: String
-  slug: String
-  excerpt: String
-  date: String
-  image: Asset
-  content: StructuredText
-}
-
 input EditorialFilter {
-  id: StringFilter
-  _status: StringFilter
+  id: LinkFilter
+  _status: StatusFilter
   _createdAt: DateTimeFilter
   _updatedAt: DateTimeFilter
   _publishedAt: DateTimeFilter
   _firstPublishedAt: DateTimeFilter
+  _publicationScheduledAt: DateTimeFilter
+  _unpublishingScheduledAt: DateTimeFilter
   title: StringFilter
   slug: StringFilter
   excerpt: StringFilter
@@ -392,6 +639,10 @@ enum EditorialOrderBy {
   _publishedAt_DESC
   _firstPublishedAt_ASC
   _firstPublishedAt_DESC
+  _publicationScheduledAt_ASC
+  _publicationScheduledAt_DESC
+  _unpublishingScheduledAt_ASC
+  _unpublishingScheduledAt_DESC
   title_ASC
   title_DESC
   slug_ASC
@@ -410,30 +661,15 @@ type EditorialMeta {
   count: Int!
 }
 
-type ChangelogEntry {
-  id: ID!
-  _modelApiKey: String!
-  _status: String
-  _createdAt: String
-  _updatedAt: String
-  _publishedAt: String
-  _firstPublishedAt: String
-  _seoMetaTags: [Tag!]!
-  _position: Int
-  date: String
-  title: String
-  description: String
-  changeType: String
-  guide: Guide
-}
-
 input ChangelogEntryFilter {
-  id: StringFilter
-  _status: StringFilter
+  id: LinkFilter
+  _status: StatusFilter
   _createdAt: DateTimeFilter
   _updatedAt: DateTimeFilter
   _publishedAt: DateTimeFilter
   _firstPublishedAt: DateTimeFilter
+  _publicationScheduledAt: DateTimeFilter
+  _unpublishingScheduledAt: DateTimeFilter
   _position: PositionFilter
   date: StringFilter
   title: StringFilter
@@ -453,6 +689,10 @@ enum ChangelogEntryOrderBy {
   _publishedAt_DESC
   _firstPublishedAt_ASC
   _firstPublishedAt_DESC
+  _publicationScheduledAt_ASC
+  _publicationScheduledAt_DESC
+  _unpublishingScheduledAt_ASC
+  _unpublishingScheduledAt_DESC
   _position_ASC
   _position_DESC
   date_ASC
@@ -471,32 +711,15 @@ type ChangelogEntryMeta {
   count: Int!
 }
 
-type HomePage {
-  id: ID!
-  _modelApiKey: String!
-  _status: String
-  _createdAt: String
-  _updatedAt: String
-  _publishedAt: String
-  _firstPublishedAt: String
-  _seoMetaTags: [Tag!]!
-  headline: String
-  headlineEmphasis: String
-  subtext: String
-  bundleTitle: String
-  bundleDescription: String
-  bundlePrice: Int
-  bundleGumroadUrl: String
-  authorBlurb: String
-}
-
 input HomePageFilter {
-  id: StringFilter
-  _status: StringFilter
+  id: LinkFilter
+  _status: StatusFilter
   _createdAt: DateTimeFilter
   _updatedAt: DateTimeFilter
   _publishedAt: DateTimeFilter
   _firstPublishedAt: DateTimeFilter
+  _publicationScheduledAt: DateTimeFilter
+  _unpublishingScheduledAt: DateTimeFilter
   headline: StringFilter
   headlineEmphasis: StringFilter
   subtext: StringFilter
@@ -518,6 +741,10 @@ enum HomePageOrderBy {
   _publishedAt_DESC
   _firstPublishedAt_ASC
   _firstPublishedAt_DESC
+  _publicationScheduledAt_ASC
+  _publicationScheduledAt_DESC
+  _unpublishingScheduledAt_ASC
+  _unpublishingScheduledAt_DESC
   headline_ASC
   headline_DESC
   headlineEmphasis_ASC
@@ -540,27 +767,15 @@ type HomePageMeta {
   count: Int!
 }
 
-type AboutPage {
-  id: ID!
-  _modelApiKey: String!
-  _status: String
-  _createdAt: String
-  _updatedAt: String
-  _publishedAt: String
-  _firstPublishedAt: String
-  _seoMetaTags: [Tag!]!
-  title: String
-  metaDescription: String
-  bio: StructuredText
-}
-
 input AboutPageFilter {
-  id: StringFilter
-  _status: StringFilter
+  id: LinkFilter
+  _status: StatusFilter
   _createdAt: DateTimeFilter
   _updatedAt: DateTimeFilter
   _publishedAt: DateTimeFilter
   _firstPublishedAt: DateTimeFilter
+  _publicationScheduledAt: DateTimeFilter
+  _unpublishingScheduledAt: DateTimeFilter
   title: StringFilter
   metaDescription: StringFilter
   bio: TextFilter
@@ -577,6 +792,10 @@ enum AboutPageOrderBy {
   _publishedAt_DESC
   _firstPublishedAt_ASC
   _firstPublishedAt_DESC
+  _publicationScheduledAt_ASC
+  _publicationScheduledAt_DESC
+  _unpublishingScheduledAt_ASC
+  _unpublishingScheduledAt_DESC
   title_ASC
   title_DESC
   metaDescription_ASC
@@ -589,29 +808,15 @@ type AboutPageMeta {
   count: Int!
 }
 
-type SiteSettings {
-  id: ID!
-  _modelApiKey: String!
-  _status: String
-  _createdAt: String
-  _updatedAt: String
-  _publishedAt: String
-  _firstPublishedAt: String
-  _seoMetaTags: [Tag!]!
-  defaultMetaDescription: String
-  restaurantCalloutTitle: String
-  restaurantCalloutText: String
-  restaurantCalloutEmail: String
-  changelogSubtitle: String
-}
-
 input SiteSettingsFilter {
-  id: StringFilter
-  _status: StringFilter
+  id: LinkFilter
+  _status: StatusFilter
   _createdAt: DateTimeFilter
   _updatedAt: DateTimeFilter
   _publishedAt: DateTimeFilter
   _firstPublishedAt: DateTimeFilter
+  _publicationScheduledAt: DateTimeFilter
+  _unpublishingScheduledAt: DateTimeFilter
   defaultMetaDescription: StringFilter
   restaurantCalloutTitle: StringFilter
   restaurantCalloutText: StringFilter
@@ -630,6 +835,10 @@ enum SiteSettingsOrderBy {
   _publishedAt_DESC
   _firstPublishedAt_ASC
   _firstPublishedAt_DESC
+  _publicationScheduledAt_ASC
+  _publicationScheduledAt_DESC
+  _unpublishingScheduledAt_ASC
+  _unpublishingScheduledAt_DESC
   defaultMetaDescription_ASC
   defaultMetaDescription_DESC
   restaurantCalloutTitle_ASC
@@ -646,9 +855,19 @@ type SiteSettingsMeta {
   count: Int!
 }
 
+enum InverseRelationshipFieldsBetweenChangelogEntryAndGuideRecord {
+  guide
+}
+
+input InverseRelationshipFilterBetweenChangelogEntryAndGuideRecord {
+  fields: [InverseRelationshipFieldsBetweenChangelogEntryAndGuideRecord!]
+}
+
 input UploadFilter {
   id: StringFilter
   filename: StringFilter
+  basename: StringFilter
+  format: StringFilter
   mimeType: StringFilter
   width: IntFilter
   height: IntFilter
@@ -663,6 +882,10 @@ input UploadFilter {
 enum UploadOrderBy {
   filename_ASC
   filename_DESC
+  basename_ASC
+  basename_DESC
+  format_ASC
+  format_DESC
   size_ASC
   size_DESC
   _createdAt_ASC
@@ -674,24 +897,24 @@ type UploadMeta {
 }
 
 type Query {
-  allGuides(locale: String, fallbackLocales: [String!], filter: GuideFilter, orderBy: [GuideOrderBy!], first: Int, skip: Int): [Guide!]!
-  guide(locale: String, fallbackLocales: [String!], id: ID, filter: GuideFilter): Guide
-  _allGuidesMeta(filter: GuideFilter): GuideMeta!
-  allEditorials(locale: String, fallbackLocales: [String!], filter: EditorialFilter, orderBy: [EditorialOrderBy!], first: Int, skip: Int): [Editorial!]!
-  editorial(locale: String, fallbackLocales: [String!], id: ID, filter: EditorialFilter): Editorial
-  _allEditorialsMeta(filter: EditorialFilter): EditorialMeta!
-  allChangelogEntries(locale: String, fallbackLocales: [String!], filter: ChangelogEntryFilter, orderBy: [ChangelogEntryOrderBy!], first: Int, skip: Int): [ChangelogEntry!]!
-  changelogEntry(locale: String, fallbackLocales: [String!], id: ID, filter: ChangelogEntryFilter): ChangelogEntry
-  _allChangelogEntriesMeta(filter: ChangelogEntryFilter): ChangelogEntryMeta!
-  allHomePages(locale: String, fallbackLocales: [String!], filter: HomePageFilter, orderBy: [HomePageOrderBy!], first: Int, skip: Int): [HomePage!]!
-  homePage(locale: String, fallbackLocales: [String!], id: ID, filter: HomePageFilter): HomePage
-  _allHomePagesMeta(filter: HomePageFilter): HomePageMeta!
-  allAboutPages(locale: String, fallbackLocales: [String!], filter: AboutPageFilter, orderBy: [AboutPageOrderBy!], first: Int, skip: Int): [AboutPage!]!
-  aboutPage(locale: String, fallbackLocales: [String!], id: ID, filter: AboutPageFilter): AboutPage
-  _allAboutPagesMeta(filter: AboutPageFilter): AboutPageMeta!
-  allSiteSettingss(locale: String, fallbackLocales: [String!], filter: SiteSettingsFilter, orderBy: [SiteSettingsOrderBy!], first: Int, skip: Int): [SiteSettings!]!
-  siteSettings(locale: String, fallbackLocales: [String!], id: ID, filter: SiteSettingsFilter): SiteSettings
-  _allSiteSettingssMeta(filter: SiteSettingsFilter): SiteSettingsMeta!
+  allGuides(locale: SiteLocale, fallbackLocales: [SiteLocale!], filter: GuideFilter, orderBy: [GuideOrderBy!], first: Int, skip: Int, excludeInvalid: Boolean): [GuideRecord!]!
+  guide(locale: SiteLocale, fallbackLocales: [SiteLocale!], id: ItemId, filter: GuideFilter): GuideRecord
+  _allGuidesMeta(filter: GuideFilter, excludeInvalid: Boolean): GuideMeta!
+  allEditorials(locale: SiteLocale, fallbackLocales: [SiteLocale!], filter: EditorialFilter, orderBy: [EditorialOrderBy!], first: Int, skip: Int, excludeInvalid: Boolean): [EditorialRecord!]!
+  editorial(locale: SiteLocale, fallbackLocales: [SiteLocale!], id: ItemId, filter: EditorialFilter): EditorialRecord
+  _allEditorialsMeta(filter: EditorialFilter, excludeInvalid: Boolean): EditorialMeta!
+  allChangelogEntries(locale: SiteLocale, fallbackLocales: [SiteLocale!], filter: ChangelogEntryFilter, orderBy: [ChangelogEntryOrderBy!], first: Int, skip: Int, excludeInvalid: Boolean): [ChangelogEntryRecord!]!
+  changelogEntry(locale: SiteLocale, fallbackLocales: [SiteLocale!], id: ItemId, filter: ChangelogEntryFilter): ChangelogEntryRecord
+  _allChangelogEntriesMeta(filter: ChangelogEntryFilter, excludeInvalid: Boolean): ChangelogEntryMeta!
+  allHomePages(locale: SiteLocale, fallbackLocales: [SiteLocale!], filter: HomePageFilter, orderBy: [HomePageOrderBy!], first: Int, skip: Int, excludeInvalid: Boolean): [HomePageRecord!]!
+  homePage(locale: SiteLocale, fallbackLocales: [SiteLocale!], id: ItemId, filter: HomePageFilter): HomePageRecord
+  _allHomePagesMeta(filter: HomePageFilter, excludeInvalid: Boolean): HomePageMeta!
+  allAboutPages(locale: SiteLocale, fallbackLocales: [SiteLocale!], filter: AboutPageFilter, orderBy: [AboutPageOrderBy!], first: Int, skip: Int, excludeInvalid: Boolean): [AboutPageRecord!]!
+  aboutPage(locale: SiteLocale, fallbackLocales: [SiteLocale!], id: ItemId, filter: AboutPageFilter): AboutPageRecord
+  _allAboutPagesMeta(filter: AboutPageFilter, excludeInvalid: Boolean): AboutPageMeta!
+  allSiteSettingses(locale: SiteLocale, fallbackLocales: [SiteLocale!], filter: SiteSettingsFilter, orderBy: [SiteSettingsOrderBy!], first: Int, skip: Int, excludeInvalid: Boolean): [SiteSettingsRecord!]!
+  siteSettings(locale: SiteLocale, fallbackLocales: [SiteLocale!], id: ItemId, filter: SiteSettingsFilter): SiteSettingsRecord
+  _allSiteSettingsesMeta(filter: SiteSettingsFilter, excludeInvalid: Boolean): SiteSettingsMeta!
   _site: SiteInfo!
   allUploads(filter: UploadFilter, orderBy: [UploadOrderBy!], first: Int, skip: Int): [Asset!]!
   _allUploadsMeta(filter: UploadFilter): UploadMeta!
