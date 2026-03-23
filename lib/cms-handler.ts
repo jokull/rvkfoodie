@@ -13,6 +13,7 @@ export function getCmsHandler() {
         writeKey: env.CMS_WRITE_KEY,
         ai: env.AI,
         vectorize: env.VECTORIZE,
+        siteUrl: "https://www.rvkfoodie.is",
       },
     });
   return cached;

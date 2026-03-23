@@ -5,15 +5,27 @@
 
 import { graphql, type ResultOf } from "gql.tada";
 import { print } from "graphql";
+import { cookies } from "next/headers";
 import { getCmsHandler } from "./cms-handler";
 
 // Store the last execute trace for diagnostics
 let _lastTrace: Record<string, unknown> | undefined;
 export function getLastExecuteTrace() { return _lastTrace; }
 
+/** Check if the current request has a valid preview cookie */
+async function isPreviewMode(): Promise<boolean> {
+  try {
+    const cookieStore = await cookies();
+    return !!cookieStore.get("__preview")?.value;
+  } catch {
+    return false;
+  }
+}
+
 async function execute<T>(document: { kind: "Document" }, variables?: Record<string, unknown>): Promise<T> {
   const queryString = print(document as Parameters<typeof print>[0]);
-  const result = await getCmsHandler().execute(queryString, variables);
+  const includeDrafts = await isPreviewMode();
+  const result = await getCmsHandler().execute(queryString, variables, { includeDrafts });
 
   if (result.errors?.length) {
     throw new Error(`GraphQL: ${result.errors.map((e) => e.message).join(", ")}`);

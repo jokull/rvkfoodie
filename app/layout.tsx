@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { EditorTokenScript } from "@/app/_components/editor-token-script";
+import { PreviewBanner } from "@/app/_components/preview-banner";
 
 export const metadata: Metadata = {
   title: {
@@ -51,6 +52,7 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-cream text-ink font-body text-normal leading-normal antialiased">
+        <PreviewBanner />
         <header className="max-w-2xl mx-auto px-6 pt-8 sm:pt-12 pb-6 sm:pb-8">
           <nav className="flex flex-col sm:flex-row items-center sm:justify-between gap-4">
             <a href="/" className="inline-block">
