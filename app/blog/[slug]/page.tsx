@@ -152,12 +152,27 @@ export default async function BlogPostPage({
         {heroUrl && post.image && (
           <CmsImage assetId={post.image.id} fieldApiKey="image">
             <div className="mb-12 rounded-2xl overflow-hidden">
-              <img
-                src={heroUrl}
-                alt={(post.image.alt ?? post.title) ?? ""}
-                className="w-full rounded-2xl"
-                loading="eager"
-              />
+              {post.image.responsiveImage ? (
+                <picture>
+                  <source srcSet={post.image.responsiveImage.webpSrcSet} type="image/webp" sizes={post.image.responsiveImage.sizes ?? undefined} />
+                  <source srcSet={post.image.responsiveImage.srcSet} sizes={post.image.responsiveImage.sizes ?? undefined} />
+                  <img
+                    src={post.image.responsiveImage.src}
+                    width={post.image.responsiveImage.width}
+                    height={post.image.responsiveImage.height}
+                    alt={(post.image.alt ?? post.title) ?? ""}
+                    className="w-full rounded-2xl"
+                    loading="eager"
+                  />
+                </picture>
+              ) : (
+                <img
+                  src={heroUrl}
+                  alt={(post.image.alt ?? post.title) ?? ""}
+                  className="w-full rounded-2xl"
+                  loading="eager"
+                />
+              )}
             </div>
           </CmsImage>
         )}

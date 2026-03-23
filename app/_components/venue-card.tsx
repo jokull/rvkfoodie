@@ -1,32 +1,9 @@
 import { Icon } from "./icon";
-import { venueUrl } from "@/lib/cms";
+import { venueUrl, type Venue } from "@/lib/cms";
 
 
-export function VenueCard({
-  id,
-  name,
-  address,
-  description,
-  note,
-  time,
-  openingHours,
-  googleMapsUrl,
-  bestOfAward,
-  grapevineUrl,
-  image,
-}: {
-  id?: string;
-  name: string;
-  address: string;
-  description: string;
-  note?: string;
-  time?: string;
-  openingHours?: string;
-  googleMapsUrl?: string;
-  bestOfAward?: string;
-  grapevineUrl?: string;
-  image?: { url: string; alt?: string };
-}) {
+export function VenueCard(props: Venue) {
+  const { id, name, address, description, note, time, openingHours, googleMapsUrl, bestOfAward, grapevineUrl, image } = props;
   const mapsUrl =
     googleMapsUrl ??
     `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name} ${address} Iceland`)}`;
@@ -62,12 +39,25 @@ export function VenueCard({
       <div className={imgUrl ? "flex gap-5 items-start" : undefined}>
         {imgUrl && (
           <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl overflow-hidden shrink-0">
-            <img
-              src={imgUrl}
-              alt={image?.alt ?? name}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
+            {image?.responsiveImage ? (
+              <picture>
+                <source srcSet={image.responsiveImage.webpSrcSet} type="image/webp" sizes="128px" />
+                <source srcSet={image.responsiveImage.srcSet} sizes="128px" />
+                <img
+                  src={image.responsiveImage.src}
+                  alt={image.alt ?? name}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              </picture>
+            ) : (
+              <img
+                src={imgUrl}
+                alt={image?.alt ?? name}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            )}
           </div>
         )}
         <div className="flex-1 min-w-0">

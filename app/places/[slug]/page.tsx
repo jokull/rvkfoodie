@@ -176,14 +176,29 @@ export default async function PlacePage({
       </a>
 
       <article>
-        {venueImgUrl && (
+        {venueImgUrl && venue.image && (
           <div className="mb-8 rounded-2xl overflow-hidden">
-            <img
-              src={venueImgUrl}
-              alt={venue.image?.alt ?? venue.name}
-              className="w-full rounded-2xl"
-              loading="eager"
-            />
+            {venue.image.responsiveImage ? (
+              <picture>
+                <source srcSet={venue.image.responsiveImage.webpSrcSet} type="image/webp" sizes={venue.image.responsiveImage.sizes ?? undefined} />
+                <source srcSet={venue.image.responsiveImage.srcSet} sizes={venue.image.responsiveImage.sizes ?? undefined} />
+                <img
+                  src={venue.image.responsiveImage.src}
+                  width={venue.image.responsiveImage.width}
+                  height={venue.image.responsiveImage.height}
+                  alt={venue.image.alt ?? venue.name}
+                  className="w-full rounded-2xl"
+                  loading="eager"
+                />
+              </picture>
+            ) : (
+              <img
+                src={venueImgUrl}
+                alt={venue.image.alt ?? venue.name}
+                className="w-full rounded-2xl"
+                loading="eager"
+              />
+            )}
           </div>
         )}
         <p className="text-tiny leading-tiny text-blue font-medium tracking-wide uppercase mb-3">

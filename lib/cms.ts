@@ -37,7 +37,11 @@ async function execute<T>(document: { kind: "Document" }, variables?: Record<str
   return result.data as T;
 }
 
-// ============ QUERIES (inline, no fragments) ============
+// Inline responsive image selection — used across all image fields
+// responsiveImage(imgixParams: { w: 800 }) generates Cloudflare Image Resizing URLs
+// with srcSet breakpoints at 320, 640, 800w and webp variants
+
+// ============ QUERIES ============
 
 const AllGuidesQuery = graphql(`
   query AllGuides {
@@ -60,7 +64,7 @@ const AllGuidesQuery = graphql(`
                   location { latitude longitude }
                   openingHours googleMapsUrl website phone
                   bestOfAward grapevineUrl
-                  image { id url alt width height }
+                  image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
                 }
               }
             }
@@ -97,7 +101,7 @@ const GuideBySlugQuery = graphql(`
                   location { latitude longitude }
                   openingHours googleMapsUrl website phone
                   bestOfAward grapevineUrl
-                  image { id url alt width height }
+                  image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
                 }
               }
             }
@@ -116,14 +120,14 @@ const AllEditorialsQuery = graphql(`
   query AllEditorials {
     allEditorials(orderBy: [date_DESC]) {
       id title slug excerpt date
-      image { id url alt width height }
+      image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
       content {
         value
         blocks {
           __typename
           ... on ImageBlockRecord {
             id
-            image { id url alt width height }
+            image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
             caption
           }
         }
@@ -137,14 +141,14 @@ const EditorialBySlugQuery = graphql(`
     editorial(filter: { slug: { eq: $slug } }) {
       id title slug excerpt date
       _seoMetaTags { tag attributes content }
-      image { id url alt width height }
+      image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
       content {
         value
         blocks {
           __typename
           ... on ImageBlockRecord {
             id
-            image { id url alt width height }
+            image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
             caption
           }
         }
@@ -218,8 +222,7 @@ export type PayloadImage = NonNullable<Editorial["image"]>;
 const HomePageDataQuery = graphql(`
   query HomePageData {
     homePage {
-      id
-      headline headlineEmphasis subtext
+      id headline headlineEmphasis subtext
       bundleTitle bundleDescription bundlePrice bundleGumroadUrl
       authorBlurb
     }
@@ -242,7 +245,7 @@ const HomePageDataQuery = graphql(`
                   location { latitude longitude }
                   openingHours googleMapsUrl website phone
                   bestOfAward grapevineUrl
-                  image { id url alt width height }
+                  image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
                 }
               }
             }
@@ -256,14 +259,14 @@ const HomePageDataQuery = graphql(`
     }
     allEditorials(orderBy: [date_DESC]) {
       id title slug excerpt date
-      image { id url alt width height }
+      image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
       content {
         value
         blocks {
           __typename
           ... on ImageBlockRecord {
             id
-            image { id url alt width height }
+            image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
             caption
           }
         }
@@ -293,7 +296,7 @@ const GuidePageDataQuery = graphql(`
                   location { latitude longitude }
                   openingHours googleMapsUrl website phone
                   bestOfAward grapevineUrl
-                  image { id url alt width height }
+                  image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
                 }
               }
             }
@@ -324,7 +327,7 @@ const GuidePageDataQuery = graphql(`
                   location { latitude longitude }
                   openingHours googleMapsUrl website phone
                   bestOfAward grapevineUrl
-                  image { id url alt width height }
+                  image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
                 }
               }
             }
@@ -338,14 +341,14 @@ const GuidePageDataQuery = graphql(`
     }
     allEditorials(orderBy: [date_DESC]) {
       id title slug excerpt date
-      image { id url alt width height }
+      image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
       content {
         value
         blocks {
           __typename
           ... on ImageBlockRecord {
             id
-            image { id url alt width height }
+            image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
             caption
           }
         }
@@ -358,14 +361,14 @@ const BlogPageDataQuery = graphql(`
   query BlogPageData($slug: String!) {
     editorial(filter: { slug: { eq: $slug } }) {
       id title slug excerpt date
-      image { id url alt width height }
+      image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
       content {
         value
         blocks {
           __typename
           ... on ImageBlockRecord {
             id
-            image { id url alt width height }
+            image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
             caption
           }
         }
@@ -390,7 +393,7 @@ const BlogPageDataQuery = graphql(`
                   location { latitude longitude }
                   openingHours googleMapsUrl website phone
                   bestOfAward grapevineUrl
-                  image { id url alt width height }
+                  image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
                 }
               }
             }
@@ -404,14 +407,14 @@ const BlogPageDataQuery = graphql(`
     }
     allEditorials(orderBy: [date_DESC]) {
       id title slug excerpt date
-      image { id url alt width height }
+      image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
       content {
         value
         blocks {
           __typename
           ... on ImageBlockRecord {
             id
-            image { id url alt width height }
+            image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
             caption
           }
         }
@@ -441,7 +444,7 @@ const GuidesAndEditorialsQuery = graphql(`
                   location { latitude longitude }
                   openingHours googleMapsUrl website phone
                   bestOfAward grapevineUrl
-                  image { id url alt width height }
+                  image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
                 }
               }
             }
@@ -455,14 +458,14 @@ const GuidesAndEditorialsQuery = graphql(`
     }
     allEditorials(orderBy: [date_DESC]) {
       id title slug excerpt date
-      image { id url alt width height }
+      image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
       content {
         value
         blocks {
           __typename
           ... on ImageBlockRecord {
             id
-            image { id url alt width height }
+            image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
             caption
           }
         }
@@ -478,8 +481,7 @@ const ChangelogPageDataQuery = graphql(`
       guide { id title slug }
     }
     siteSettings {
-      id
-      defaultMetaDescription restaurantCalloutTitle
+      id defaultMetaDescription restaurantCalloutTitle
       restaurantCalloutText restaurantCalloutEmail
       changelogSubtitle
     }
@@ -508,7 +510,7 @@ const AboutPageDataQuery = graphql(`
                   location { latitude longitude }
                   openingHours googleMapsUrl website phone
                   bestOfAward grapevineUrl
-                  image { id url alt width height }
+                  image { id url alt width height responsiveImage(imgixParams: { w: 800 }) { src srcSet webpSrcSet width height sizes } }
                 }
               }
             }
