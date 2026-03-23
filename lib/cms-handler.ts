@@ -14,6 +14,10 @@ export function getCmsHandler() {
         ai: env.AI,
         vectorize: env.VECTORIZE,
         siteUrl: "https://www.rvkfoodie.is",
+        r2AccessKeyId: env.R2_ACCESS_KEY_ID,
+        r2SecretAccessKey: env.R2_SECRET_ACCESS_KEY,
+        r2BucketName: "rvkfoodie-cms",
+        cfAccountId: "561f024b3ba2bbafa2a67ec9b911693c",
       },
     });
   return cached;
