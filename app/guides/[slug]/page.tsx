@@ -76,7 +76,8 @@ export default async function GuidePage({
     }
   }
 
-  const unlocked = unlockedProducts.includes(guide.gumroadProductId);
+  const isPreview = !!cookieStore.get("__preview")?.value;
+  const unlocked = isPreview || unlockedProducts.includes(guide.gumroadProductId);
   const pending = pendingParam === "true";
 
   let totalHidden = 0;
