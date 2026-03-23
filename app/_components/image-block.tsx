@@ -1,24 +1,10 @@
+import type { FragmentOf } from "gql.tada";
+import type { ImageBlockFragment } from "@/lib/cms";
+
 export function ImageBlock({
   block,
 }: {
-  block: {
-    id: string;
-    image: {
-      url: string;
-      alt: string | null;
-      width: number | null;
-      height: number | null;
-      responsiveImage?: {
-        src: string;
-        srcSet: string;
-        webpSrcSet: string;
-        width: number;
-        height: number;
-        sizes: string;
-      } | null;
-    } | null;
-    caption: string | null;
-  };
+  block: FragmentOf<typeof ImageBlockFragment>;
 }) {
   if (!block.image?.url) return null;
   const ri = block.image.responsiveImage;
@@ -27,8 +13,8 @@ export function ImageBlock({
     <figure className="my-8 rounded-2xl overflow-hidden">
       {ri ? (
         <picture>
-          <source srcSet={ri.webpSrcSet} type="image/webp" sizes={ri.sizes} />
-          <source srcSet={ri.srcSet} sizes={ri.sizes} />
+          <source srcSet={ri.webpSrcSet} type="image/webp" sizes={ri.sizes ?? undefined} />
+          <source srcSet={ri.srcSet} sizes={ri.sizes ?? undefined} />
           <img
             src={ri.src}
             width={ri.width}

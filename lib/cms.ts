@@ -39,7 +39,7 @@ async function execute<T>(document: { kind: "Document" }, variables?: Record<str
 
 // ============ FRAGMENTS ============
 
-const ResponsiveImageFragment = graphql(`
+export const ResponsiveImageFragment = graphql(`
   fragment ResponsiveImageFields on Asset @_unmask {
     id url alt width height
     responsiveImage(imgixParams: { w: 800 }) {
@@ -48,7 +48,7 @@ const ResponsiveImageFragment = graphql(`
   }
 `);
 
-const VenueFragment = graphql(`
+export const VenueFragment = graphql(`
   fragment VenueFields on VenueRecord @_unmask {
     id name address description note time isFree
     location { latitude longitude }
@@ -58,7 +58,7 @@ const VenueFragment = graphql(`
   }
 `, [ResponsiveImageFragment]);
 
-const ImageBlockFragment = graphql(`
+export const ImageBlockFragment = graphql(`
   fragment ImageBlockFields on ImageBlockRecord @_unmask {
     id
     image { ...ResponsiveImageFields }

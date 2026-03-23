@@ -91,13 +91,7 @@ export default async function BlogPostPage({
   const contentValue = post.content?.value as
     | { document?: { children?: ContentNode[] } }
     | undefined;
-  type ImageBlockData = {
-    __typename: string;
-    id: string;
-    image: { url: string; alt: string | null; width: number | null; height: number | null } | null;
-    caption: string | null;
-  };
-  const contentBlocks: ImageBlockData[] = (post.content?.blocks ?? []) as ImageBlockData[];
+  const contentBlocks = post.content?.blocks ?? [];
   const contentBlocksById = new Map(
     contentBlocks.map((b) => [b.id, b]),
   );

@@ -1,11 +1,9 @@
-type ResponsiveImageData = {
-  src: string;
-  srcSet: string;
-  webpSrcSet: string;
-  width: number;
-  height: number;
-  sizes: string;
-};
+import type { FragmentOf } from "gql.tada";
+import type { ResponsiveImageFragment } from "@/lib/cms";
+
+type ResponsiveImageData = NonNullable<
+  FragmentOf<typeof ResponsiveImageFragment>["responsiveImage"]
+>;
 
 export function ResponsiveImage({
   data,
@@ -20,8 +18,8 @@ export function ResponsiveImage({
 }) {
   return (
     <picture>
-      <source srcSet={data.webpSrcSet} type="image/webp" sizes={data.sizes} />
-      <source srcSet={data.srcSet} sizes={data.sizes} />
+      <source srcSet={data.webpSrcSet} type="image/webp" sizes={data.sizes ?? undefined} />
+      <source srcSet={data.srcSet} sizes={data.sizes ?? undefined} />
       <img
         src={data.src}
         width={data.width}
