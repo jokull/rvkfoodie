@@ -91,7 +91,7 @@ export default async function HomePage() {
             {collagePhotos.map((photo, i) => {
               const card = collageCards[i];
               if (!card) return null;
-              const imgUrl = photo.image.responsiveImage?.src ?? photo.image.url;
+              const ri = photo.image.responsiveImage;
               return (
                 <div
                   key={photo.id}
@@ -106,11 +106,15 @@ export default async function HomePage() {
                     zIndex: card.z,
                   }}
                 >
-                  <img
-                    src={imgUrl}
-                    alt={(photo.image.alt ?? photo.title) ?? ""}
-                    className="w-full h-full object-cover"
-                  />
+                  {ri ? (
+                    <picture>
+                      <source srcSet={ri.webpSrcSet} type="image/webp" sizes={`${card.w}px`} />
+                      <source srcSet={ri.srcSet} sizes={`${card.w}px`} />
+                      <img src={ri.src} alt={(photo.image.alt ?? photo.title) ?? ""} className="w-full h-full object-cover" />
+                    </picture>
+                  ) : (
+                    <img src={photo.image.url} alt={(photo.image.alt ?? photo.title) ?? ""} className="w-full h-full object-cover" />
+                  )}
                 </div>
               );
             })}
@@ -192,21 +196,24 @@ export default async function HomePage() {
           </h2>
           <div className="space-y-6">
             {editorials.map((post) => {
-              const imgUrl = post.image?.responsiveImage?.src ?? post.image?.url ?? null;
+              const ri = post.image?.responsiveImage;
               return (
                 <a
                   key={post.slug}
                   href={`/blog/${post.slug}`}
                   className="flex gap-5 group items-start"
                 >
-                  {imgUrl && (
+                  {post.image && (
                     <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl overflow-hidden shrink-0">
-                      <img
-                        src={imgUrl}
-                        alt={(post.image?.alt ?? post.title) ?? ""}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                      />
+                      {ri ? (
+                        <picture>
+                          <source srcSet={ri.webpSrcSet} type="image/webp" sizes="128px" />
+                          <source srcSet={ri.srcSet} sizes="128px" />
+                          <img src={ri.src} alt={(post.image.alt ?? post.title) ?? ""} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                        </picture>
+                      ) : (
+                        <img src={post.image.url} alt={(post.image.alt ?? post.title) ?? ""} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                      )}
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
