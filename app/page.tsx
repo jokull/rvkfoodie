@@ -91,7 +91,7 @@ export default async function HomePage() {
             {collagePhotos.map((photo, i) => {
               const card = collageCards[i];
               if (!card) return null;
-              const imgUrl = photo.image.url;
+              const imgUrl = photo.image.responsiveImage?.src ?? photo.image.url;
               return (
                 <div
                   key={photo.id}
@@ -192,7 +192,7 @@ export default async function HomePage() {
           </h2>
           <div className="space-y-6">
             {editorials.map((post) => {
-              const imgUrl = post.image?.url ?? null;
+              const imgUrl = post.image?.responsiveImage?.src ?? post.image?.url ?? null;
               return (
                 <a
                   key={post.slug}

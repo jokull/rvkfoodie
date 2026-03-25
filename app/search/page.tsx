@@ -104,7 +104,7 @@ export default async function SearchPage({
               title: ed.title ?? "",
               subtitle: ed.excerpt ?? "",
               url: `/blog/${ed.slug}`,
-              image: ed.image?.url ?? undefined,
+              image: ed.image?.responsiveImage?.src ?? ed.image?.url ?? undefined,
               score: sr.rank,
             });
           }
@@ -122,7 +122,7 @@ export default async function SearchPage({
           title: venue.name,
           subtitle: `${venue.address} · ${section} · ${guide.title}`,
           url: venueUrl(venue),
-          image: venue.image?.url ?? undefined,
+          image: venue.image?.responsiveImage?.src ?? venue.image?.url ?? undefined,
           badge: venue.bestOfAward ?? undefined,
         });
       }
@@ -138,7 +138,7 @@ export default async function SearchPage({
             title: ed.title ?? "",
             subtitle: ed.excerpt ?? "",
             url: `/blog/${ed.slug}`,
-            image: ed.image?.url ?? undefined,
+            image: ed.image?.responsiveImage?.src ?? ed.image?.url ?? undefined,
           });
         }
       }
