@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "86f4a6d4-aa0b-4e08-8e5e-209100cfb3e7",
+  "id": "6bc241e8-77b7-4747-be86-833efea7ea8c",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -20,6 +20,10 @@
     },
     {
       "name": "deals",
+      "entityType": "tables"
+    },
+    {
+      "name": "guide_captures",
       "entityType": "tables"
     },
     {
@@ -425,6 +429,46 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "deals"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "guide_captures"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "guide_id",
+      "entityType": "columns",
+      "table": "guide_captures"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "email",
+      "entityType": "columns",
+      "table": "guide_captures"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "guide_captures"
     },
     {
       "type": "text",
@@ -1097,6 +1141,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "guide_captures_pk",
+      "table": "guide_captures",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "guide_excludes_pk",
       "table": "guide_excludes",
       "entityType": "pks"
@@ -1233,6 +1286,20 @@
       "name": "deals_stage_idx",
       "entityType": "indexes",
       "table": "deals"
+    },
+    {
+      "columns": [
+        {
+          "value": "guide_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "gc_guide_idx",
+      "entityType": "indexes",
+      "table": "guide_captures"
     },
     {
       "columns": [

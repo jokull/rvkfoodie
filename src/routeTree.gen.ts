@@ -10,11 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiQrRouteImport } from './routes/api.qr'
 import { Route as ApiRpcRouteImport } from './routes/api.rpc'
+import { Route as GSlugRouteImport } from './routes/g.$slug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiQrRoute = ApiQrRouteImport.update({
+  id: '/api/qr',
+  path: '/api/qr',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiRpcRoute = ApiRpcRouteImport.update({
@@ -22,31 +29,44 @@ const ApiRpcRoute = ApiRpcRouteImport.update({
   path: '/api/rpc',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GSlugRoute = GSlugRouteImport.update({
+  id: '/g/$slug',
+  path: '/g/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/qr': typeof ApiQrRoute
   '/api/rpc': typeof ApiRpcRoute
+  '/g/$slug': typeof GSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/qr': typeof ApiQrRoute
   '/api/rpc': typeof ApiRpcRoute
+  '/g/$slug': typeof GSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/qr': typeof ApiQrRoute
   '/api/rpc': typeof ApiRpcRoute
+  '/g/$slug': typeof GSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/rpc'
+  fullPaths: '/' | '/api/qr' | '/api/rpc' | '/g/$slug'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/rpc'
-  id: '__root__' | '/' | '/api/rpc'
+  to: '/' | '/api/qr' | '/api/rpc' | '/g/$slug'
+  id: '__root__' | '/' | '/api/qr' | '/api/rpc' | '/g/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiQrRoute: typeof ApiQrRoute
   ApiRpcRoute: typeof ApiRpcRoute
+  GSlugRoute: typeof GSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -58,6 +78,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/qr': {
+      id: '/api/qr'
+      path: '/api/qr'
+      fullPath: '/api/qr'
+      preLoaderRoute: typeof ApiQrRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/rpc': {
       id: '/api/rpc'
       path: '/api/rpc'
@@ -65,12 +92,21 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiRpcRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/g/$slug': {
+      id: '/g/$slug'
+      path: '/g/$slug'
+      fullPath: '/g/$slug'
+      preLoaderRoute: typeof GSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiQrRoute: ApiQrRoute,
   ApiRpcRoute: ApiRpcRoute,
+  GSlugRoute: GSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

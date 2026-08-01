@@ -311,3 +311,17 @@ export const guideExcludes = sqliteTable(
   },
   (t) => [unique('ge_guide_venue_uq').on(t.guideId, t.venueId)],
 )
+
+/** "Email me this guide" — offline-keeping captures. */
+export const guideCaptures = sqliteTable(
+  'guide_captures',
+  {
+    id: text('id').primaryKey(),
+    guideId: text('guide_id').notNull(),
+    email: text('email').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (t) => [index('gc_guide_idx').on(t.guideId)],
+)

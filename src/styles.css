@@ -87,3 +87,100 @@ main {
 .muted {
   @apply text-sm text-slate-500;
 }
+
+/* --- Guide page (/g/<slug>) --- */
+.guide-shell {
+  @apply mx-auto max-w-xl px-4 py-4;
+}
+.guide-back {
+  @apply text-sm text-slate-400;
+}
+.guide-hero {
+  @apply mb-4;
+}
+.guide-hero h1 {
+  @apply text-2xl font-semibold;
+}
+.guide-intro {
+  @apply mt-1 text-sm text-slate-600;
+}
+.badge-sample {
+  @apply mt-2 inline-block rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-700;
+}
+.guide-map {
+  @apply mb-6 h-52 w-full overflow-hidden rounded-lg border border-slate-200;
+}
+.guide-section {
+  @apply mb-6;
+}
+.section-title {
+  @apply mb-2 border-b border-slate-200 pb-1 text-sm font-semibold uppercase tracking-wide text-slate-500;
+}
+.guide-list {
+  @apply flex flex-col gap-3;
+}
+.venue-card {
+  @apply rounded-lg border border-slate-200 bg-white p-3;
+}
+.venue-card.editor-pick {
+  @apply border-slate-400;
+}
+.venue-card-head {
+  @apply flex items-center justify-between gap-2;
+}
+.venue-card-head h3 {
+  @apply text-base font-semibold;
+}
+.badge-pick {
+  @apply rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700;
+}
+.venue-card-address {
+  @apply mt-0.5 text-sm text-slate-600;
+}
+.venue-card-hours {
+  @apply text-xs text-slate-400;
+}
+.venue-card-note {
+  @apply mt-2 text-sm;
+}
+.venue-card-dishes {
+  @apply mt-1 text-sm text-emerald-700;
+}
+.venue-card-actions {
+  @apply mt-2 flex gap-3 text-sm font-medium text-sky-700;
+}
+.guide-footer {
+  @apply mt-8 border-t border-slate-200 pt-4 text-center;
+}
+.capture-form {
+  @apply mt-3 flex flex-col items-center gap-2;
+}
+.capture-form label {
+  @apply text-sm font-medium;
+}
+.capture-row {
+  @apply flex w-full max-w-sm gap-2;
+}
+.capture-row input {
+  @apply flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm;
+}
+.capture-row button {
+  @apply rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white;
+}
+.capture-done {
+  @apply text-sm text-emerald-700;
+}
+
+/* Leaflet map pins */
+.pin-dot {
+  @apply rounded-full border-2 border-white shadow;
+}
+.pin-hotel-dot {
+  @apply h-3.5 w-3.5 bg-sky-600;
+}
+.pin-venue-dot {
+  @apply h-2.5 w-2.5 bg-rose-600;
+}
+.radius-ring {
+  @apply fill-sky-200/40 stroke-sky-500;
+}

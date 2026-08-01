@@ -5,6 +5,8 @@
  * prefetchers in ssr.ts, both of which Start strips from the client build.
  */
 import { createId } from '@paralleldrive/cuid2'
+import { env } from 'cloudflare:workers'
+import { EmailMessage } from 'cloudflare:email'
 import { and, asc, count, desc, eq, gt, inArray, ne, sum } from 'drizzle-orm'
 import { generateKeyBetween } from 'fractional-indexing'
 import { err, matchError, ok } from 'result-rpc'
@@ -28,6 +30,7 @@ import {
   draftGuideContract,
   guideByIdContract,
   guideListContract,
+  guideViewBySlugContract,
   guideViewContract,
   hotelsByBusinessContract,
   hotelsListContract,
@@ -35,6 +38,7 @@ import {
   overviewContract,
   publishGuideContract,
   removeGuideExcludeContract,
+  requestGuideCaptureContract,
   setGuideConfigContract,
   setVenueStatusContract,
   updateBusinessContract,
@@ -51,6 +55,7 @@ import {
   contacts,
   db,
   deals,
+  guideCaptures,
   guideExcludes,
   guideVenues,
   guides,
@@ -1104,17 +1109,98 @@ const removeGuideExclude = server
     return ok({})
   })
 
-const guideView = server.implement(guideViewContract).handler(async ({ input, errors, context }) => {
-  const guide = (await context.db.select().from(guides).where(eq(guides.id, input.id)).limit(1))[0]
-  if (!guide) return err(errors.notFound({ guideId: input.id }))
-  const rows = await context.db
+/** Mobile-friendly HTML snapshot of the guide — the offline “keeping” artifact. */
+const buildGuideEmailHtml = (view: NonNullable<Awaited<ReturnType<typeof loadGuideView>>>) => {
+  const grouped = new Map<string, typeof view.venueRows>()
+  for (const row of view.venueRows) {
+    const list = grouped.get(row.venue.category) ?? []
+    list.push(row)
+    grouped.set(row.venue.category, list)
+  }
+  const sections = [...grouped.entries()]
+    .map(
+      ([category, rows]) => `
+        <h2 style="font-size:18px;margin:28px 0 8px;color:#111">${category}</h2>
+        ${rows
+          .map(
+            (r) => `
+          <div style="margin:0 0 18px;padding:12px;border:1px solid #e2e2e2;border-radius:8px">
+            <h3 style="margin:0 0 4px;font-size:16px">${r.venue.name}</h3>
+            <p style="margin:0;color:#555;font-size:14px">${r.venue.address}${
+              r.venue.openingHours ? ` · ${r.venue.openingHours}` : ''
+            }</p>
+            ${
+              (r.overrideText ?? r.venue.note)
+                ? `<p style="margin:6px 0 0;font-size:14px">${r.overrideText ?? r.venue.note}</p>`
+                : ''
+            }
+          </div>`,
+          )
+          .join('\n')}
+      `,
+    )
+    .join('\n')
+  return `
+<!doctype html><html><body style="margin:0;font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#fafafa;color:#222">
+  <div style="max-width:600px;margin:0 auto;padding:24px">
+    <h1 style="font-size:22px">Your Reykjavík guide</h1>
+    <p style="color:#555">Curated by Reykjavík Foodie — kept current, delivered to your inbox.</p>
+    ${sections}
+    <p style="margin-top:32px;color:#999;font-size:12px">Made for your stay · Reykjavík Foodie · rvkfoodie.is</p>
+  </div>
+</body></html>`
+}
+
+const requestGuideCapture = server
+  .implement(requestGuideCaptureContract)
+  .handler(async ({ input, errors, context }) => {
+    const guide = (
+      await context.db.select().from(guides).where(eq(guides.slug, input.slug)).limit(1)
+    )[0]
+    if (!guide) return err(errors.notFound({ guideId: input.slug }))
+    const view = await loadGuideView(context.db, guide.id)
+    if (!view) return err(errors.notFound({ guideId: input.slug }))
+
+    await context.db.insert(guideCaptures).values({
+      id: createId(),
+      guideId: guide.id,
+      email: input.email,
+      createdAt: new Date(),
+    })
+
+    // Turnstile verification + beta ops (verified from-address, rate limit)
+    // land in ticket 07; local emulation sends without them.
+    const raw = [
+      'From: Reykjavík Foodie <guides@rvkfoodie.is>',
+      `To: <${input.email}>`,
+      `Subject: Your Reykjavík guide (${guide.slug})`,
+      `Message-ID: <${createId()}@rvkfoodie.is>`,
+      `Date: ${new Date().toUTCString()}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/html; charset=utf-8',
+      '',
+      buildGuideEmailHtml(view),
+    ].join('\r\n')
+    try {
+      await env.EMAIL.send(new EmailMessage('guides@rvkfoodie.is', input.email, raw))
+    } catch (e) {
+      console.error('capture email failed', e)
+      return err(errors.notFound({ guideId: input.slug }))
+    }
+    return ok({})
+  })
+
+const loadGuideView = async (db: Db, guideId: string) => {
+  const guide = (await db.select().from(guides).where(eq(guides.id, guideId)).limit(1))[0]
+  if (!guide) return null
+  const rows = await db
     .select()
     .from(guideVenues)
-    .where(and(eq(guideVenues.guideId, input.id), eq(guideVenues.status, 'live')))
+    .where(and(eq(guideVenues.guideId, guideId), eq(guideVenues.status, 'live')))
     .orderBy(asc(guideVenues.orderKey))
   const venueIds = rows.map((r) => r.venueId)
   const venueRows = venueIds.length
-    ? await context.db.select().from(venues).where(inArray(venues.id, venueIds))
+    ? await db.select().from(venues).where(inArray(venues.id, venueIds))
     : []
   const venueById = new Map(venueRows.map((v) => [v.id, v]))
   const venueRowsOut = rows.map((r) => {
@@ -1128,8 +1214,25 @@ const guideView = server.implement(guideViewContract).handler(async ({ input, er
       venue: toVenuePublic(venue),
     }
   })
-  return ok({ guide: toGuide(guide), venueRows: venueRowsOut })
+  return { guide: toGuide(guide), venueRows: venueRowsOut }
+}
+
+const guideView = server.implement(guideViewContract).handler(async ({ input, errors, context }) => {
+  const view = await loadGuideView(context.db, input.id)
+  if (!view) return err(errors.notFound({ guideId: input.id }))
+  return ok(view)
 })
+
+const guideViewBySlug = server
+  .implement(guideViewBySlugContract)
+  .handler(async ({ input, errors, context }) => {
+    const guide = (
+      await context.db.select().from(guides).where(eq(guides.slug, input.slug)).limit(1)
+    )[0]
+    if (!guide) return err(errors.notFound({ guideId: input.slug }))
+    const view = await loadGuideView(context.db, guide.id)
+    return ok(view!)
+  })
 
 export const router = server.router({
   venues: {
@@ -1166,6 +1269,7 @@ export const router = server.router({
   },
   guides: {
     view: guideView,
+    viewBySlug: guideViewBySlug,
     list: guideList,
     byId: guideById,
     create: createGuide,
@@ -1175,6 +1279,9 @@ export const router = server.router({
     publish: publishGuide,
     addExclude: addGuideExclude,
     removeExclude: removeGuideExclude,
+  },
+  captures: {
+    request: requestGuideCapture,
   },
   stats: { overview },
 })
@@ -1191,7 +1298,6 @@ export const rpcHandler = createFetchHandler({
   router,
   createContext,
   endpoint: '/api/rpc',
-  contractVersion: 'rvkfoodie-scaffold',
   onInternalError: (event) => {
     console.error('rpc internal', event.incidentId, event.cause)
   },

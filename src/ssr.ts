@@ -34,3 +34,12 @@ export const prefetchHome = createServerFn({ method: 'GET' }).handler(async () =
   ])
   return runtime.dehydrate()
 })
+
+/** Guide page loader, keyed by the public slug. */
+export const prefetchGuide = createServerFn({ method: 'GET' })
+  .validator((data: { slug: string }) => data)
+  .handler(async ({ data }) => {
+    const { runtime, serverClient } = buildRuntime()
+    await runtime.prefetch(serverClient.guides.viewBySlug, { slug: data.slug })
+    return runtime.dehydrate()
+  })

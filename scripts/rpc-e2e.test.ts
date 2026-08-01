@@ -65,3 +65,14 @@ const audit = await client.audit.list({ entityType: 'venue', entityId: 'venue_05
 assert(audit.ok, 'audit.list ok')
 if (audit.ok) assert(audit.value.length >= 1, 'audit rows exist')
 console.log('ALL E2E CHECKS PASSED')
+
+// --- Guide page surfaces (ticket 06) ---
+const bySlug = await client.guides.viewBySlug({ slug: 'hotel-borg' })
+assert(bySlug.ok, 'guides.viewBySlug ok')
+if (bySlug.ok) assert(bySlug.value.venueRows.length === 7, '7 venues via slug')
+
+const capture = await client.captures.request({ slug: 'hotel-borg', email: 'guest@example.com' })
+assert(capture.ok, 'captures.request ok (EMAIL binding local emulation)')
+
+const qrRes = await fetch('http://localhost:3000/api/qr?slug=hotel-borg')
+assert(qrRes.status === 200 && (qrRes.headers.get('content-type') ?? '').includes('image/svg+xml'), 'QR endpoint returns SVG')

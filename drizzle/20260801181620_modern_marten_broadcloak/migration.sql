@@ -48,6 +48,13 @@ CREATE TABLE `deals` (
 	`updated_at` integer NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE `guide_captures` (
+	`id` text PRIMARY KEY,
+	`guide_id` text NOT NULL,
+	`email` text NOT NULL,
+	`created_at` integer NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE `guide_excludes` (
 	`id` text PRIMARY KEY,
 	`guide_id` text NOT NULL,
@@ -137,6 +144,7 @@ CREATE INDEX `businesses_name_idx` ON `businesses` (`name`);--> statement-breakp
 CREATE INDEX `contacts_business_idx` ON `contacts` (`business_id`);--> statement-breakpoint
 CREATE INDEX `deals_business_idx` ON `deals` (`business_id`);--> statement-breakpoint
 CREATE INDEX `deals_stage_idx` ON `deals` (`stage`);--> statement-breakpoint
+CREATE INDEX `gc_guide_idx` ON `guide_captures` (`guide_id`);--> statement-breakpoint
 CREATE INDEX `gv_guide_idx` ON `guide_venues` (`guide_id`);--> statement-breakpoint
 CREATE INDEX `gv_venue_idx` ON `guide_venues` (`venue_id`);--> statement-breakpoint
 CREATE INDEX `guides_hotel_idx` ON `guides` (`hotel_id`);--> statement-breakpoint

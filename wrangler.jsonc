@@ -18,7 +18,8 @@
   ],
 
   // Email binding — send_email is in beta (remote deploy requires the beta
-  // grant; local emulation works without it). Destination is a placeholder
-  // until a verified address is configured.
-  "send_email": [{ "name": "EMAIL", "destination_address": "guides@rvkfoodie.is" }]
+  // grant; local emulation works without it). No destination restriction:
+  // the guide-capture flow sends to arbitrary guest emails. The from-address
+  // (guides@rvkfoodie.is) needs domain verification for production.
+  "send_email": [{ "name": "EMAIL" }]
 }

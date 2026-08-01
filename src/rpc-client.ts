@@ -14,7 +14,6 @@ import { appContract } from './contract.js'
 export const client = createBrowserClient({
   contract: appContract,
   transport: fetchTransport({ url: '/api/rpc' }),
-  contractVersion: 'rvkfoodie-scaffold',
 })
 
 export type AppClient = typeof client

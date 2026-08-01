@@ -360,6 +360,14 @@ export const guideViewContract = app
   .errors({ ...pickErrors(guideErrors, 'notFound') })
   .query()
 
+/** Public surface: the /g/<slug> page resolves by slug, never by id. */
+export const guideViewBySlugContract = app
+  .procedure()
+  .input(wire.object({ slug: wire.string }))
+  .output(GuideViewCodec)
+  .errors({ ...pickErrors(guideErrors, 'notFound') })
+  .query()
+
 export const guideListContract = app
   .procedure()
   .input(wire.object({}))
@@ -451,6 +459,14 @@ export const removeGuideExcludeContract = app
   .affects(guideViewContract)
   .mutation()
 
+/** Public: “email me this guide” — Turnstile + HTML email in ticket 07. */
+export const requestGuideCaptureContract = app
+  .procedure()
+  .input(wire.object({ slug: wire.string, email: wire.string }))
+  .output(wire.object({}))
+  .errors({ ...pickErrors(guideErrors, 'notFound') })
+  .mutation()
+
 export const appContract = app.contract({
   venues: {
     feed: venueFeedContract,
@@ -488,6 +504,7 @@ export const appContract = app.contract({
   },
   guides: {
     view: guideViewContract,
+    viewBySlug: guideViewBySlugContract,
     list: guideListContract,
     byId: guideByIdContract,
     create: createGuideContract,
@@ -497,6 +514,9 @@ export const appContract = app.contract({
     publish: publishGuideContract,
     addExclude: addGuideExcludeContract,
     removeExclude: removeGuideExcludeContract,
+  },
+  captures: {
+    request: requestGuideCaptureContract,
   },
   stats: {
     overview: overviewContract,
