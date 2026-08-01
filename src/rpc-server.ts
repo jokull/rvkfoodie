@@ -7,7 +7,7 @@
 import { createId } from '@paralleldrive/cuid2'
 import { env } from 'cloudflare:workers'
 import { EmailMessage } from 'cloudflare:email'
-import { and, asc, count, desc, eq, gt, inArray, ne, sum } from 'drizzle-orm'
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, ne, or, sum } from 'drizzle-orm'
 import { generateKeyBetween } from 'fractional-indexing'
 import { err, matchError, ok, pickErrors } from 'result-rpc'
 import { tryDb } from 'result-rpc/db'
@@ -54,6 +54,7 @@ import {
   venueByIdContract,
   venueFeedContract,
   guideBuilderContract,
+  digestContract,
 } from './contract.js'
 import {
   auditLog,
@@ -1416,6 +1417,138 @@ const guideBuilder = server
     })
   })
 
+const sendDigestEmail = async (to: string, subject: string, text: string) => {
+  const raw = [
+    'From: Reykjavík Foodie <guides@rvkfoodie.is>',
+    `To: <${to}>`,
+    `Subject: ${subject}`,
+    `Message-ID: <${crypto.randomUUID()}@rvkfoodie.is>`,
+    `Date: ${new Date().toUTCString()}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/plain; charset=utf-8',
+    '',
+    text,
+  ].join('\r\n')
+  await env.EMAIL.send(new EmailMessage('guides@rvkfoodie.is', to, raw))
+}
+
+/**
+ * The monthly-pass finish: diff each live guide against the last digest
+ * baseline, email affected hotels. First run snapshots the baseline
+ * silently (no mail). "removed" = closures (they drop on the next draft)
+ * plus anything the hotel was told about that is no longer in the guide.
+ */
+const digestGuides = server
+  .implement(digestContract).use(requireStaff)
+  .handler(async ({ input, errors, context }) => {
+    const db = context.db
+    const all = input.guideId
+      ? await db.select().from(guides).where(eq(guides.id, input.guideId)).limit(1)
+      : await db.select().from(guides).where(eq(guides.status, 'live'))
+    if (input.guideId && all.length === 0) return err(errors.notFound({ guideId: input.guideId }))
+
+    const results = []
+    for (const guide of all) {
+      const rows = await db
+        .select()
+        .from(guideVenues)
+        .where(and(eq(guideVenues.guideId, guide.id), eq(guideVenues.status, 'live')))
+        .orderBy(asc(guideVenues.orderKey))
+      const venueRows = rows.length
+        ? await db.select().from(venues).where(inArray(venues.id, rows.map((r) => r.venueId)))
+        : []
+      const venueById = new Map(venueRows.map((v) => [v.id, v]))
+
+      const currentLive = rows
+        .filter((r) => venueById.get(r.venueId)?.status === 'live')
+        .map((r) => r.venueId)
+      const closures = rows
+        .filter((r) => venueById.get(r.venueId)?.status !== 'live')
+        .map((r) => r.venueId)
+      const baseline: string[] | null = guide.lastDigestVenueIds ?? null
+
+      let added: string[] = []
+      let removed: string[] = []
+      let skipped = baseline === null
+      if (!skipped) {
+        added = currentLive.filter((id) => !baseline!.includes(id))
+        removed = [
+          ...closures,
+          ...baseline!.filter((id) => !currentLive.includes(id) && !closures.includes(id)),
+        ]
+      }
+
+      const nameOf = (id: string) => venueById.get(id)?.name ?? id
+      let emailed: string[] = []
+      if (!skipped && (added.length > 0 || removed.length > 0)) {
+        const hotel = (
+          await db.select().from(hotels).where(eq(hotels.id, guide.hotelId)).limit(1)
+        )[0]
+        if (hotel) {
+          const recipients = await db
+            .select({ email: contacts.email })
+            .from(contacts)
+            .where(
+              and(
+                or(
+                  eq(contacts.hotelId, hotel.id),
+                  hotel.businessId !== null ? eq(contacts.businessId, hotel.businessId) : undefined,
+                ),
+                isNotNull(contacts.email),
+              ),
+            )
+          const tos = recipients.map((r) => r.email).filter((e): e is string => e !== null)
+          if (tos.length > 0) {
+            const lines = [
+              `Hi,`,
+              ``,
+              `Your Reykjavík Foodie guide (${guide.slug}) has been updated:`,
+              ``,
+              ...added.map((id) => `+ ${nameOf(id)}`),
+              ...removed.map((id) => `- ${nameOf(id)}`),
+              ``,
+              `See it live: https://rvkfoodie.is/g/${guide.slug}`,
+              ``,
+              `— the Reykjavík Foodie editorial team`,
+            ]
+            for (const to of tos) {
+              await sendDigestEmail(
+                to,
+                `Your guide — ${added.length} new, ${removed.length} removed`,
+                lines.join('\n'),
+              )
+              emailed.push(to)
+            }
+          }
+        }
+      }
+
+      await db
+        .update(guides)
+        .set({
+          lastDigestAt: new Date(),
+          lastDigestVenueIds: currentLive,
+          updatedAt: new Date(),
+        })
+        .where(eq(guides.id, guide.id))
+      await audit(db, {
+        actor: context.session?.user.email ?? 'system',
+        action: 'digest',
+        entityType: 'guide',
+        entityId: guide.id,
+        after: { added, removed, emailed, skipped },
+      })
+      results.push({
+        guideId: guide.id,
+        slug: guide.slug,
+        added: added.map(nameOf),
+        removed: removed.map(nameOf),
+        emailed,
+        skipped,
+      })
+    }
+    return ok(results)
+  })
 const updateGuideVenue = server
   .implement(updateGuideVenueContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
@@ -1500,6 +1633,7 @@ export const router = server.router({
     addExclude: addGuideExclude,
     removeExclude: removeGuideExclude,
     builder: guideBuilder,
+    digest: digestGuides,
   },
   guideVenues: {
     update: updateGuideVenue,

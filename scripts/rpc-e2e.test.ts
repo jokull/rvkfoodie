@@ -136,6 +136,43 @@ if (created.ok) {
       const ux = await client.guides.removeExclude({ guideId, venueId: second.venueId })
       assert(ux.ok, 'guides.removeExclude ok')
     }
+
+    // monthly-pass digest: first run snapshots the baseline silently,
+    // closures get reported, steady state sends nothing
+    const first = await client.guides.digest({})
+    assert(first.ok, 'guides.digest ok')
+    if (first.ok) {
+      const entry = first.value.find((e) => e.guideId === guideId)
+      assert(entry && entry.skipped === true, 'first digest snapshots silently (skipped)')
+    }
+    const victim = builder.ok ? builder.value.rows[0] : null
+    if (victim) {
+      const closed = await client.venues.setStatus({ id: victim.venueId, status: 'closed' })
+      assert(closed.ok, 'digest: venue closed')
+      const secondDigest = await client.guides.digest({})
+      assert(secondDigest.ok, 'guides.digest run 2 ok')
+      if (secondDigest.ok) {
+        const entry = secondDigest.value.find((e) => e.guideId === guideId)
+        assert(entry && entry.skipped === false, 'second digest is not skipped')
+        assert(entry && entry.removed.length === 1 && entry.removed[0] === victim.venue.name, 'closure reported as removed')
+        assert(entry && entry.added.length === 0, 'no additions on closure')
+      }
+      const reopened = await client.venues.setStatus({ id: victim.venueId, status: 'live' })
+      assert(reopened.ok, 'digest: venue reopened')
+      const third = await client.guides.digest({})
+      assert(third.ok, 'guides.digest run 3 ok')
+      if (third.ok) {
+        const entry = third.value.find((e) => e.guideId === guideId)
+        assert(entry && entry.skipped === false && entry.added.length === 1, 'reopened venue reported as re-added')
+        assert(entry && entry.removed.length === 0, 'no removals on reopen')
+      }
+      const fourth = await client.guides.digest({})
+      assert(fourth.ok, 'guides.digest run 4 ok')
+      if (fourth.ok) {
+        const entry = fourth.value.find((e) => e.guideId === guideId)
+        assert(entry && entry.skipped === false && entry.added.length === 0 && entry.removed.length === 0, 'steady state sends nothing')
+      }
+    }
   }
 }
 

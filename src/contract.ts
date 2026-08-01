@@ -30,6 +30,7 @@ import {
   OverviewCodec,
   Venue,
   VenueAward,
+  DigestResult,
 } from './models.js'
 import { LIFECYCLE_TYPES, PIPELINE_STAGES, VENUE_AWARD_TYPES, VENUE_CATEGORIES } from './schema.js'
 import type { AppContext } from './rpc-server.js'
@@ -491,6 +492,18 @@ export const approveGuideCandidatesContract = app
   .affects(guideViewContract)
   .mutation()
 
+/**
+ * The monthly-pass finish: diff every live guide against the last digest
+ * baseline and email affected hotels. First run snapshots the baseline
+ * silently; afterwards only real changes produce mail.
+ */
+export const digestContract = app
+  .procedure()
+  .input(wire.object({ guideId: wire.optional(wire.string) }))
+  .output(DigestResult)
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(guideErrors, 'notFound') })
+  .mutation()
+
 export const setGuideConfigContract = app
   .procedure()
   .input(
@@ -604,6 +617,7 @@ export const appContract = app.contract({
     addExclude: addGuideExcludeContract,
     removeExclude: removeGuideExcludeContract,
     builder: guideBuilderContract,
+    digest: digestContract,
   },
   guideVenues: {
     update: updateGuideVenueContract,

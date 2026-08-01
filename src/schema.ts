@@ -279,6 +279,10 @@ export const guides = sqliteTable(
     /** Itinerary target count. */
     targetCount: integer('target_count').notNull().default(24),
     generatedAt: integer('generated_at', { mode: 'timestamp_ms' }),
+    /** When the last digest email went out (or the baseline was snapshotted). */
+    lastDigestAt: integer('last_digest_at', { mode: 'timestamp_ms' }),
+    /** The live venue-id set the hotel was last told about — the diff baseline. */
+    lastDigestVenueIds: text('last_digest_venue_ids', { mode: 'json' }).$type<string[]>(),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .$defaultFn(() => new Date())
       .notNull(),

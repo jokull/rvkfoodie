@@ -9,7 +9,8 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { ResultRpcHydrationBoundary, useResultMutation, useResultPaginatedQuery } from 'result-rpc/react'
-import type { VenueRow } from '../models.js'
+import { DigestResult, type VenueRow } from '../models.js'
+import type { InputOf } from 'result-rpc'
 import { client } from '../rpc-client.js'
 import { prefetchVenues } from '../ssr.js'
 
@@ -84,6 +85,10 @@ function MonthlyPass() {
 
 function MonthlyPassInner() {
   const [minConfidence, setMinConfidence] = useState('')
+  const [digestOut, setDigestOut] = useState<InputOf<typeof DigestResult> | null>(null)
+  const digest = useResultMutation(client.guides.digest, {
+    onSuccess: (value) => setDigestOut(value),
+  })
   const feed = useResultPaginatedQuery(client.venues.feed, {}, { staleTime: 60_000 })
   if (feed.state === 'pending') return <p className="muted">Loading…</p>
   if (feed.state === 'failure') return <p className="error">Failed: {feed.error._tag}</p>
@@ -115,7 +120,31 @@ function MonthlyPassInner() {
           placeholder="min confidence (0–1)"
           aria-label="Minimum confidence"
         />
+        <button
+          onClick={() => void digest.mutate({})}
+          disabled={digest.state === 'pending'}
+        >
+          {digest.state === 'pending' ? 'Digesting…' : 'Send digest'}
+        </button>
       </div>
+      {digest.state === 'failure' && <p className="error">Digest failed: {digest.error._tag}</p>}
+      {digestOut && (
+        <ul className="event-list panel">
+          {digestOut.map((d) => (
+            <li key={d.guideId} className="pass-row">
+              <span className="pass-name">/{d.slug}</span>
+              <span className="muted small">
+                {d.skipped
+                  ? 'baseline snapshotted'
+                  : d.added.length === 0 && d.removed.length === 0
+                    ? 'no changes'
+                    : `+${d.added.length} −${d.removed.length}`}
+              </span>
+              <span className="muted small">{d.emailed.length > 0 ? `emailed ${d.emailed.join(', ')}` : ''}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       <QueueSection title="Due for verification" venues={due} />
       <QueueSection title="Closure candidates" venues={closed} />
       <QueueSection title="Recently added" venues={added.slice(0, 10)} count={added.length} />

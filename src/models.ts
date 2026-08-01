@@ -239,3 +239,17 @@ export const OverviewCodec = wire.object({
   hotelCount: wire.number,
 })
 export type Overview = InputOf<typeof OverviewCodec>
+
+/** One guide's digest line — added/removed are venue NAMES (hotel-facing). */
+export const DigestEntry = wire.object({
+  guideId: wire.string,
+  slug: wire.string,
+  added: wire.array(wire.string),
+  removed: wire.array(wire.string),
+  /** Recipients that got the email (empty when no contacts are on file). */
+  emailed: wire.array(wire.string),
+  /** True when the baseline was snapshotted with nothing sent (first run). */
+  skipped: wire.boolean,
+})
+
+export const DigestResult = wire.array(DigestEntry)
