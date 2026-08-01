@@ -1,0 +1,89 @@
+@import 'tailwindcss';
+
+.site-header {
+  @apply flex items-center gap-3 border-b border-slate-200 px-4 py-3;
+}
+.site-header .brand {
+  @apply text-lg font-semibold;
+}
+.site-header .subtitle {
+  @apply text-sm text-slate-500;
+}
+
+main {
+  @apply mx-auto max-w-3xl px-4 py-6;
+}
+
+.site-footer {
+  @apply border-t border-slate-200 px-4 py-3 text-center text-xs text-slate-400;
+}
+
+.stats {
+  @apply mb-4 flex gap-4;
+}
+.stat {
+  @apply flex flex-col rounded-lg border border-slate-200 px-4 py-2;
+}
+.stat strong {
+  @apply text-2xl;
+}
+.stat span {
+  @apply text-xs text-slate-500;
+}
+
+.add-form {
+  @apply mb-4 flex flex-wrap gap-2;
+}
+.add-form input,
+.add-form select {
+  @apply rounded-md border border-slate-300 px-2 py-1 text-sm;
+}
+.add-form button {
+  @apply rounded-md bg-slate-900 px-3 py-1 text-sm font-medium text-white;
+}
+
+.feed {
+  @apply flex flex-col gap-2;
+}
+.card {
+  @apply rounded-lg border border-slate-200 p-3;
+}
+.card-head {
+  @apply flex items-center justify-between gap-2;
+}
+.toggle {
+  @apply rounded-md border border-slate-300 px-2 py-1 text-xs;
+}
+.badge {
+  @apply mr-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600;
+}
+.badge.status-live {
+  @apply bg-emerald-100 text-emerald-700;
+}
+.badge.status-closed {
+  @apply bg-rose-100 text-rose-700;
+}
+.badge.status-draft {
+  @apply bg-amber-100 text-amber-700;
+}
+
+.load-more {
+  @apply mt-3 rounded-md border border-slate-300 px-3 py-1 text-sm;
+}
+
+.hotels {
+  @apply mt-8;
+}
+.hotels h2 {
+  @apply mb-2 text-lg font-semibold;
+}
+.hotels ul {
+  @apply flex flex-col gap-1 text-sm;
+}
+
+.error {
+  @apply text-sm text-rose-600;
+}
+.muted {
+  @apply text-sm text-slate-500;
+}

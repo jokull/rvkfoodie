@@ -1,0 +1,10 @@
+allowBuilds:
+  esbuild: set this to true or false
+  workerd: set this to true or false
+onlyBuiltDependencies:
+  - esbuild
+  - workerd
+  - sharp
+  - '@parcel/watcher'
+  - msgpackr-extract
+verifyDepsBeforeRun: false

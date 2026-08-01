@@ -1,8 +1,7 @@
 node_modules/
 dist/
 .wrangler/
-.astro/
-.env
-.dev.vars
-media/
 *.tsbuildinfo
+*.log
+.dev.vars
+.DS_Store
