@@ -36,14 +36,13 @@ build tickets as the frontier resolves.
 04 [Legacy venue backfill](tickets/04-legacy-venue-backfill.md) — task.
 07 [Email: binding ops + capture flow](tickets/07-email-capture.md) — task.
 08 [R2 photo uploads](tickets/08-r2-photo-uploads.md) — task.
-09 [Analytics events](tickets/09-analytics-events.md) — task.
 10 [Auth: better-auth on D1 + Start SSR](tickets/10-auth-better-auth.md) —
    research (subagent findings captured). Blocks 11.
 11 [Internal SPA screens](tickets/11-internal-spa-screens.md) — grilling.
 12 [Monthly pass + digest](tickets/12-monthly-pass-digest.md) — task.
 
 Closed: 01 categories, 02 venue data model, 03 CRM data model,
-05 guide model + drafting engine, 06 guide page.
+05 guide model + drafting engine, 06 guide page, 09 analytics events.
 
 ## Decisions so far
 

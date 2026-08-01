@@ -15,3 +15,11 @@ Implement `guide_events` (decided in map.md):
   time, popular venues (click-through), email captures.
 - Not built: PostHog (future switch when the business is serious — the
   table is the source of truth until then).
+
+## Resolution (claimed 2026-08-01)
+
+- guide_events table + events.record procedure (fire-and-forget).
+- Beacon in the guide page: view / qr-scan on mount (?src=qr distinguishes),
+  venue-click on card links, email-captured on capture success.
+- SPA raw aggregates (views/QR per guide, popular venues, captures) land
+  with the internal SPA (ticket 11) — the table and beacon are in.
