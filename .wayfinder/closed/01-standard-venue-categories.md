@@ -18,3 +18,14 @@ sweet-treats / fine-dining, or the old site's implicit grouping (breakfast,
 lunch, dinner, sweet treats, bars). The answer also drives the generator's
 category-balance step and the backfill mapping (legacy `block_venue` entries
 carry no category field today — category must be assigned during backfill).
+
+## Resolution (claimed 2026-08-01)
+
+- Seven categories: breakfast-brunch, cafe, bakery, restaurant, bar,
+  street-food, sweet-treats. Restaurant includes fine dining; bar includes
+  pubs + cocktail bars.
+- Venues carry `category` (primary, required) + `categorySecondary`
+  (optional).
+- Drafting engine: each venue counts ONCE toward category caps — a venue
+  renders under its primary category; the secondary category is a card tag
+  and a balance tiebreak. No double-counting ("prevent doubling").

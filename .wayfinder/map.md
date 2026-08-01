@@ -33,8 +33,6 @@ build tickets as the frontier resolves.
 
 ## Tickets
 
-01 [Standard venue categories](tickets/01-standard-venue-categories.md) —
-   grilling, frontier. Blocks 02, 04, 05.
 02 [Venue data model](tickets/02-venue-data-model.md) — task. Blocks 04, 06.
 03 [CRM data model](tickets/03-crm-data-model.md) — task. Blocks 11.
 04 [Legacy venue backfill](tickets/04-legacy-venue-backfill.md) — task.
@@ -50,6 +48,12 @@ build tickets as the frontier resolves.
 12 [Monthly pass + digest](tickets/12-monthly-pass-digest.md) — task.
 
 ## Decisions so far
+
+- **Venue categories (closed ticket 01)** — seven fixed categories:
+  breakfast-brunch, cafe, bakery, restaurant, bar, street-food,
+  sweet-treats. Venues carry a required primary + optional secondary
+  category; drafting counts each venue once (renders under primary,
+  secondary is tag + balance tiebreak), no double-counting.
 
 - V1 deliverable — mobile web guide per hotel at `/g/<slug>` + QR code; PDF
   rendering and the wider product offering punted. *(ticket 06)*
