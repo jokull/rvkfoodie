@@ -1,30 +1,57 @@
 /**
- * The internal SPA shell — gated on session. Minimal for now: signed-out
- * shows the email-OTP login, signed-in shows the operator view. The real
- * screen inventory (CRM, venues, guide builder, monthly pass) is ticket 11.
+ * The internal SPA shell — session-gated layout with the operator nav.
+ * Signed-out renders the login form in place of the outlet.
  */
-import { createFileRoute } from '@tanstack/react-router'
+import { Link, Outlet, createFileRoute } from '@tanstack/react-router'
 import { LoginForm } from '../components/login-form.js'
 import { getSession } from '../ssr.js'
 
 export const Route = createFileRoute('/app')({
   loader: () => getSession(),
-  component: App,
+  component: AppShell,
 })
 
-function App() {
+const NavLink = ({ to, exact, children }: { to: string; exact?: boolean; children: React.ReactNode }) => (
+  <Link
+    to={to}
+    className="app-nav-link"
+    activeProps={{ 'data-active': '' }}
+    activeOptions={exact ? { exact: true } : undefined}
+  >
+    {children}
+  </Link>
+)
+
+function AppShell() {
   const session = Route.useLoaderData()
   if (!session) return <LoginForm />
   return (
-    <div className="app-shell">
-      <h1>Reykjavík Foodie — operator</h1>
-      <p className="muted">
-        Signed in as <strong>{session.user.email}</strong>.
-      </p>
-      <p className="muted">
-        The internal screens (CRM, venues, guide builder, monthly pass) land
-        with ticket 11.
-      </p>
+    <div className="app-layout">
+      <aside className="app-sidebar">
+        <div className="app-brand">
+          <strong>rvkfoodie</strong>
+          <span className="muted small">operator</span>
+        </div>
+        <nav className="app-nav">
+          <NavLink to="/app" exact>
+            Dashboard
+          </NavLink>
+          <NavLink to="/app/venues">Venues</NavLink>
+          <span className="app-nav-item app-nav-disabled">
+            CRM <small>soon</small>
+          </span>
+          <span className="app-nav-item app-nav-disabled">
+            Guide builder <small>soon</small>
+          </span>
+          <span className="app-nav-item app-nav-disabled">
+            Monthly pass <small>soon</small>
+          </span>
+        </nav>
+        <p className="app-user muted small">{session.user.email}</p>
+      </aside>
+      <main className="app-main">
+        <Outlet />
+      </main>
     </div>
   )
 }

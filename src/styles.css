@@ -209,3 +209,172 @@ main {
 .venue-card-photo {
   @apply mb-2 h-40 w-full rounded-lg object-cover;
 }
+
+/* --- Internal SPA (ticket 11: venues screen) --- */
+.app-layout {
+  @apply flex min-h-screen;
+}
+.app-sidebar {
+  @apply flex w-56 shrink-0 flex-col border-r border-slate-200 bg-slate-50 px-4 py-5;
+}
+.app-brand {
+  @apply mb-5 flex flex-col;
+}
+.app-brand strong {
+  @apply text-sm font-semibold;
+}
+.app-nav {
+  @apply flex flex-col gap-1;
+}
+.app-nav-link {
+  @apply no-underline;
+}
+.app-nav-item {
+  @apply block rounded-md px-2 py-1.5 text-sm text-slate-700;
+}
+.app-nav-item:hover {
+  @apply bg-slate-200/60;
+}
+.app-nav-item.is-active {
+  @apply bg-white font-medium text-slate-900 shadow-sm;
+}
+.app-nav-item small {
+  @apply text-xs text-slate-400;
+}
+.app-nav-disabled {
+  @apply cursor-default text-slate-400;
+}
+.app-nav-disabled:hover {
+  @apply bg-transparent;
+}
+.app-user {
+  @apply mt-auto truncate;
+}
+.app-main {
+  @apply w-full max-w-5xl px-8 py-6;
+}
+.page-title {
+  @apply text-xl font-semibold;
+}
+.page-head {
+  @apply mb-4 flex items-baseline gap-3;
+}
+
+/* venue list */
+.venue-filters {
+  @apply mb-4 flex flex-wrap gap-2;
+}
+.venue-filters input {
+  @apply w-72 rounded-md border border-slate-300 px-2 py-1.5 text-sm;
+}
+.venue-filters select {
+  @apply rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm;
+}
+.venue-list {
+  @apply flex flex-col gap-1;
+}
+.venue-row {
+  @apply flex items-center gap-3 rounded-lg px-2 py-2 no-underline hover:bg-slate-50;
+}
+.venue-thumb {
+  @apply h-10 w-10 shrink-0 rounded-md object-cover;
+}
+.venue-thumb-empty {
+  @apply bg-slate-100;
+}
+.venue-row-body {
+  @apply flex min-w-0 flex-1 flex-col;
+}
+.venue-row-body strong {
+  @apply truncate text-sm font-medium text-slate-900;
+}
+.venue-confidence {
+  @apply w-10 text-right text-xs tabular-nums text-slate-500;
+}
+
+/* venue detail */
+.venue-hero {
+  @apply mb-6 flex gap-4;
+}
+.venue-hero-photo {
+  @apply h-24 w-24 shrink-0 rounded-lg object-cover;
+}
+.venue-badges {
+  @apply mb-1 flex flex-wrap gap-1.5;
+}
+.venue-form {
+  @apply mb-6;
+}
+.form-grid {
+  @apply grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2;
+}
+.form-grid-two {
+  @apply grid;
+}
+.form-field {
+  @apply flex flex-col gap-1;
+}
+.form-field > span {
+  @apply text-xs font-medium text-slate-600;
+}
+.form-field input,
+.form-field select,
+.form-field textarea {
+  @apply rounded-md border border-slate-300 px-2 py-1.5 text-sm;
+}
+.form-field textarea {
+  @apply resize-y;
+}
+.form-field-wide {
+  @apply md:col-span-2;
+}
+.form-error {
+  @apply text-xs text-red-600;
+}
+.form-actions {
+  @apply mt-4 flex items-center gap-3;
+}
+.form-actions button,
+.toggle {
+  @apply rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50;
+}
+.saved {
+  @apply text-sm text-emerald-600;
+}
+.panel {
+  @apply mb-6 rounded-lg border border-slate-200 p-4;
+}
+.panel-title {
+  @apply mb-2 text-sm font-semibold text-slate-700;
+}
+.lifecycle-form {
+  @apply mb-3 flex flex-wrap gap-2;
+}
+.lifecycle-form input,
+.lifecycle-form select {
+  @apply rounded-md border border-slate-300 px-2 py-1.5 text-sm;
+}
+.lifecycle-form button {
+  @apply rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50;
+}
+.event-list {
+  @apply flex flex-col gap-1;
+}
+.event-list li {
+  @apply flex items-center gap-2;
+}
+.link-button {
+  @apply ml-auto text-xs text-slate-500 underline;
+}
+.audit-list {
+  @apply flex flex-col gap-1;
+}
+.audit-list li {
+  @apply flex flex-wrap items-baseline gap-2 text-sm;
+}
+.audit-list code {
+  @apply rounded bg-slate-100 px-1 text-xs;
+}
+.badge-pick {
+  @apply bg-amber-100 text-amber-800;
+}

@@ -168,6 +168,12 @@ export const setVenueStatusContract = app
  * drives venue status + confidence (closure → status closed, confidence 0;
  * reopened → status live). Returns the event; invalidates venue surfaces.
  */
+export const listLifecycleContract = app
+  .procedure()
+  .input(wire.object({ venueId: wire.string }))
+  .output(wire.array(LifecycleEvent.all('lifecycle events are public')))
+  .query()
+
 export const addLifecycleEventContract = app
   .procedure()
   .input(
@@ -182,14 +188,9 @@ export const addLifecycleEventContract = app
   .errors({ ...pickErrors(venueErrors, 'notFound') })
   .affects(venueFeedContract)
   .affects(venueByIdContract)
+  .affects(listLifecycleContract)
   .affects(overviewContract)
   .mutation()
-
-export const listLifecycleContract = app
-  .procedure()
-  .input(wire.object({ venueId: wire.string }))
-  .output(wire.array(LifecycleEvent.all('lifecycle events are public')))
-  .query()
 
 export const auditListContract = app
   .procedure()

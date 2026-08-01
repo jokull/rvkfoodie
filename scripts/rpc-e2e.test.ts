@@ -138,12 +138,14 @@ if (addV.ok) {
   assert(upd.ok && upd.value.website === 'https://example.com' && upd.value.phone === '555 1234' && upd.value.confidence === 0.7, 'venues.update carries website/phone/confidence')
   const award = await client.venueAwards.add({ venueId: vid, awardType: 'grapevine-best-of', title: 'Test Award', url: 'https://grapevine.is/x' })
   assert(award.ok, 'venueAwards.add ok')
-  const dup = await client.venueAwards.add({ venueId: vid, awardType: 'grapevine-best-of', title: 'Dup', url: null })
+  const dup = await client.venueAwards.add({ venueId: vid, awardType: 'grapevine-best-of', title: 'Dup', url: undefined })
   assert(!dup.ok && dup.error._tag === 'venue-award/exists', 'venueAwards.add rejects duplicates')
   const list = await client.venueAwards.list({ venueId: vid })
   assert(list.ok && list.value.length === 1 && list.value[0].title === 'Test Award', 'venueAwards.list ok')
-  const rm = await client.venueAwards.remove({ id: award.value.id })
-  assert(rm.ok, 'venueAwards.remove ok')
+  if (award.ok) {
+    const rm = await client.venueAwards.remove({ id: award.value.id })
+    assert(rm.ok, 'venueAwards.remove ok')
+  }
   const empty = await client.venueAwards.list({ venueId: vid })
   assert(empty.ok && empty.value.length === 0, 'venueAwards.list empty after remove')
   const del = await client.venues.setStatus({ id: vid, status: 'closed' })

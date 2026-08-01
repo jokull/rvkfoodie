@@ -50,3 +50,37 @@ export const prefetchGuide = createServerFn({ method: 'GET' })
 export const getSession = createServerFn({ method: 'GET' }).handler(async () => {
   return auth.api.getSession({ headers: getRequestHeaders() })
 })
+
+/** /app dashboard: aggregates + hotels, one payload. */
+export const prefetchAppDashboard = createServerFn({ method: 'GET' }).handler(async () => {
+  const { runtime, serverClient } = buildRuntime()
+  await Promise.all([
+    runtime.prefetch(serverClient.stats.overview, {}),
+    runtime.prefetch(serverClient.hotels.list, {}),
+  ])
+  return runtime.dehydrate()
+})
+
+/** /app/venues: the full venue inventory + overview, one payload. */
+export const prefetchVenues = createServerFn({ method: 'GET' }).handler(async () => {
+  const { runtime, serverClient } = buildRuntime()
+  await Promise.all([
+    runtime.prefetchPaginated(serverClient.venues.feed, {}),
+    runtime.prefetch(serverClient.stats.overview, {}),
+  ])
+  return runtime.dehydrate()
+})
+
+/** /app/venues/$venueId: detail + lifecycle + awards + audit, one payload. */
+export const prefetchVenueDetail = createServerFn({ method: 'GET' })
+  .validator((data: { id: string }) => data)
+  .handler(async ({ data }) => {
+    const { runtime, serverClient } = buildRuntime()
+    await Promise.all([
+      runtime.prefetch(serverClient.venues.byId, { id: data.id }),
+      runtime.prefetch(serverClient.venues.listLifecycle, { venueId: data.id }),
+      runtime.prefetch(serverClient.venueAwards.list, { venueId: data.id }),
+      runtime.prefetch(serverClient.audit.list, { entityType: 'venue', entityId: data.id }),
+    ])
+    return runtime.dehydrate()
+  })
