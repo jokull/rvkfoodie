@@ -172,12 +172,18 @@ const plan = () => {
 
       if (!same) updates.push({ id: hit.id, ...target })
     }
-    if (v.bestOfAward) {
-      const hit = byName.get(v.key) ?? byName.get(`the${v.key}`)
-      if (!hit) throw new Error(`Award venue not found: ${v.key}`)
-      awards.push({ venueId: hit.id, awardType: 'grapevine-best-of', title: v.bestOfAward, url: v.grapevineUrl })
-    }
   })
+
+  // Award venue ids: existing rows + this run's inserts (fresh-DB safe).
+  const idByKey = new Map<string, string>()
+  for (const [k, v] of byName) idByKey.set(k, v.id)
+  for (const v of inserts) idByKey.set(norm(v.name), v.id)
+  for (const v of data) {
+    if (!v.bestOfAward) continue
+    const hit = idByKey.get(v.key) ?? idByKey.get(`the${v.key}`)
+    if (!hit) throw new Error(`Award venue not found: ${v.key}`)
+    awards.push({ venueId: hit, awardType: 'grapevine-best-of', title: v.bestOfAward, url: v.grapevineUrl })
+  }
 
   // Non-overlapping seed venues keep existing, reindexed to the tail.
   const owned = new Set(data.map((v: Row) => v.key))

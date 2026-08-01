@@ -127,8 +127,16 @@ function VenueCard({
 }) {
   const v = row.venue
   const note = row.overrideText ?? v.note
+  const photo = v.photos[0]
+  const photoUrl = photo
+    ? photo.replace(
+        /^(https?:\/\/media\.rvkfoodie\.is)\/?(.*)$/,
+        '$1/cdn-cgi/image/width=640,fit=scale-down,format=webp/$2',
+      )
+    : null
   return (
     <li className={`venue-card${editorPick ? ' editor-pick' : ''}`}>
+      {photoUrl && <img className="venue-card-photo" src={photoUrl} alt={v.name} loading="lazy" />}
       <div className="venue-card-head">
         <h3>{v.name}</h3>
         {editorPick && <span className="badge badge-pick">editor's pick</span>}

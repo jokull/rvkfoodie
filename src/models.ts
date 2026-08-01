@@ -182,6 +182,7 @@ export const GuideVenueViewCodec = wire.object({
     'lat',
     'lon',
     'confidence',
+    'photos',
   ),
 })
 

@@ -3,6 +3,7 @@
  * browser client + wire protocol (works in node 24). Run with the dev server
  * up: pnpm dev, then npx tsx rpc-e2e.test.ts
  */
+import { execFileSync } from 'node:child_process'
 import { createBrowserClient, fetchTransport } from 'result-rpc/client'
 import { appContract } from '../src/contract.js'
 
@@ -27,25 +28,40 @@ if (view.ok) {
   console.log('  first venue:', view.value.venueRows[0].venue.name, '| cat:', view.value.venueRows[0].venue.category)
 }
 
-// 2) create + draft for hotel_02 (101 Hotel), then approve + publish
+// 2) create + draft for hotel_02 (101 Hotel), then approve + publish.
+// Reset that guide's state first so the flow is deterministic on re-runs.
+const q = (sql: string) =>
+  JSON.parse(
+    execFileSync('npx', ['wrangler', 'd1', 'execute', 'rvkfoodie-cms-v4b', '--local', '--json', '--command', sql], {
+      encoding: 'utf8',
+    }),
+  )[0].results
+for (const row of q(`SELECT id FROM guides WHERE hotel_id = 'hotel_02'`)) {
+  q(`DELETE FROM guide_events WHERE guide_id = '${row.id}'`)
+  q(`DELETE FROM guide_captures WHERE guide_id = '${row.id}'`)
+  q(`DELETE FROM guide_venues WHERE guide_id = '${row.id}'`)
+  q(`DELETE FROM guide_excludes WHERE guide_id = '${row.id}'`)
+  q(`DELETE FROM guides WHERE id = '${row.id}'`)
+}
 const created = await client.guides.create({ hotelId: 'hotel_02' })
 assert(created.ok, 'guides.create ok')
 if (created.ok) {
   const guideId = created.value.id
   const draft = await client.guides.draft({ id: guideId })
   assert(draft.ok, 'guides.draft ok')
-  if (draft.ok) console.log('  draft:', JSON.stringify(draft.value))
+  if (draft.ok) assert(draft.value.added.length > 0, 'draft adds candidates from the backfilled pool')
   const pendingView = await client.guides.view({ id: guideId })
   assert(pendingView.ok, 'view after draft ok (0 live rows expected)')
   if (pendingView.ok) assert(pendingView.value.venueRows.length === 0, 'pending rows not live yet')
 
-  // find pending rows and approve
-  const list = await client.guides.list({})
-  assert(list.ok, 'guides.list ok')
-  // approve candidates needs pending venueIds — query guide_venues via audit? Use a direct check:
-  // approve with the drafted venue ids — we don't have them from view; use an empty-ish probe:
-  const approve = await client.guides.approveCandidates({ guideId, venueIds: [] })
-  assert(approve.ok, 'approveCandidates ok (empty batch)')
+  // Approve the drafted candidates; the view then shows them live.
+  const approve = await client.guides.approveCandidates({ guideId, venueIds: draft.value.added })
+  assert(approve.ok && approve.value.length === draft.value.added.length, 'approveCandidates ok')
+  const liveView = await client.guides.view({ id: guideId })
+  assert(liveView.ok && liveView.value.venueRows.length === draft.value.added.length, 'view shows live rows after approve')
+  if (liveView.ok) {
+    assert(liveView.value.venueRows.some((r) => (r.venue.photos?.length ?? 0) > 0), 'guide view includes legacy CDN photos')
+  }
 
   const publish = await client.guides.publish({ id: guideId })
   assert(publish.ok, 'guides.publish ok')

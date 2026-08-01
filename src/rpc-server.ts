@@ -116,6 +116,7 @@ const toVenuePublic = (row: typeof venues.$inferSelect) => ({
   lat: row.lat,
   lon: row.lon,
   confidence: row.confidence,
+  photos: row.photos,
 })
 
 const toHotel = (row: typeof hotels.$inferSelect) => ({

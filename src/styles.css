@@ -204,3 +204,8 @@ main {
 .app-shell {
   @apply mx-auto max-w-3xl px-4 py-6;
 }
+
+/* --- Guide venue card photos (legacy CDN, media.rvkfoodie.is) --- */
+.venue-card-photo {
+  @apply mb-2 h-40 w-full rounded-lg object-cover;
+}
