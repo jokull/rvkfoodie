@@ -33,7 +33,6 @@ build tickets as the frontier resolves.
 
 ## Tickets
 
-02 [Venue data model](tickets/02-venue-data-model.md) — task. Blocks 04, 06.
 03 [CRM data model](tickets/03-crm-data-model.md) — task. Blocks 11.
 04 [Legacy venue backfill](tickets/04-legacy-venue-backfill.md) — task.
 05 [Guide model + drafting engine](tickets/05-guide-model-drafting-engine.md)
@@ -54,6 +53,9 @@ build tickets as the frontier resolves.
   sweet-treats. Venues carry a required primary + optional secondary
   category; drafting counts each venue once (renders under primary,
   secondary is tag + balance tiebreak), no double-counting.
+- **Venue data model (closed ticket 02)** — venues + lifecycle + audit
+  tables implemented per the model decisions; wire.enum deferred to the
+  next result-rpc publish (enumOf = union of literals meanwhile).
 
 - V1 deliverable — mobile web guide per hotel at `/g/<slug>` + QR code; PDF
   rendering and the wider product offering punted. *(ticket 06)*
