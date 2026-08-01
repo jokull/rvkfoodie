@@ -5,7 +5,9 @@
  * `createServerFn` prefetchers in ssr.ts, both of which Start strips from
  * the client build.
  */
-import { asc, count, eq, gt } from 'drizzle-orm'
+import { createId } from '@paralleldrive/cuid2'
+import { asc, count, desc, eq, gt } from 'drizzle-orm'
+import { generateKeyBetween } from 'fractional-indexing'
 import { err, matchError, ok } from 'result-rpc'
 import { tryDb } from 'result-rpc/db'
 import { createFetchHandler, serverRpc } from 'result-rpc/server'
@@ -35,6 +37,7 @@ const toVenue = (row: typeof venues.$inferSelect) => ({
   category: row.category,
   neighborhood: row.neighborhood,
   status: row.status,
+  orderKey: row.orderKey,
 })
 
 const toHotel = (row: typeof hotels.$inferSelect) => ({
@@ -46,16 +49,17 @@ const toHotel = (row: typeof hotels.$inferSelect) => ({
 
 const venueFeed = server.implement(venueFeedContract).handler(async ({ input, context }) => {
   // input is `{ list: {}, cursor: string | null }` — the paginate split.
+  // The feed is curated order: fractional-index orderKey, not id.
   const rows = await context.db
     .select()
     .from(venues)
-    .where(input.cursor === null ? undefined : gt(venues.id, input.cursor))
-    .orderBy(asc(venues.id))
+    .where(input.cursor === null ? undefined : gt(venues.orderKey, input.cursor))
+    .orderBy(asc(venues.orderKey))
     .limit(PAGE_SIZE + 1)
   const page = rows.slice(0, PAGE_SIZE)
   return ok({
     items: page.map(toVenue),
-    nextCursor: rows.length > PAGE_SIZE ? (page[page.length - 1]?.id ?? null) : null,
+    nextCursor: rows.length > PAGE_SIZE ? (page[page.length - 1]?.orderKey ?? null) : null,
   })
 })
 
@@ -67,12 +71,22 @@ const venueById = server.implement(venueByIdContract).handler(async ({ input, er
 
 const addVenue = server.implement(addVenueContract).handler(async ({ input, errors, context }) => {
   const now = new Date()
+  // CUID2 id, generated server-side; orderKey appended after the current
+  // last venue (client-first reordering arrives with the guide builder).
+  const last = (
+    await context.db
+      .select({ orderKey: venues.orderKey })
+      .from(venues)
+      .orderBy(desc(venues.orderKey))
+      .limit(1)
+  )[0]
   const row = {
-    id: `venue_${now.getTime().toString(36)}`,
+    id: createId(),
     name: input.name,
     category: input.category,
     neighborhood: input.neighborhood,
     status: 'draft',
+    orderKey: generateKeyBetween(last?.orderKey ?? null, null),
     notes: null,
     createdAt: now,
     updatedAt: now,

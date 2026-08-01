@@ -1,0 +1,1 @@
+ALTER TABLE `venues` ADD `order_key` text NOT NULL;

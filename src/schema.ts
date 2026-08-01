@@ -1,6 +1,10 @@
 /**
  * Drizzle schema for the platform database (D1).
  *
+ * Identity is CUID2 (server-generated, `@paralleldrive/cuid2`); curated
+ * ordering uses fractional-index keys (`fractional-indexing`) so the client
+ * can compute reorder positions locally and the server only persists them.
+ *
  * Seed shape — the full editorial model (cuisine, price level, opening
  * hours, photos, recommended dishes, confidence; guides; hotel CRM fields)
  * is charted in .wayfinder and arrives in later migrations.
@@ -17,6 +21,8 @@ export const venues = sqliteTable(
     neighborhood: text('neighborhood').notNull(),
     /** draft | live | closed */
     status: text('status').notNull().default('draft'),
+    /** Fractional-index key — curated feed/guide order, client-computable. */
+    orderKey: text('order_key').notNull(),
     notes: text('notes'),
     createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),

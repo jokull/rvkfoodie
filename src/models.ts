@@ -15,6 +15,7 @@ export const Venue = defineModel('venue', {
     category: wire.string,
     neighborhood: wire.string,
     status: wire.string,
+    orderKey: wire.string,
   },
 }).$satisfies<typeof venues.$inferSelect>()
 export type VenueRow = ModelValue<typeof Venue>
