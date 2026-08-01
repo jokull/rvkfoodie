@@ -17,14 +17,18 @@
     "db:seed:remote": "wrangler d1 execute rvkfoodie-cms-v4b --remote --file scripts/seed.sql"
   },
   "dependencies": {
+    "@cloudflare/kumo": "^2.9.0",
+    "@formisch/react": "1.0.0-rc.0",
     "@paralleldrive/cuid2": "^3.3.0",
+    "@phosphor-icons/react": "^2.1.10",
     "@tanstack/react-router": "^1.170.18",
     "@tanstack/react-start": "^1.168.34",
     "drizzle-orm": "1.0.0-rc.4",
     "fractional-indexing": "^4.0.0",
     "react": "~19.2.4",
     "react-dom": "~19.2.4",
-    "result-rpc": "^0.2.0"
+    "result-rpc": "^0.2.0",
+    "valibot": "^1.4.2"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.50.0",

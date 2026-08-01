@@ -5,6 +5,9 @@ Reykjavík Foodie — curated food guides sold to hotels as an annual B2B subscr
 - Stack, scripts, and architecture rules live in README.md and code headers.
 - Identity: CUID2 (`@paralleldrive/cuid2`), generated server-side. Curated
   ordering: fractional-index keys (`fractional-indexing`), client-computable.
+- Internal SPA UI: `@cloudflare/kumo` components + `@phosphor-icons/react`;
+  forms: `@formisch/react` (schema-first, valibot) — form schemas map onto
+  result-rpc procedure inputs.
 - Plan big work through the wayfinder map (`.wayfinder/map.md`): resolve one
   ticket per session, never more (research tickets excepted).
 - The D1 database is shared with a legacy agent-cms schema (`content_*`,
