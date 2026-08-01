@@ -23,4 +23,12 @@
   // (guides@rvkfoodie.is) needs domain verification for production.
   "send_email": [{ "name": "EMAIL" }],
 
+  // Auth config — BETTER_AUTH_SECRET is a real secret (wrangler secret put
+  // in prod, .dev.vars locally); declared here as empty vars so the types
+  // exist. BETTER_AUTH_URL is the public base URL (https://rvkfoodie.is).
+  "vars": {
+    "BETTER_AUTH_URL": "",
+    "BETTER_AUTH_SECRET": ""
+  }
+
 }

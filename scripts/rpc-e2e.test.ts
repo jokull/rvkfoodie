@@ -82,3 +82,20 @@ const ev = await client.events.record({ slug: 'hotel-borg', event: 'view' })
 assert(ev.ok, 'events.record ok')
 const evClick = await client.events.record({ slug: 'hotel-borg', event: 'venue-click', venueId: 'venue_01' })
 assert(evClick.ok, 'events.record venue-click ok')
+
+// --- Auth (ticket 10) — better-auth adapter on drizzle 1.0-rc.4 + D1 ---
+const AUTH = 'http://localhost:3000'
+const unauth = await fetch(`${AUTH}/api/auth/get-session`)
+assert(unauth.status === 200, 'get-session ok when signed out')
+const wrong = await fetch(`${AUTH}/api/auth/sign-in/email-otp`, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json', origin: AUTH },
+  body: JSON.stringify({ email: 'jokull@solberg.is', otp: '000000' }),
+})
+assert(wrong.status === 400, 'sign-in wrong code rejected (adapter SELECT on 1.0-rc.4)')
+const send = await fetch(`${AUTH}/api/auth/email-otp/send-verification-otp`, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json', origin: AUTH },
+  body: JSON.stringify({ email: 'jokull@solberg.is', type: 'sign-in' }),
+})
+assert(send.status === 200, 'send-verification-otp ok (adapter INSERT on 1.0-rc.4 + EMAIL binding)')

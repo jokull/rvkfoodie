@@ -13,8 +13,10 @@
  * The route component hands it to `<ResultRpcHydrationBoundary>`.
  */
 import { createServerFn } from '@tanstack/react-start'
+import { getRequestHeaders } from '@tanstack/react-start/server'
 import { createQueryRuntime } from 'result-rpc/query'
 import { createServerClient } from 'result-rpc/server'
+import { auth } from './auth.js'
 import { createContext, router } from './rpc-server.js'
 
 const buildRuntime = () => {
@@ -43,3 +45,8 @@ export const prefetchGuide = createServerFn({ method: 'GET' })
     await runtime.prefetch(serverClient.guides.viewBySlug, { slug: data.slug })
     return runtime.dehydrate()
   })
+
+/** The current session, for loaders. Null when signed out. */
+export const getSession = createServerFn({ method: 'GET' }).handler(async () => {
+  return auth.api.getSession({ headers: getRequestHeaders() })
+})
