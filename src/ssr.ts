@@ -13,6 +13,7 @@
  * The route component hands it to `<ResultRpcHydrationBoundary>`.
  */
 import { createServerFn } from '@tanstack/react-start'
+import { env } from 'cloudflare:workers'
 import { createQueryRuntime } from 'result-rpc/query'
 import { createServerClient } from 'result-rpc/server'
 import { createContext, router } from './rpc-server.js'
@@ -35,11 +36,14 @@ export const prefetchHome = createServerFn({ method: 'GET' }).handler(async () =
   return runtime.dehydrate()
 })
 
-/** Guide page loader, keyed by the public slug. */
+/** Guide page loader: view + the public Turnstile site key, in one payload. */
 export const prefetchGuide = createServerFn({ method: 'GET' })
   .validator((data: { slug: string }) => data)
   .handler(async ({ data }) => {
     const { runtime, serverClient } = buildRuntime()
     await runtime.prefetch(serverClient.guides.viewBySlug, { slug: data.slug })
-    return runtime.dehydrate()
+    return {
+      state: runtime.dehydrate(),
+      turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? '',
+    }
   })

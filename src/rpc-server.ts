@@ -37,6 +37,7 @@ import {
   listLifecycleContract,
   overviewContract,
   publishGuideContract,
+  recordGuideEventContract,
   removeGuideExcludeContract,
   requestGuideCaptureContract,
   setGuideConfigContract,
@@ -56,6 +57,7 @@ import {
   db,
   deals,
   guideCaptures,
+  guideEvents,
   guideExcludes,
   guideVenues,
   guides,
@@ -856,6 +858,24 @@ const overview = server.implement(overviewContract).handler(async ({ context }) 
   return ok({ venueCount, liveVenueCount, hotelCount })
 })
 
+/** Fire-and-forget: drop silently if the guide is missing. */
+const recordGuideEvent = server
+  .implement(recordGuideEventContract)
+  .handler(async ({ input, context }) => {
+    const guide = (
+      await context.db.select().from(guides).where(eq(guides.slug, input.slug)).limit(1)
+    )[0]
+    if (!guide) return ok({})
+    await context.db.insert(guideEvents).values({
+      id: createId(),
+      guideId: guide.id,
+      event: input.event,
+      venueId: input.venueId ?? null,
+      happenedAt: new Date(),
+    })
+    return ok({})
+  })
+
 // --- Guide handlers -------------------------------------------------------
 
 const guideList = server.implement(guideListContract).handler(async ({ context }) => {
@@ -1161,6 +1181,20 @@ const requestGuideCapture = server
     const view = await loadGuideView(context.db, guide.id)
     if (!view) return err(errors.notFound({ guideId: input.slug }))
 
+    // Turnstile: verify when a secret key is configured; dev runs without
+    // one (and without the widget) skip verification.
+    const secret = env.TURNSTILE_SECRET_KEY
+    if (secret) {
+      if (!input.turnstileToken) return err(errors.verificationFailed({}))
+      const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ secret, response: input.turnstileToken }),
+      })
+      const data = (await res.json()) as { success?: boolean }
+      if (data.success !== true) return err(errors.verificationFailed({}))
+    }
+
     await context.db.insert(guideCaptures).values({
       id: createId(),
       guideId: guide.id,
@@ -1168,8 +1202,8 @@ const requestGuideCapture = server
       createdAt: new Date(),
     })
 
-    // Turnstile verification + beta ops (verified from-address, rate limit)
-    // land in ticket 07; local emulation sends without them.
+    // beta ops (verified from-address, rate limit) land in ticket 07; local
+    // emulation sends without them.
     const raw = [
       'From: Reykjavík Foodie <guides@rvkfoodie.is>',
       `To: <${input.email}>`,
@@ -1282,6 +1316,9 @@ export const router = server.router({
   },
   captures: {
     request: requestGuideCapture,
+  },
+  events: {
+    record: recordGuideEvent,
   },
   stats: { overview },
 })

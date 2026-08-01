@@ -12,4 +12,4 @@ import { drizzle } from 'drizzle-orm/d1'
 export const db = drizzle(env.DB)
 export type Db = typeof db
 
-export { auditLog, businesses, contacts, deals, guideCaptures, guideExcludes, guideVenues, guides, hotels, venueLifecycleEvents, venues } from './schema.js'
+export { auditLog, businesses, contacts, deals, guideCaptures, guideEvents, guideExcludes, guideVenues, guides, hotels, venueLifecycleEvents, venues } from './schema.js'

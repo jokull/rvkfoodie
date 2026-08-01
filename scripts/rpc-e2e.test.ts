@@ -76,3 +76,9 @@ assert(capture.ok, 'captures.request ok (EMAIL binding local emulation)')
 
 const qrRes = await fetch('http://localhost:3000/api/qr?slug=hotel-borg')
 assert(qrRes.status === 200 && (qrRes.headers.get('content-type') ?? '').includes('image/svg+xml'), 'QR endpoint returns SVG')
+
+// --- Analytics beacon (ticket 09) ---
+const ev = await client.events.record({ slug: 'hotel-borg', event: 'view' })
+assert(ev.ok, 'events.record ok')
+const evClick = await client.events.record({ slug: 'hotel-borg', event: 'venue-click', venueId: 'venue_01' })
+assert(evClick.ok, 'events.record venue-click ok')

@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "6bc241e8-77b7-4747-be86-833efea7ea8c",
+  "id": "69333540-9010-4934-b0ad-97aae52e2088",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -24,6 +24,10 @@
     },
     {
       "name": "guide_captures",
+      "entityType": "tables"
+    },
+    {
+      "name": "guide_events",
       "entityType": "tables"
     },
     {
@@ -469,6 +473,56 @@
       "name": "created_at",
       "entityType": "columns",
       "table": "guide_captures"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "guide_events"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "guide_id",
+      "entityType": "columns",
+      "table": "guide_events"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "event",
+      "entityType": "columns",
+      "table": "guide_events"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "venue_id",
+      "entityType": "columns",
+      "table": "guide_events"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "happened_at",
+      "entityType": "columns",
+      "table": "guide_events"
     },
     {
       "type": "text",
@@ -1150,6 +1204,15 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "guide_events_pk",
+      "table": "guide_events",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "guide_excludes_pk",
       "table": "guide_excludes",
       "entityType": "pks"
@@ -1300,6 +1363,34 @@
       "name": "gc_guide_idx",
       "entityType": "indexes",
       "table": "guide_captures"
+    },
+    {
+      "columns": [
+        {
+          "value": "guide_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "ge_guide_idx",
+      "entityType": "indexes",
+      "table": "guide_events"
+    },
+    {
+      "columns": [
+        {
+          "value": "event",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "ge_event_idx",
+      "entityType": "indexes",
+      "table": "guide_events"
     },
     {
       "columns": [

@@ -325,3 +325,22 @@ export const guideCaptures = sqliteTable(
   },
   (t) => [index('gc_guide_idx').on(t.guideId)],
 )
+
+/** Guide analytics — route-side beacon, raw aggregates (ticket 09). */
+export const guideEvents = sqliteTable(
+  'guide_events',
+  {
+    id: text('id').primaryKey(),
+    guideId: text('guide_id').notNull(),
+    /** view | qr-scan | venue-click | email-captured */
+    event: text('event').notNull(),
+    venueId: text('venue_id'),
+    happenedAt: integer('happened_at', { mode: 'timestamp_ms' })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (t) => [
+    index('ge_guide_idx').on(t.guideId),
+    index('ge_event_idx').on(t.event),
+  ],
+)

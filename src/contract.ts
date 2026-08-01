@@ -7,6 +7,7 @@
 import { pickErrors, rpc, wire } from 'result-rpc'
 import {
   businessErrors,
+  captureErrors,
   contactErrors,
   dealErrors,
   guideErrors,
@@ -459,12 +460,31 @@ export const removeGuideExcludeContract = app
   .affects(guideViewContract)
   .mutation()
 
-/** Public: “email me this guide” — Turnstile + HTML email in ticket 07. */
+/** Public: “email me this guide” — Turnstile token verified server-side. */
 export const requestGuideCaptureContract = app
   .procedure()
-  .input(wire.object({ slug: wire.string, email: wire.string }))
+  .input(
+    wire.object({
+      slug: wire.string,
+      email: wire.string,
+      turnstileToken: wire.optional(wire.string),
+    }),
+  )
   .output(wire.object({}))
-  .errors({ ...pickErrors(guideErrors, 'notFound') })
+  .errors({ ...pickErrors(guideErrors, 'notFound'), ...pickErrors(captureErrors, 'verificationFailed') })
+  .mutation()
+
+/** Fire-and-forget analytics beacon — failures never surface. */
+export const recordGuideEventContract = app
+  .procedure()
+  .input(
+    wire.object({
+      slug: wire.string,
+      event: enumOf(['view', 'qr-scan', 'venue-click', 'email-captured'] as const),
+      venueId: wire.optional(wire.string),
+    }),
+  )
+  .output(wire.object({}))
   .mutation()
 
 export const appContract = app.contract({
@@ -517,6 +537,9 @@ export const appContract = app.contract({
   },
   captures: {
     request: requestGuideCaptureContract,
+  },
+  events: {
+    record: recordGuideEventContract,
   },
   stats: {
     overview: overviewContract,
