@@ -53,3 +53,5 @@ above), lifecycle events, audit trail, photo manager (ticket 08).
   guides.builder (staff-gated snapshot query) + guideVenues.update
   (reorder/pin/override, affects builder + public view).
 - Remaining: monthly pass screen (ticket 12 queue).
+
+- Monthly pass screen live (queue + actions) — completes the SPA surface. Ticket 11 CLOSED.

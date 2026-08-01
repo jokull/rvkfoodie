@@ -19,3 +19,16 @@ now, automation later):
   guide now includes X; Y was removed") — draft + regenerate per-hotel
   guides happens in the guide builder (ticket 05/06), not here.
 - Future (not built): "in business" detection automation, cron.
+
+## Progress (2026-08-01) — CLOSED
+
+- Pass screen live at /app/pass (queue + re-verify/close/reopen + min-confidence filter) — ticket 11 scope.
+- Digest implemented: `guides.digest` (staff-gated). Diffs each live guide against the last digest's
+  live-venue baseline, emails affected hotels via the EMAIL binding. First run snapshots the baseline
+  silently; afterwards only real changes mail: removals = venue closures (silent draft disqualifiers)
+  plus anything the hotel was told about that left the guide; additions = newly live rows. Recipients
+  resolve hotel-scoped contacts, falling back to business contacts. Guides carry `lastDigestAt` +
+  `lastDigestVenueIds` (migration `20260801205455_warm_lionheart`).
+- e2e: first-run snapshot, closure → removed, reopen → re-added, steady state → silent (71 assertions).
+- Remaining (ops, not build): apply migrations to remote D1 before deploy; verify the
+  guides@rvkfoodie.is from-address (ticket 07 ops) so digest mail actually lands.
