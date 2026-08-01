@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { useResultMutation, useResultPaginatedQuery, useResultQuery } from 'result-rpc/react'
 import type { HotelRow, VenueRow } from '../models.js'
 import { client } from '../rpc-client.js'
+import { VENUE_CATEGORIES } from '../schema.js'
 
 const StatusToggle = ({ venue }: { venue: VenueRow }) => {
   // The mutation output is the Venue ENTITY: the cache patches this row in
@@ -33,8 +34,12 @@ const VenueCard = ({ venue }: { venue: VenueRow }) => (
       <StatusToggle venue={venue} />
     </div>
     <span className="badge">{venue.category}</span>
-    <span className="badge">{venue.neighborhood}</span>
     <span className={`badge status-${venue.status}`}>{venue.status}</span>
+    <p className="card-body">
+      {venue.address}
+      {venue.openingHours ? ` · ${venue.openingHours}` : ''}
+      {venue.note ? ` — ${venue.note}` : ''}
+    </p>
   </li>
 )
 
@@ -62,7 +67,7 @@ export const VenueFeed = () => {
 
 export const StatsBar = () => {
   // One-off aggregate: no entity identity, kept fresh via `.affects()` on
-  // the add/setStatus mutations.
+  // the venue mutations.
   const stats = useResultQuery(client.stats.overview, {}, { staleTime: 60_000 })
   if (stats.state === 'pending') return <p className="muted">…</p>
   if (stats.state === 'failure') return null
@@ -86,18 +91,21 @@ export const StatsBar = () => {
 
 export const AddVenueForm = () => {
   const [name, setName] = useState('')
-  const [category, setCategory] = useState('restaurant')
-  const [neighborhood, setNeighborhood] = useState('Miðborg')
+  const [category, setCategory] = useState<string>(VENUE_CATEGORIES[0])
+  const [address, setAddress] = useState('')
   const add = useResultMutation(client.venues.add, {
-    onSuccess: () => setName(''),
+    onSuccess: () => {
+      setName('')
+      setAddress('')
+    },
   })
   return (
     <form
       className="add-form"
       onSubmit={(e) => {
         e.preventDefault()
-        if (!name.trim()) return
-        add.mutate({ name: name.trim(), category, neighborhood })
+        if (!name.trim() || !address.trim()) return
+        add.mutate({ name: name.trim(), category, address: address.trim() })
       }}
     >
       <input
@@ -107,19 +115,16 @@ export const AddVenueForm = () => {
         aria-label="Venue name"
       />
       <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Category">
-        {['restaurant', 'cafe', 'bar', 'bakery', 'street-food'].map((c) => (
+        {VENUE_CATEGORIES.map((c) => (
           <option key={c}>{c}</option>
         ))}
       </select>
-      <select
-        value={neighborhood}
-        onChange={(e) => setNeighborhood(e.target.value)}
-        aria-label="Neighborhood"
-      >
-        {['Miðborg', 'Laugavegur', 'Hverfisgata', 'Þingholt', 'Grandi', 'Viðey'].map((n) => (
-          <option key={n}>{n}</option>
-        ))}
-      </select>
+      <input
+        value={address}
+        onChange={(e) => setAddress(e.target.value)}
+        placeholder="Address"
+        aria-label="Address"
+      />
       <button type="submit" disabled={add.state === 'pending'}>
         Add
       </button>
