@@ -24,82 +24,95 @@ build tickets as the frontier resolves.
 - Stack is LOCKED (scaffold committed): TanStack Start (Vite 8) on Cloudflare
   Workers via `@cloudflare/vite-plugin`; Drizzle `1.0.0-rc.4` + D1
   (`rvkfoodie-cms-v4b`, shared with legacy schema — legacy tables untouched
-  until the backfill ticket lands, then dropped); result-rpc typed RPC
-  (contract in `src/contract.ts`, handlers in `src/rpc-server.ts`,
-  createServerFn prefetch + hydration); `wrangler types`; EMAIL send_email
-  binding (beta); CUID2 ids server-side; fractional-index ordering
-  (BASE_62, BINARY-safe verified); internal SPA UI `@cloudflare/kumo` +
-  `@phosphor-icons/react`; forms `@formisch/react` (valibot, schema-first).
+  until ticket 04 lands, then dropped); result-rpc typed RPC (contract in
+  `src/contract.ts`, handlers in `src/rpc-server.ts`, createServerFn
+  prefetch + hydration); `wrangler types`; EMAIL send_email binding (beta);
+  CUID2 ids server-side; fractional-index ordering (BASE_62, BINARY-safe
+  verified); internal SPA UI `@cloudflare/kumo` + `@phosphor-icons/react`;
+  forms `@formisch/react` (valibot, schema-first); Turnstile.
+
+## Tickets
+
+01 [Standard venue categories](tickets/01-standard-venue-categories.md) —
+   grilling, frontier. Blocks 02, 04, 05.
+02 [Venue data model](tickets/02-venue-data-model.md) — task. Blocks 04, 06.
+03 [CRM data model](tickets/03-crm-data-model.md) — task. Blocks 11.
+04 [Legacy venue backfill](tickets/04-legacy-venue-backfill.md) — task.
+05 [Guide model + drafting engine](tickets/05-guide-model-drafting-engine.md)
+   — grilling. Blocks 06, 12.
+06 [Guide page: /g/<slug>](tickets/06-guide-page.md) — prototype. Blocks 09.
+07 [Email: binding ops + capture flow](tickets/07-email-capture.md) — task.
+08 [R2 photo uploads](tickets/08-r2-photo-uploads.md) — task.
+09 [Analytics events](tickets/09-analytics-events.md) — task.
+10 [Auth: better-auth on D1 + Start SSR](tickets/10-auth-better-auth.md) —
+   research. Blocks 11.
+11 [Internal SPA screens](tickets/11-internal-spa-screens.md) — grilling.
+12 [Monthly pass + digest](tickets/12-monthly-pass-digest.md) — task.
 
 ## Decisions so far
 
 - V1 deliverable — mobile web guide per hotel at `/g/<slug>` + QR code; PDF
-  rendering and the wider product offering punted.
-- Offline/"keeping" — guide pages get an "email me this guide" capture; sends
-  the guide as an HTML email via the EMAIL binding (no 4G, forgot the URL).
+  rendering and the wider product offering punted. *(ticket 06)*
+- Offline/"keeping" — guide pages get an "email me this guide" capture; the
+  guide ships as an HTML email via the EMAIL binding (no 4G, forgot the
+  URL). Turnstile protects the form. *(tickets 06, 07)*
 - Venue model — id (CUID2), name, category, status, orderKey; cuisine, price
   level, tags, note, recommended dishes, last-verified, confidence, source;
-  address + lat/lon; google places id; dineoutId (Dineout booking deep-link);
+  address + lat/lon; google places id; dineoutId (Dineout deep-link);
   opening hours as free TEXT; photos via R2 presigned-URL uploads (out of
-  band). NO neighborhood field, NO walking-distance field.
+  band). NO neighborhood, NO walking distance. *(ticket 02)*
 - Lifecycle table — venue lifecycle events (closed / temporarily closed /
-  reopened) feeding "out of business" detection.
-- Audit table — generic action log.
-- CRM — business-first, canonical terminology: `businesses` (account) →
-  `hotels` (secondary, optional, FK businessId, carries the pin: address +
-  lat/lon) → `contacts` (business-first, hotelId nullable, isDecisionMaker)
-  → `deals` (annual subscription: stage, pricePerRoom, annualValue =
-  pricePerRoom × rooms, startDate, renewalDate). Pipeline:
+  reopened) feeding "out of business" detection. Audit table — generic
+  action log. *(ticket 02)*
+- CRM — business-first, canonical: `businesses` → `hotels` (secondary, FK,
+  carries the pin) → `contacts` (business-first, hotelId nullable,
+  isDecisionMaker) → `deals` (annual subscription: stage, pricePerRoom,
+  annualValue = pricePerRoom × rooms, startDate, renewalDate). Pipeline:
   prospect → contacted → sample-sent → proposal → won → lost. Outreach
-  history folded into notes; no separate outreach table in V1.
+  history in notes; no separate outreach table. *(ticket 03)*
 - Guide architecture — per-hotel guides are SNAPSHOTS from a drafting
-  engine: the generator drafts, staff then customize completely (relaying
-  hotel asks). Not generated-on-read. Venue cards carry canonical default
-  copy, overridable per guide.
+  engine: generator drafts, staff customize completely (relaying hotel
+  asks). NOT generated-on-read. Fixed standard-category template for every
+  guide (grouped at render); editorial text blocks deferred. Venue cards
+  carry canonical default copy, overridable per guide. *(tickets 05, 06)*
 - Generator rule — radius (default ~15–20 min walk from hotel pin,
-  overridable) → quality gate (status=live, confidence, freshness) → balance
-  (target count, category spread) → overrides (featured always-in, excluded
-  never-in, count/radius). Deterministic server-side.
-- Backfill — venues ONLY from legacy: `block_venue` (~55 blocks, dedupe by
-  name, prefer fullest entry) + `data/venue-data.json`. Old guides are NOT
-  backfill material. Coordinates mostly present; Golden Circle entries need
-  geocoding. Images via assets refs (media.rvkfoodie.is / R2).
+  overridable) → quality gate (status=live, confidence ≥ 0.7, verified
+  within 6 months) → balance (target count ~20–30, category spread) →
+  overrides (featured always-in, excluded never-in, count/radius).
+  Deterministic server-side. *(ticket 05)*
+- Confidence — 0–1 editorial score, set in the monthly pass / backfill;
+  lifecycle events override mechanically (closure → 0, reopened clears);
+  manual re-verification otherwise. *(tickets 02, 12)*
+- Backfill — venues ONLY: `block_venue` (~55, dedupe by name, prefer fullest
+  entry) + `data/venue-data.json`. Old guides are NOT backfill material.
+  Golden Circle entries need geocoding. Images via assets refs. *(ticket 04)*
 - Auth — better-auth: email OTP (+ optional password, long-lived cookie),
-  single access tier (no roles — just the two founders), NOT Cloudflare
-  Access. OTP delivery via EMAIL binding.
-- Guide URL/security — `https://rvkfoodie.is/g/<slug>`, no vanity subdomains
-  (future upsell), noindex, page public (not walled), security by obscurity;
-  future gate (email-triggered delivery or room-number+email) only if
-  harvesting becomes a real problem.
-- Analytics — `guide_events` table (view / qr-scan / venue-click /
-  email-captured, venueId nullable, happenedAt) via route-side beacon; QR
-  encodes `?src=qr` to count scans without a redirect hop; SPA shows raw
-  aggregates. PostHog only when the business is serious (not now).
-- Map — Leaflet + OpenStreetMap for MVP; move to Google Maps later.
-- Monthly pass — manual, editor-driven review against the FULL venue
-  inventory (due-for-verification queue, closure candidates from lifecycle,
-  new-openings triage); future automation for "in business" detection.
-  Email digest to affected hotels after a pass; guides update by re-running
-  the drafting engine per hotel (snapshots).
+  single access tier (two founders, no roles), NOT Cloudflare Access. OTP
+  via EMAIL binding. *(ticket 10)*
+- Guide URL/security — `https://rvkfoodie.is/g/<slug>`, no vanity
+  subdomains (future upsell), noindex, public (not walled), security by
+  obscurity; future gate (email-triggered delivery or room-number+email)
+  only if harvesting becomes real. *(ticket 06)*
+- Sales sample — the pitch artifact IS the guide: drafting engine runs for
+  prospects, guide sits in draft, `/g/<slug>` URL is shareable (public
+  anyway); small "sample" footer marker for non-customer drafts. *(ticket 06)*
+- Analytics — `guide_events` (view / qr-scan / venue-click /
+  email-captured, venueId nullable) via route-side beacon; QR encodes
+  `?src=qr`; SPA shows raw aggregates. PostHog only when the business is
+  serious. *(ticket 09)*
+- Map — Leaflet + OpenStreetMap for MVP; Google Maps later. *(ticket 06)*
+- Monthly pass — manual, editor-driven, against the FULL venue inventory
+  (due-for-verification queue, closure candidates, new-openings triage);
+  finish → email digest to affected hotels; guides update by re-running the
+  drafting engine. Future: "in business" automation, cron. *(ticket 12)*
 
 ## Not yet specified
 
-- Guide sectioning: does the drafting engine group venues (by category /
-  proximity ring / itinerary) and do guides carry editorial text blocks
-  (intro, tips) like the old site's sections did?
-- Confidence score mechanics: what feeds it, how it's assigned in V1.
-- Email-capture abuse handling: rate limits, honeypots, from-address
-  verification (send_email beta needs a verified domain/address).
-- R2 presigned-upload flow: bucket layout, key scheme, who uploads, image
-  variants.
-- Hotel guide config surface in the SPA (radius, count, featured/excluded,
-  brand colors/logo).
-- The sales pitch artifact: is the personalized sample guide the same
-  `/g/<slug>` page in draft, or a separate shareable export?
-- Internal SPA route/screen inventory (dashboard, CRM, inventory, guide
-  builder, monthly pass).
-- Public marketing home for rvkfoodie.is (out-of-product or in-scope for
-  sales outreach?).
+- Marketing home for rvkfoodie.is: out-of-product or in-scope for sales
+  outreach? (No decision yet — the guide page is the product surface.)
+- R2 bucket layout / serving path detail (ticket 08 decides).
+- Guide builder and monthly pass route/UI structure (ticket 11 decides).
+- New-openings intake source for the monthly pass (ticket 12 decides).
 
 ## Out of scope
 
