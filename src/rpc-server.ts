@@ -5,7 +5,7 @@
  * prefetchers in ssr.ts, both of which Start strips from the client build.
  */
 import { createId } from '@paralleldrive/cuid2'
-import { and, asc, count, desc, eq, gt, sum } from 'drizzle-orm'
+import { and, asc, count, desc, eq, gt, inArray, ne, sum } from 'drizzle-orm'
 import { generateKeyBetween } from 'fractional-indexing'
 import { err, matchError, ok } from 'result-rpc'
 import { tryDb } from 'result-rpc/db'
@@ -14,18 +14,28 @@ import {
   addBusinessContract,
   addContactContract,
   addDealContract,
+  addGuideExcludeContract,
   addHotelContract,
   addLifecycleEventContract,
   addVenueContract,
+  approveGuideCandidatesContract,
   auditListContract,
   businessByIdContract,
   businessListContract,
   contactsByBusinessContract,
+  createGuideContract,
   dealsByBusinessContract,
+  draftGuideContract,
+  guideByIdContract,
+  guideListContract,
+  guideViewContract,
   hotelsByBusinessContract,
   hotelsListContract,
   listLifecycleContract,
   overviewContract,
+  publishGuideContract,
+  removeGuideExcludeContract,
+  setGuideConfigContract,
   setVenueStatusContract,
   updateBusinessContract,
   updateContactContract,
@@ -41,11 +51,15 @@ import {
   contacts,
   db,
   deals,
+  guideExcludes,
+  guideVenues,
+  guides,
   hotels,
   venueLifecycleEvents,
   venues,
   type Db,
 } from './db.js'
+import { draftItinerary } from './guide-gen.js'
 
 export interface AppContext {
   db: Db
@@ -79,6 +93,22 @@ const toVenue = (row: typeof venues.$inferSelect) => ({
   dineoutId: row.dineoutId,
   openingHours: row.openingHours,
   photos: row.photos,
+})
+
+/** Exactly the fields the public guide view exposes (Venue.pick). */
+const toVenuePublic = (row: typeof venues.$inferSelect) => ({
+  id: row.id,
+  name: row.name,
+  category: row.category,
+  categorySecondary: row.categorySecondary,
+  address: row.address,
+  openingHours: row.openingHours,
+  note: row.note,
+  recommendedDishes: row.recommendedDishes,
+  dineoutId: row.dineoutId,
+  lat: row.lat,
+  lon: row.lon,
+  confidence: row.confidence,
 })
 
 const toHotel = (row: typeof hotels.$inferSelect) => ({
@@ -123,6 +153,41 @@ const toDeal = (row: typeof deals.$inferSelect) => ({
   renewalDate: row.renewalDate,
   notes: row.notes,
 })
+
+const toGuide = (row: typeof guides.$inferSelect) => ({
+  id: row.id,
+  hotelId: row.hotelId,
+  slug: row.slug,
+  status: row.status,
+  radiusMin: row.radiusMin,
+  targetCount: row.targetCount,
+  generatedAt: row.generatedAt,
+})
+
+const toGuideVenue = (row: typeof guideVenues.$inferSelect) => ({
+  id: row.id,
+  guideId: row.guideId,
+  venueId: row.venueId,
+  status: row.status,
+  orderKey: row.orderKey,
+  overrideText: row.overrideText,
+  pinned: row.pinned,
+})
+
+const toLifecycle = (row: typeof venueLifecycleEvents.$inferSelect) => ({
+  id: row.id,
+  venueId: row.venueId,
+  type: row.type,
+  startedAt: row.startedAt,
+  endedAt: row.endedAt,
+  note: row.note,
+})
+
+const slugFromName = (name: string) =>
+  name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
 
 /** Fire-and-forget audit write — a failing audit entry never fails the
  * mutation that triggered it. */
@@ -351,7 +416,7 @@ const addLifecycleEvent = server
       entityId: input.venueId,
       after: { type: input.type, startedAt: input.startedAt },
     })
-    return ok(row)
+    return ok(toLifecycle(row))
   })
 
 const listLifecycle = server.implement(listLifecycleContract).handler(async ({ input, context }) => {
@@ -360,7 +425,7 @@ const listLifecycle = server.implement(listLifecycleContract).handler(async ({ i
     .from(venueLifecycleEvents)
     .where(eq(venueLifecycleEvents.venueId, input.venueId))
     .orderBy(desc(venueLifecycleEvents.startedAt))
-  return ok(rows)
+  return ok(rows.map(toLifecycle))
 })
 
 const auditList = server.implement(auditListContract).handler(async ({ input, context }) => {
@@ -786,6 +851,286 @@ const overview = server.implement(overviewContract).handler(async ({ context }) 
   return ok({ venueCount, liveVenueCount, hotelCount })
 })
 
+// --- Guide handlers -------------------------------------------------------
+
+const guideList = server.implement(guideListContract).handler(async ({ context }) => {
+  const rows = await context.db.select().from(guides).orderBy(asc(guides.slug))
+  return ok(rows.map(toGuide))
+})
+
+const guideById = server.implement(guideByIdContract).handler(async ({ input, errors, context }) => {
+  const row = (await context.db.select().from(guides).where(eq(guides.id, input.id)).limit(1))[0]
+  if (!row) return err(errors.notFound({ guideId: input.id }))
+  return ok(toGuide(row))
+})
+
+const createGuide = server.implement(createGuideContract).handler(async ({ input, errors, context }) => {
+  const hotel = (await context.db.select().from(hotels).where(eq(hotels.id, input.hotelId)).limit(1))[0]
+  if (!hotel) return err(errors.notFound({ guideId: input.hotelId }))
+  const existing = (
+    await context.db.select().from(guides).where(eq(guides.hotelId, input.hotelId)).limit(1)
+  )[0]
+  if (existing) return ok(toGuide(existing))
+  const row = {
+    id: createId(),
+    hotelId: input.hotelId,
+    slug: slugFromName(hotel.name),
+    status: 'draft',
+    radiusMin: input.radiusMin ?? 20,
+    targetCount: input.targetCount ?? 24,
+    generatedAt: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+  const inserted = await context.db.insert(guides).values(row).returning()
+  await audit(context.db, {
+    actor: 'system',
+    action: 'create',
+    entityType: 'guide',
+    entityId: inserted[0]!.id,
+    after: row,
+  })
+  return ok(toGuide(inserted[0]!))
+})
+
+const draftGuide = server.implement(draftGuideContract).handler(async ({ input, errors, context }) => {
+  const guide = (await context.db.select().from(guides).where(eq(guides.id, input.id)).limit(1))[0]
+  if (!guide) return err(errors.notFound({ guideId: input.id }))
+  const hotel = (await context.db.select().from(hotels).where(eq(hotels.id, guide.hotelId)).limit(1))[0]
+  if (!hotel || hotel.lat === null || hotel.lon === null) {
+    return err(errors.noPool({ guideId: input.id }))
+  }
+
+  const excluded = (
+    await context.db
+      .select({ venueId: guideExcludes.venueId })
+      .from(guideExcludes)
+      .where(eq(guideExcludes.guideId, input.id))
+  ).map((r) => r.venueId)
+  const excludedIds = new Set(excluded)
+
+  const existingRows = await context.db
+    .select()
+    .from(guideVenues)
+    .where(and(eq(guideVenues.guideId, input.id), ne(guideVenues.status, 'removed')))
+  const existingIds = existingRows.map((r) => r.venueId)
+  const venueStatus = new Map<string, string>()
+  if (existingIds.length > 0) {
+    const vs = await context.db
+      .select({ id: venues.id, status: venues.status })
+      .from(venues)
+      .where(inArray(venues.id, existingIds))
+    for (const v of vs) venueStatus.set(v.id, v.status)
+  }
+
+  // Merge: keep qualifying rows in place (status-only silent disqualifier);
+  // closed venues are marked removed.
+  const kept: string[] = []
+  const dropped: string[] = []
+  let lastOrderKey: string | null = null
+  const now = new Date()
+  for (const row of existingRows) {
+    if (venueStatus.get(row.venueId) === 'live') {
+      kept.push(row.venueId)
+      if (lastOrderKey === null || row.orderKey > lastOrderKey) lastOrderKey = row.orderKey
+    } else {
+      dropped.push(row.venueId)
+      await context.db
+        .update(guideVenues)
+        .set({ status: 'removed', updatedAt: now })
+        .where(eq(guideVenues.id, row.id))
+    }
+  }
+
+  // Pool: live venues, not already in the guide, not excluded, with coords.
+  const poolRows = await context.db
+    .select({
+      id: venues.id,
+      category: venues.category,
+      lat: venues.lat,
+      lon: venues.lon,
+      confidence: venues.confidence,
+    })
+    .from(venues)
+    .where(eq(venues.status, 'live'))
+  const pool = poolRows.filter(
+    (v) => !excludedIds.has(v.id) && !new Set([...kept, ...dropped]).has(v.id),
+  )
+
+  const picks = draftItinerary({
+    hotel: { lat: hotel.lat, lon: hotel.lon },
+    radiusMin: guide.radiusMin,
+    targetCount: guide.targetCount,
+    pool,
+    lastOrderKey,
+  })
+  for (const pick of picks) {
+    await context.db.insert(guideVenues).values({
+      id: createId(),
+      guideId: input.id,
+      venueId: pick.venueId,
+      status: 'pending',
+      orderKey: pick.orderKey,
+      overrideText: null,
+      pinned: false,
+      createdAt: now,
+      updatedAt: now,
+    })
+  }
+  await context.db
+    .update(guides)
+    .set({ generatedAt: now, updatedAt: now })
+    .where(eq(guides.id, input.id))
+  await audit(context.db, {
+    actor: 'system',
+    action: 'draft',
+    entityType: 'guide',
+    entityId: input.id,
+    after: { kept: kept.length, dropped, added: picks.map((p) => p.venueId) },
+  })
+  return ok({ kept: kept.length, dropped, added: picks.map((p) => p.venueId) })
+})
+
+const approveGuideCandidates = server
+  .implement(approveGuideCandidatesContract)
+  .handler(async ({ input, errors, context }) => {
+    const guide = (
+      await context.db.select().from(guides).where(eq(guides.id, input.guideId)).limit(1)
+    )[0]
+    if (!guide) return err(errors.notFound({ guideId: input.guideId }))
+    const rows = await context.db
+      .select()
+      .from(guideVenues)
+      .where(
+        and(
+          eq(guideVenues.guideId, input.guideId),
+          eq(guideVenues.status, 'pending'),
+          inArray(guideVenues.venueId, input.venueIds),
+        ),
+      )
+    const now = new Date()
+    for (const row of rows) {
+      await context.db
+        .update(guideVenues)
+        .set({ status: 'live', updatedAt: now })
+        .where(eq(guideVenues.id, row.id))
+    }
+    await audit(context.db, {
+      actor: 'system',
+      action: 'approve-candidates',
+      entityType: 'guide',
+      entityId: input.guideId,
+      after: { venueIds: input.venueIds },
+    })
+    return ok(rows.map(toGuideVenue))
+  })
+
+const setGuideConfig = server
+  .implement(setGuideConfigContract)
+  .handler(async ({ input, errors, context }) => {
+    const guide = (
+      await context.db.select().from(guides).where(eq(guides.id, input.guideId)).limit(1)
+    )[0]
+    if (!guide) return err(errors.notFound({ guideId: input.guideId }))
+    const updated = (
+      await context.db
+        .update(guides)
+        .set({
+          ...(input.radiusMin !== undefined ? { radiusMin: input.radiusMin } : {}),
+          ...(input.targetCount !== undefined ? { targetCount: input.targetCount } : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(guides.id, input.guideId))
+        .returning()
+    )[0]
+    await audit(context.db, {
+      actor: 'system',
+      action: 'config-change',
+      entityType: 'guide',
+      entityId: input.guideId,
+      before: { radiusMin: guide.radiusMin, targetCount: guide.targetCount },
+      after: { radiusMin: updated!.radiusMin, targetCount: updated!.targetCount },
+    })
+    return ok(toGuide(updated!))
+  })
+
+const publishGuide = server.implement(publishGuideContract).handler(async ({ input, errors, context }) => {
+  const guide = (await context.db.select().from(guides).where(eq(guides.id, input.id)).limit(1))[0]
+  if (!guide) return err(errors.notFound({ guideId: input.id }))
+  const updated = (
+    await context.db
+      .update(guides)
+      .set({ status: 'live', updatedAt: new Date() })
+      .where(eq(guides.id, input.id))
+      .returning()
+  )[0]
+  await audit(context.db, {
+    actor: 'system',
+    action: 'publish',
+    entityType: 'guide',
+    entityId: input.id,
+    before: { status: guide.status },
+    after: { status: 'live' },
+  })
+  return ok(toGuide(updated!))
+})
+
+const addGuideExclude = server
+  .implement(addGuideExcludeContract)
+  .handler(async ({ input, errors, context }) => {
+    const guide = (
+      await context.db.select().from(guides).where(eq(guides.id, input.guideId)).limit(1)
+    )[0]
+    if (!guide) return err(errors.notFound({ guideId: input.guideId }))
+    await context.db
+      .insert(guideExcludes)
+      .values({ id: createId(), guideId: input.guideId, venueId: input.venueId })
+      .onConflictDoNothing()
+    return ok({})
+  })
+
+const removeGuideExclude = server
+  .implement(removeGuideExcludeContract)
+  .handler(async ({ input, errors, context }) => {
+    const guide = (
+      await context.db.select().from(guides).where(eq(guides.id, input.guideId)).limit(1)
+    )[0]
+    if (!guide) return err(errors.notFound({ guideId: input.guideId }))
+    await context.db
+      .delete(guideExcludes)
+      .where(
+        and(eq(guideExcludes.guideId, input.guideId), eq(guideExcludes.venueId, input.venueId)),
+      )
+    return ok({})
+  })
+
+const guideView = server.implement(guideViewContract).handler(async ({ input, errors, context }) => {
+  const guide = (await context.db.select().from(guides).where(eq(guides.id, input.id)).limit(1))[0]
+  if (!guide) return err(errors.notFound({ guideId: input.id }))
+  const rows = await context.db
+    .select()
+    .from(guideVenues)
+    .where(and(eq(guideVenues.guideId, input.id), eq(guideVenues.status, 'live')))
+    .orderBy(asc(guideVenues.orderKey))
+  const venueIds = rows.map((r) => r.venueId)
+  const venueRows = venueIds.length
+    ? await context.db.select().from(venues).where(inArray(venues.id, venueIds))
+    : []
+  const venueById = new Map(venueRows.map((v) => [v.id, v]))
+  const venueRowsOut = rows.map((r) => {
+    const venue = venueById.get(r.venueId)!
+    return {
+      id: r.id,
+      venueId: r.venueId,
+      orderKey: r.orderKey,
+      overrideText: r.overrideText,
+      pinned: r.pinned,
+      venue: toVenuePublic(venue),
+    }
+  })
+  return ok({ guide: toGuide(guide), venueRows: venueRowsOut })
+})
+
 export const router = server.router({
   venues: {
     feed: venueFeed,
@@ -819,6 +1164,18 @@ export const router = server.router({
     add: addDeal,
     update: updateDeal,
   },
+  guides: {
+    view: guideView,
+    list: guideList,
+    byId: guideById,
+    create: createGuide,
+    draft: draftGuide,
+    approveCandidates: approveGuideCandidates,
+    setConfig: setGuideConfig,
+    publish: publishGuide,
+    addExclude: addGuideExclude,
+    removeExclude: removeGuideExclude,
+  },
   stats: { overview },
 })
 
@@ -835,4 +1192,7 @@ export const rpcHandler = createFetchHandler({
   createContext,
   endpoint: '/api/rpc',
   contractVersion: 'rvkfoodie-scaffold',
+  onInternalError: (event) => {
+    console.error('rpc internal', event.incidentId, event.cause)
+  },
 })

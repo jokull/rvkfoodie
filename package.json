@@ -14,7 +14,8 @@
     "db:migrate": "wrangler d1 migrations apply rvkfoodie-cms-v4b --local",
     "db:migrate:remote": "wrangler d1 migrations apply rvkfoodie-cms-v4b --remote",
     "db:seed": "wrangler d1 execute rvkfoodie-cms-v4b --local --file scripts/seed.sql",
-    "db:seed:remote": "wrangler d1 execute rvkfoodie-cms-v4b --remote --file scripts/seed.sql"
+    "db:seed:remote": "wrangler d1 execute rvkfoodie-cms-v4b --remote --file scripts/seed.sql",
+    "test:rpc": "tsx scripts/rpc-e2e.test.ts"
   },
   "dependencies": {
     "@cloudflare/kumo": "^2.9.0",
@@ -39,6 +40,7 @@
     "@vitejs/plugin-react": "^6.0.5",
     "drizzle-kit": "1.0.0-rc.4",
     "tailwindcss": "^4.2.2",
+    "tsx": "^4.23.1",
     "typescript": "^5.9.3",
     "vite": "^8.2.0",
     "wrangler": "^4.118.0"

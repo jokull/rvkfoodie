@@ -9,7 +9,7 @@
  * layer owns the value sets (venue status, categories, lifecycle types,
  * pipeline stages).
  */
-import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { index, integer, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core'
 
 export const VENUE_STATUS = ['draft', 'live', 'closed'] as const
 export const VENUE_CATEGORIES = [
@@ -30,6 +30,8 @@ export const PIPELINE_STAGES = [
   'won',
   'lost',
 ] as const
+export const GUIDE_STATUS = ['draft', 'live'] as const
+export const GUIDE_VENUE_STATUS = ['pending', 'live', 'removed'] as const
 
 /** The editorial database — one curated venue. */
 export const venues = sqliteTable(
@@ -210,8 +212,7 @@ export const contacts = sqliteTable(
  * pricePerRoom (the rate card at deal time) with annualValue =
  * pricePerRoom × rooms computed at write, so history stays accurate even
  * if room counts change later.
- */
-export const deals = sqliteTable(
+ */export const deals = sqliteTable(
   'deals',
   {
     id: text('id').primaryKey(),
@@ -235,4 +236,78 @@ export const deals = sqliteTable(
     index('deals_business_idx').on(t.businessId),
     index('deals_stage_idx').on(t.stage),
   ],
+)
+
+/**
+ * Guides — one per hotel (V1). A guide is a SNAPSHOT produced by the
+ * drafting engine: staff draft, customize, approve candidates, publish.
+ * The /g/<slug> page serves only live guides.
+ */
+export const guides = sqliteTable(
+  'guides',
+  {
+    id: text('id').primaryKey(),
+    hotelId: text('hotel_id').notNull().unique(),
+    slug: text('slug').notNull().unique(),
+    /** draft | live */
+    status: text('status').notNull().default('draft'),
+    /** Walk minutes — converted to straight-line km at draft time. */
+    radiusMin: integer('radius_min').notNull().default(20),
+    /** Itinerary target count. */
+    targetCount: integer('target_count').notNull().default(24),
+    generatedAt: integer('generated_at', { mode: 'timestamp_ms' }),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (t) => [index('guides_hotel_idx').on(t.hotelId)],
+)
+
+/**
+ * The snapshot's venue rows. Re-draft is a merge: qualifying rows keep
+ * their position/overrides; closed venues are marked removed; generated
+ * picks land as pending until staff approve them (no silent entry).
+ */
+export const guideVenues = sqliteTable(
+  'guide_venues',
+  {
+    id: text('id').primaryKey(),
+    guideId: text('guide_id').notNull(),
+    venueId: text('venue_id').notNull(),
+    /** pending | live | removed */
+    status: text('status').notNull().default('pending'),
+    orderKey: text('order_key').notNull(),
+    /** Per-guide copy override — venue cards use it when present. */
+    overrideText: text('override_text'),
+    /** Featured — always kept in place on re-draft (unless venue closed). */
+    pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (t) => [
+    index('gv_guide_idx').on(t.guideId),
+    index('gv_venue_idx').on(t.venueId),
+    unique('gv_guide_venue_uq').on(t.guideId, t.venueId),
+  ],
+)
+
+/** Hotel-level exclusions — excluded venues never re-enter on draft. */
+export const guideExcludes = sqliteTable(
+  'guide_excludes',
+  {
+    id: text('id').primaryKey(),
+    guideId: text('guide_id').notNull(),
+    venueId: text('venue_id').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (t) => [unique('ge_guide_venue_uq').on(t.guideId, t.venueId)],
 )

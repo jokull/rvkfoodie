@@ -9,6 +9,7 @@ import {
   businessErrors,
   contactErrors,
   dealErrors,
+  guideErrors,
   hotelErrors,
   venueErrors,
 } from './errors.js'
@@ -17,6 +18,9 @@ import {
   Business,
   Contact,
   Deal,
+  Guide,
+  GuideVenue,
+  GuideViewCodec,
   Hotel,
   LifecycleEvent,
   OverviewCodec,
@@ -346,6 +350,107 @@ export const updateDealContract = app
   .affects(dealsByBusinessContract)
   .mutation()
 
+// --- Guides ---------------------------------------------------------------
+
+/** The public guide view — must be declared before draft/approve affects(). */
+export const guideViewContract = app
+  .procedure()
+  .input(wire.object({ id: wire.string }))
+  .output(GuideViewCodec)
+  .errors({ ...pickErrors(guideErrors, 'notFound') })
+  .query()
+
+export const guideListContract = app
+  .procedure()
+  .input(wire.object({}))
+  .output(wire.array(Guide.all('guide metadata is staff-visible')))
+  .query()
+
+export const guideByIdContract = app
+  .procedure()
+  .input(wire.object({ id: wire.string }))
+  .output(Guide.all('guide metadata is staff-visible'))
+  .errors({ ...pickErrors(guideErrors, 'notFound') })
+  .query()
+
+export const createGuideContract = app
+  .procedure()
+  .input(
+    wire.object({
+      hotelId: wire.string,
+      radiusMin: wire.optional(wire.integer({ min: 1, max: 120 })),
+      targetCount: wire.optional(wire.integer({ min: 1, max: 60 })),
+    }),
+  )
+  .output(Guide.all('guide metadata is staff-visible'))
+  .errors({ ...pickErrors(guideErrors, 'notFound') })
+  .affects(guideListContract)
+  .mutation()
+
+/** Merge re-draft: keep qualifying rows, drop closed, append pending picks. */
+export const draftGuideContract = app
+  .procedure()
+  .input(wire.object({ id: wire.string }))
+  .output(
+    wire.object({
+      kept: wire.number,
+      dropped: wire.array(wire.string),
+      added: wire.array(wire.string),
+    }),
+  )
+  .errors({ ...pickErrors(guideErrors, 'notFound', 'noPool') })
+  .affects(guideViewContract)
+  .affects(guideByIdContract)
+  .mutation()
+
+/** Promote generated pending rows to live — the maintenance-cycle approval. */
+export const approveGuideCandidatesContract = app
+  .procedure()
+  .input(wire.object({ guideId: wire.string, venueIds: wire.array(wire.string) }))
+  .output(wire.array(GuideVenue.all('guide venue rows are staff-visible')))
+  .errors({ ...pickErrors(guideErrors, 'notFound') })
+  .affects(guideViewContract)
+  .mutation()
+
+export const setGuideConfigContract = app
+  .procedure()
+  .input(
+    wire.object({
+      guideId: wire.string,
+      radiusMin: wire.optional(wire.integer({ min: 1, max: 120 })),
+      targetCount: wire.optional(wire.integer({ min: 1, max: 60 })),
+    }),
+  )
+  .output(Guide.all('guide metadata is staff-visible'))
+  .errors({ ...pickErrors(guideErrors, 'notFound') })
+  .affects(guideByIdContract)
+  .mutation()
+
+export const publishGuideContract = app
+  .procedure()
+  .input(wire.object({ id: wire.string }))
+  .output(Guide.all('guide metadata is staff-visible'))
+  .errors({ ...pickErrors(guideErrors, 'notFound') })
+  .affects(guideListContract)
+  .affects(guideByIdContract)
+  .mutation()
+
+export const addGuideExcludeContract = app
+  .procedure()
+  .input(wire.object({ guideId: wire.string, venueId: wire.string }))
+  .output(wire.object({}))
+  .errors({ ...pickErrors(guideErrors, 'notFound') })
+  .affects(guideViewContract)
+  .mutation()
+
+export const removeGuideExcludeContract = app
+  .procedure()
+  .input(wire.object({ guideId: wire.string, venueId: wire.string }))
+  .output(wire.object({}))
+  .errors({ ...pickErrors(guideErrors, 'notFound') })
+  .affects(guideViewContract)
+  .mutation()
+
 export const appContract = app.contract({
   venues: {
     feed: venueFeedContract,
@@ -380,6 +485,18 @@ export const appContract = app.contract({
     listByBusiness: dealsByBusinessContract,
     add: addDealContract,
     update: updateDealContract,
+  },
+  guides: {
+    view: guideViewContract,
+    list: guideListContract,
+    byId: guideByIdContract,
+    create: createGuideContract,
+    draft: draftGuideContract,
+    approveCandidates: approveGuideCandidatesContract,
+    setConfig: setGuideConfigContract,
+    publish: publishGuideContract,
+    addExclude: addGuideExcludeContract,
+    removeExclude: removeGuideExcludeContract,
   },
   stats: {
     overview: overviewContract,

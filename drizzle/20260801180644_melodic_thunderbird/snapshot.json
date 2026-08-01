@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "be4e1577-66c3-4bb0-8e60-7433eacb217f",
+  "id": "86f4a6d4-aa0b-4e08-8e5e-209100cfb3e7",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -20,6 +20,18 @@
     },
     {
       "name": "deals",
+      "entityType": "tables"
+    },
+    {
+      "name": "guide_excludes",
+      "entityType": "tables"
+    },
+    {
+      "name": "guide_venues",
+      "entityType": "tables"
+    },
+    {
+      "name": "guides",
       "entityType": "tables"
     },
     {
@@ -413,6 +425,226 @@
       "name": "updated_at",
       "entityType": "columns",
       "table": "deals"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "guide_excludes"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "guide_id",
+      "entityType": "columns",
+      "table": "guide_excludes"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "venue_id",
+      "entityType": "columns",
+      "table": "guide_excludes"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "guide_excludes"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "guide_venues"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "guide_id",
+      "entityType": "columns",
+      "table": "guide_venues"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "venue_id",
+      "entityType": "columns",
+      "table": "guide_venues"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'pending'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "guide_venues"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "order_key",
+      "entityType": "columns",
+      "table": "guide_venues"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "override_text",
+      "entityType": "columns",
+      "table": "guide_venues"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "pinned",
+      "entityType": "columns",
+      "table": "guide_venues"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "guide_venues"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "guide_venues"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "guides"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "hotel_id",
+      "entityType": "columns",
+      "table": "guides"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "slug",
+      "entityType": "columns",
+      "table": "guides"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'draft'",
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "guides"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "20",
+      "generated": null,
+      "name": "radius_min",
+      "entityType": "columns",
+      "table": "guides"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "24",
+      "generated": null,
+      "name": "target_count",
+      "entityType": "columns",
+      "table": "guides"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "generated_at",
+      "entityType": "columns",
+      "table": "guides"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "guides"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "guides"
     },
     {
       "type": "text",
@@ -865,6 +1097,33 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "guide_excludes_pk",
+      "table": "guide_excludes",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "guide_venues_pk",
+      "table": "guide_venues",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "guides_pk",
+      "table": "guides",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "hotels_pk",
       "table": "hotels",
       "entityType": "pks"
@@ -978,6 +1237,48 @@
     {
       "columns": [
         {
+          "value": "guide_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "gv_guide_idx",
+      "entityType": "indexes",
+      "table": "guide_venues"
+    },
+    {
+      "columns": [
+        {
+          "value": "venue_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "gv_venue_idx",
+      "entityType": "indexes",
+      "table": "guide_venues"
+    },
+    {
+      "columns": [
+        {
+          "value": "hotel_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "guides_hotel_idx",
+      "entityType": "indexes",
+      "table": "guides"
+    },
+    {
+      "columns": [
+        {
           "value": "business_id",
           "isExpression": false
         }
@@ -1058,6 +1359,35 @@
       "name": "venues_order_idx",
       "entityType": "indexes",
       "table": "venues"
+    },
+    {
+      "columns": [
+        "guide_id",
+        "venue_id"
+      ],
+      "nameExplicit": true,
+      "name": "ge_guide_venue_uq",
+      "entityType": "uniques",
+      "table": "guide_excludes"
+    },
+    {
+      "columns": [
+        "guide_id",
+        "venue_id"
+      ],
+      "nameExplicit": true,
+      "name": "gv_guide_venue_uq",
+      "entityType": "uniques",
+      "table": "guide_venues"
+    },
+    {
+      "columns": [
+        "slug"
+      ],
+      "nameExplicit": false,
+      "name": "guides_slug_unique",
+      "entityType": "uniques",
+      "table": "guides"
     },
     {
       "columns": [

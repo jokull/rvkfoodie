@@ -10,6 +10,8 @@ import type {
   businesses,
   contacts,
   deals,
+  guideVenues,
+  guides,
   hotels,
   venueLifecycleEvents,
   venues,
@@ -130,7 +132,64 @@ export const Deal = defineModel('deal', {
 }).$satisfies<typeof deals.$inferSelect>()
 export type DealRow = ModelValue<typeof Deal>
 
-/** One-off aggregate — no entity identity, kept fresh via `.affects()`. */
+/** One per hotel (V1). */
+export const Guide = defineModel('guide', {
+  key: 'id',
+  shape: {
+    id: wire.string,
+    hotelId: wire.string,
+    slug: wire.string,
+    status: wire.string,
+    radiusMin: wire.integer(),
+    targetCount: wire.integer(),
+    generatedAt: wire.nullable(wire.date),
+  },
+}).$satisfies<typeof guides.$inferSelect>()
+export type GuideRow = ModelValue<typeof Guide>
+
+/** A snapshot row: pending (generated, unapproved), live, or removed. */
+export const GuideVenue = defineModel('guide-venue', {
+  key: 'id',
+  shape: {
+    id: wire.string,
+    guideId: wire.string,
+    venueId: wire.string,
+    status: wire.string,
+    orderKey: wire.string,
+    overrideText: wire.nullable(wire.string),
+    pinned: wire.boolean,
+  },
+}).$satisfies<typeof guideVenues.$inferSelect>()
+export type GuideVenueRow = ModelValue<typeof GuideVenue>
+
+/** The public guide view — guide + live venue rows with overrides. */
+export const GuideVenueViewCodec = wire.object({
+  id: wire.string,
+  venueId: wire.string,
+  orderKey: wire.string,
+  overrideText: wire.nullable(wire.string),
+  pinned: wire.boolean,
+  venue: Venue.pick(
+    'id',
+    'name',
+    'category',
+    'categorySecondary',
+    'address',
+    'openingHours',
+    'note',
+    'recommendedDishes',
+    'dineoutId',
+    'lat',
+    'lon',
+    'confidence',
+  ),
+})
+
+export const GuideViewCodec = wire.object({
+  guide: Guide.all('the guide is public'),
+  venueRows: wire.array(GuideVenueViewCodec),
+})
+export type GuideView = InputOf<typeof GuideViewCodec>
 export const OverviewCodec = wire.object({
   venueCount: wire.number,
   liveVenueCount: wire.number,

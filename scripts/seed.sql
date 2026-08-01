@@ -34,3 +34,16 @@ INSERT OR IGNORE INTO deals (id, business_id, name, stage, price_per_room, annua
 ('deal_01', 'biz_01', 'Annual guide subscription — Keahotels Reykjavík', 'sample-sent', 1500, 288000, NULL, NULL, 'Sample guide sent to Guðrún; awaiting response', 1719792000000, 1719792000000),
 ('deal_02', 'biz_02', 'Annual guide subscription — Kex Hostel', 'won', 1200, 50400, 1720000000000, 1751536000000, 'Signed 2026', 1719792000000, 1719792000000),
 ('deal_03', 'biz_03', 'Annual guide subscription — Icelandair Hotel Reykjavík', 'prospect', 1500, 154500, NULL, NULL, 'Cold outreach phase', 1719792000000, 1719792000000);
+
+-- Demo guide: Hotel Borg (live) with the 7 live venues, template order.
+INSERT OR IGNORE INTO guides (id, hotel_id, slug, status, radius_min, target_count, generated_at, created_at, updated_at) VALUES
+('guide_01', 'hotel_01', 'hotel-borg', 'live', 20, 24, 1750000000000, 1719792000000, 1719792000000);
+
+INSERT OR IGNORE INTO guide_venues (id, guide_id, venue_id, status, order_key, override_text, pinned, created_at, updated_at) VALUES
+('gv_01', 'guide_01', 'venue_01', 'live', 'a0', NULL, 0, 1719792000000, 1719792000000),
+('gv_02', 'guide_01', 'venue_02', 'live', 'a1', NULL, 0, 1719792000000, 1719792000000),
+('gv_03', 'guide_01', 'venue_03', 'live', 'a2', NULL, 0, 1719792000000, 1719792000000),
+('gv_04', 'guide_01', 'venue_05', 'live', 'a3', NULL, 0, 1719792000000, 1719792000000),
+('gv_05', 'guide_01', 'venue_06', 'live', 'a4', NULL, 0, 1719792000000, 1719792000000),
+('gv_06', 'guide_01', 'venue_07', 'live', 'a5', NULL, 0, 1719792000000, 1719792000000),
+('gv_07', 'guide_01', 'venue_08', 'live', 'a6', NULL, 0, 1719792000000, 1719792000000);

@@ -22,3 +22,8 @@ export const contactErrors = defineErrors('contact', {
 export const dealErrors = defineErrors('deal', {
   notFound: { data: wire.object({ dealId: wire.string }), httpStatus: 404 },
 })
+
+export const guideErrors = defineErrors('guide', {
+  notFound: { data: wire.object({ guideId: wire.string }), httpStatus: 404 },
+  noPool: { data: wire.object({ guideId: wire.string }), httpStatus: 422 },
+})
