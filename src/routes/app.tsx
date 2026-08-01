@@ -39,9 +39,7 @@ function AppShell() {
           <NavLink to="/app/venues">Venues</NavLink>
           <NavLink to="/app/crm">CRM</NavLink>
           <NavLink to="/app/guides">Guide builder</NavLink>
-          <span className="app-nav-item app-nav-disabled">
-            Monthly pass <small>soon</small>
-          </span>
+          <NavLink to="/app/pass">Monthly pass</NavLink>
         </nav>
         <p className="app-user muted small">{session.user.email}</p>
       </aside>

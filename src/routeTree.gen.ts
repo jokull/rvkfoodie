@@ -17,6 +17,7 @@ import { Route as ApiUploadRouteImport } from './routes/api.upload'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppCrmRouteImport } from './routes/app.crm'
 import { Route as AppGuidesRouteImport } from './routes/app.guides'
+import { Route as AppPassRouteImport } from './routes/app.pass'
 import { Route as AppVenuesRouteImport } from './routes/app.venues'
 import { Route as GSlugRouteImport } from './routes/g.$slug'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
@@ -64,6 +65,11 @@ const AppGuidesRoute = AppGuidesRouteImport.update({
   path: '/guides',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPassRoute = AppPassRouteImport.update({
+  id: '/pass',
+  path: '/pass',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppVenuesRoute = AppVenuesRouteImport.update({
   id: '/venues',
   path: '/venues',
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/api/upload': typeof ApiUploadRoute
   '/app/crm': typeof AppCrmRoute
   '/app/guides': typeof AppGuidesRoute
+  '/app/pass': typeof AppPassRoute
   '/app/venues': typeof AppVenuesRoute
   '/g/$slug': typeof GSlugRoute
   '/app/': typeof AppIndexRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/api/upload': typeof ApiUploadRoute
   '/app/crm': typeof AppCrmRoute
   '/app/guides': typeof AppGuidesRoute
+  '/app/pass': typeof AppPassRoute
   '/app/venues': typeof AppVenuesRoute
   '/g/$slug': typeof GSlugRoute
   '/app': typeof AppIndexRoute
@@ -135,6 +143,7 @@ export interface FileRoutesById {
   '/api/upload': typeof ApiUploadRoute
   '/app/crm': typeof AppCrmRoute
   '/app/guides': typeof AppGuidesRoute
+  '/app/pass': typeof AppPassRoute
   '/app/venues': typeof AppVenuesRoute
   '/g/$slug': typeof GSlugRoute
   '/app/': typeof AppIndexRoute
@@ -153,6 +162,7 @@ export interface FileRouteTypes {
     | '/api/upload'
     | '/app/crm'
     | '/app/guides'
+    | '/app/pass'
     | '/app/venues'
     | '/g/$slug'
     | '/app/'
@@ -168,6 +178,7 @@ export interface FileRouteTypes {
     | '/api/upload'
     | '/app/crm'
     | '/app/guides'
+    | '/app/pass'
     | '/app/venues'
     | '/g/$slug'
     | '/app'
@@ -184,6 +195,7 @@ export interface FileRouteTypes {
     | '/api/upload'
     | '/app/crm'
     | '/app/guides'
+    | '/app/pass'
     | '/app/venues'
     | '/g/$slug'
     | '/app/'
@@ -261,6 +273,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppGuidesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/pass': {
+      id: '/app/pass'
+      path: '/pass'
+      fullPath: '/app/pass'
+      preLoaderRoute: typeof AppPassRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/venues': {
       id: '/app/venues'
       path: '/venues'
@@ -309,6 +328,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppCrmRoute: typeof AppCrmRoute
   AppGuidesRoute: typeof AppGuidesRoute
+  AppPassRoute: typeof AppPassRoute
   AppVenuesRoute: typeof AppVenuesRoute
   AppIndexRoute: typeof AppIndexRoute
   AppCrmBusinessIdRoute: typeof AppCrmBusinessIdRoute
@@ -319,6 +339,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppCrmRoute: AppCrmRoute,
   AppGuidesRoute: AppGuidesRoute,
+  AppPassRoute: AppPassRoute,
   AppVenuesRoute: AppVenuesRoute,
   AppIndexRoute: AppIndexRoute,
   AppCrmBusinessIdRoute: AppCrmBusinessIdRoute,

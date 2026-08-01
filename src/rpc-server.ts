@@ -122,6 +122,7 @@ const toVenue = (row: typeof venues.$inferSelect) => ({
   phone: row.phone,
   openingHours: row.openingHours,
   photos: row.photos,
+  createdAt: row.createdAt,
 })
 
 /** Exactly the fields the public guide view exposes (Venue.pick). */

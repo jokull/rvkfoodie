@@ -426,3 +426,12 @@ main {
 .override-input {
   @apply rounded-md border border-slate-300 px-2 py-0.5 text-xs;
 }
+.pass-row {
+  @apply flex flex-wrap items-center gap-2 py-1;
+}
+.pass-name {
+  @apply font-medium text-slate-900 no-underline;
+}
+.pass-actions {
+  @apply ml-auto flex gap-2;
+}

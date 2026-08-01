@@ -48,6 +48,7 @@ export const Venue = defineModel('venue', {
     phone: wire.nullable(wire.string),
     openingHours: wire.nullable(wire.string),
     photos: wire.array(wire.string),
+    createdAt: wire.date,
   },
 }).$satisfies<typeof venues.$inferSelect>()
 export type VenueRow = ModelValue<typeof Venue>
