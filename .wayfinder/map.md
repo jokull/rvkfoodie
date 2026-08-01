@@ -34,8 +34,6 @@ build tickets as the frontier resolves.
 ## Tickets
 
 04 [Legacy venue backfill](tickets/04-legacy-venue-backfill.md) — task.
-05 [Guide model + drafting engine](tickets/05-guide-model-drafting-engine.md)
-   — grilling. Blocks 06, 12.
 06 [Guide page: /g/<slug>](tickets/06-guide-page.md) — prototype. Blocks 09.
 07 [Email: binding ops + capture flow](tickets/07-email-capture.md) — task.
 08 [R2 photo uploads](tickets/08-r2-photo-uploads.md) — task.
@@ -45,7 +43,8 @@ build tickets as the frontier resolves.
 11 [Internal SPA screens](tickets/11-internal-spa-screens.md) — grilling.
 12 [Monthly pass + digest](tickets/12-monthly-pass-digest.md) — task.
 
-Closed: 01 categories, 02 venue data model, 03 CRM data model.
+Closed: 01 categories, 02 venue data model, 03 CRM data model,
+05 guide model + drafting engine.
 
 ## Decisions so far
 
@@ -83,10 +82,13 @@ Closed: 01 categories, 02 venue data model, 03 CRM data model.
   guide (grouped at render); editorial text blocks deferred. Venue cards
   carry canonical default copy, overridable per guide. *(tickets 05, 06)*
 - Generator rule — radius (default ~15–20 min walk from hotel pin,
-  overridable) → quality gate (status=live, confidence ≥ 0.7, verified
-  within 6 months) → balance (target count ~20–30, category spread) →
-  overrides (featured always-in, excluded never-in, count/radius).
-  Deterministic server-side. *(ticket 05)*
+  overridable) → status gate (live, no confidence cutoff) → balance
+  (round-robin category cycles to the itinerary target, circuit breakers)
+  → overrides (featured always-in, excluded never-in, count/radius).
+  Deterministic server-side. Re-draft is a MERGE: status is the only silent
+  disqualifier; generated picks land PENDING and enter only via staff
+  approval; confidence/freshness are health flags for the maintenance
+  cycle, never silent eviction. *(ticket 05)*
 - Confidence — 0–1 editorial score, set in the monthly pass / backfill;
   lifecycle events override mechanically (closure → 0, reopened clears);
   manual re-verification otherwise. *(tickets 02, 12)*
