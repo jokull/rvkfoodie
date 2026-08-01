@@ -8,6 +8,17 @@
  *
  * Mounted at /api/auth/* by src/routes/api.auth.$.ts; session reads in SSR
  * loaders go through auth.api.getSession({ headers }).
+ *
+ * Auth deliberately lives outside the result-rpc contract:
+ *  - better-auth ships its own typed client + endpoint router; re-declaring
+ *    them on the wire would duplicate a typed API that already exists.
+ *  - sign-in's real output is Set-Cookie (plus the cookie rotation and
+ *    CSRF/Origin checks inside the handler) — a side channel result-rpc
+ *    would need to declare and flush per procedure.
+ *  - session reads are control flow for loaders (gate + redirect), not
+ *    contract data; getSession reads the SSR request headers directly.
+ * If auth grows roles or permissions, move the read into the contract as a
+ * typed whoami procedure — the wire would then document the session shape.
  */
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
