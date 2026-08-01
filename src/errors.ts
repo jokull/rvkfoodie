@@ -6,6 +6,11 @@ export const venueErrors = defineErrors('venue', {
   nameTaken: { data: wire.object({ name: wire.string }), httpStatus: 409 },
 })
 
+export const venueAwardErrors = defineErrors('venue-award', {
+  notFound: { data: wire.object({ awardId: wire.string }), httpStatus: 404 },
+  exists: { data: wire.object({ venueId: wire.string }), httpStatus: 409 },
+})
+
 export const businessErrors = defineErrors('business', {
   notFound: { data: wire.object({ businessId: wire.string }), httpStatus: 404 },
   nameTaken: { data: wire.object({ name: wire.string }), httpStatus: 409 },

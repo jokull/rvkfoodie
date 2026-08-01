@@ -11,6 +11,7 @@ import {
   dealErrors,
   guideErrors,
   hotelErrors,
+  venueAwardErrors,
   venueErrors,
 } from './errors.js'
 import {
@@ -25,8 +26,9 @@ import {
   LifecycleEvent,
   OverviewCodec,
   Venue,
+  VenueAward,
 } from './models.js'
-import { LIFECYCLE_TYPES, PIPELINE_STAGES, VENUE_CATEGORIES } from './schema.js'
+import { LIFECYCLE_TYPES, PIPELINE_STAGES, VENUE_AWARD_TYPES, VENUE_CATEGORIES } from './schema.js'
 import type { AppContext } from './rpc-server.js'
 
 export const app = rpc.context<AppContext>()
@@ -75,6 +77,8 @@ export const addVenueContract = app
       openingHours: wire.optional(wire.string),
       dineoutId: wire.optional(wire.string),
       googlePlacesId: wire.optional(wire.string),
+      website: wire.optional(wire.string),
+      phone: wire.optional(wire.string),
       lat: wire.optional(wire.number),
       lon: wire.optional(wire.number),
     }),
@@ -101,6 +105,11 @@ export const updateVenueContract = app
       openingHours: wire.optional(wire.string),
       dineoutId: wire.optional(wire.string),
       googlePlacesId: wire.optional(wire.string),
+      website: wire.optional(wire.string),
+      phone: wire.optional(wire.string),
+      /** Staff-only fields: editorial confidence + last verification. */
+      confidence: wire.optional(wire.number),
+      lastVerifiedAt: wire.optional(wire.date),
       lat: wire.optional(wire.number),
       lon: wire.optional(wire.number),
       tags: wire.optional(wire.array(wire.string)),
@@ -112,6 +121,37 @@ export const updateVenueContract = app
   .errors({ ...pickErrors(venueErrors, 'notFound', 'nameTaken') })
   .affects(venueFeedContract)
   .affects(overviewContract)
+  .mutation()
+
+/** Awards on a venue — the editor's-pick source for guide pages. */
+export const venueAwardListContract = app
+  .procedure()
+  .input(wire.object({ venueId: wire.string }))
+  .output(wire.array(VenueAward.all('awards are staff-visible')))
+  .errors({ ...pickErrors(venueErrors, 'notFound') })
+  .query()
+
+export const venueAwardAddContract = app
+  .procedure()
+  .input(
+    wire.object({
+      venueId: wire.string,
+      awardType: enumOf(VENUE_AWARD_TYPES),
+      title: wire.string,
+      url: wire.optional(wire.string),
+    }),
+  )
+  .output(VenueAward.all('awards are staff-visible'))
+  .errors({ ...pickErrors(venueErrors, 'notFound'), ...pickErrors(venueAwardErrors, 'exists') })
+  .affects(venueAwardListContract)
+  .mutation()
+
+export const venueAwardRemoveContract = app
+  .procedure()
+  .input(wire.object({ id: wire.string }))
+  .output(wire.object({ removed: wire.boolean }))
+  .errors({ ...pickErrors(venueAwardErrors, 'notFound') })
+  .affects(venueAwardListContract)
   .mutation()
 
 /** Editorial status toggle (mark closed / mark live). */
@@ -489,6 +529,11 @@ export const appContract = app.contract({
     setStatus: setVenueStatusContract,
     addLifecycleEvent: addLifecycleEventContract,
     listLifecycle: listLifecycleContract,
+  },
+  venueAwards: {
+    list: venueAwardListContract,
+    add: venueAwardAddContract,
+    remove: venueAwardRemoveContract,
   },
   audit: {
     list: auditListContract,

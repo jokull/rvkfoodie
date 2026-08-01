@@ -43,6 +43,10 @@ for (const row of q(`SELECT id FROM guides WHERE hotel_id = 'hotel_02'`)) {
   q(`DELETE FROM guide_excludes WHERE guide_id = '${row.id}'`)
   q(`DELETE FROM guides WHERE id = '${row.id}'`)
 }
+// Idempotent CRUD venue (cascade removes its awards/lifecycle rows).
+for (const row of q(`SELECT id FROM venues WHERE name = 'E2E Test Spot'`)) {
+  q(`DELETE FROM venues WHERE id = '${row.id}'`)
+}
 const created = await client.guides.create({ hotelId: 'hotel_02' })
 assert(created.ok, 'guides.create ok')
 if (created.ok) {
@@ -50,22 +54,26 @@ if (created.ok) {
   const draft = await client.guides.draft({ id: guideId })
   assert(draft.ok, 'guides.draft ok')
   if (draft.ok) assert(draft.value.added.length > 0, 'draft adds candidates from the backfilled pool')
-  const pendingView = await client.guides.view({ id: guideId })
-  assert(pendingView.ok, 'view after draft ok (0 live rows expected)')
-  if (pendingView.ok) assert(pendingView.value.venueRows.length === 0, 'pending rows not live yet')
+  if (draft.ok) {
+    assert(draft.value.added.length > 0, 'draft adds candidates from the backfilled pool')
+    const pendingView = await client.guides.view({ id: guideId })
+    assert(pendingView.ok, 'view after draft ok (0 live rows expected)')
+    if (pendingView.ok) assert(pendingView.value.venueRows.length === 0, 'pending rows not live yet')
 
-  // Approve the drafted candidates; the view then shows them live.
-  const approve = await client.guides.approveCandidates({ guideId, venueIds: draft.value.added })
-  assert(approve.ok && approve.value.length === draft.value.added.length, 'approveCandidates ok')
-  const liveView = await client.guides.view({ id: guideId })
-  assert(liveView.ok && liveView.value.venueRows.length === draft.value.added.length, 'view shows live rows after approve')
-  if (liveView.ok) {
-    assert(liveView.value.venueRows.some((r) => (r.venue.photos?.length ?? 0) > 0), 'guide view includes legacy CDN photos')
+    // Approve the drafted candidates; the view then shows them live.
+    const approve = await client.guides.approveCandidates({ guideId, venueIds: draft.value.added })
+    assert(approve.ok && approve.value.length === draft.value.added.length, 'approveCandidates ok')
+    const liveView = await client.guides.view({ id: guideId })
+    assert(liveView.ok && liveView.value.venueRows.length === draft.value.added.length, 'view shows live rows after approve')
+    if (liveView.ok) {
+      assert(liveView.value.venueRows.some((r) => (r.venue.photos?.length ?? 0) > 0), 'guide view includes legacy CDN photos')
+      assert(liveView.value.venueRows.some((r) => (r.venue.website?.length ?? 0) > 0 || (r.venue.phone?.length ?? 0) > 0), 'guide view includes website/phone')
+    }
+
+    const publish = await client.guides.publish({ id: guideId })
+    assert(publish.ok, 'guides.publish ok')
+    if (publish.ok) assert(publish.value.status === 'live', 'guide now live')
   }
-
-  const publish = await client.guides.publish({ id: guideId })
-  assert(publish.ok, 'guides.publish ok')
-  if (publish.ok) assert(publish.value.status === 'live', 'guide now live')
 }
 
 // 3) exclude flow on the live guide
@@ -115,3 +123,29 @@ const send = await fetch(`${AUTH}/api/auth/email-otp/send-verification-otp`, {
   body: JSON.stringify({ email: 'jokull@solberg.is', type: 'sign-in' }),
 })
 assert(send.status === 200, 'send-verification-otp ok (adapter INSERT on 1.0-rc.4 + EMAIL binding)')
+
+// --- Venue CRUD extras (website/phone/confidence + awards) ---
+const addV = await client.venues.add({ name: 'E2E Test Spot', category: 'restaurant', address: 'Testavegur 1' })
+assert(addV.ok, 'venues.add ok (CRUD venue)')
+if (addV.ok) {
+  const vid = addV.value.id
+  const upd = await client.venues.update({
+    id: vid,
+    website: 'https://example.com',
+    phone: '555 1234',
+    confidence: 0.7,
+  })
+  assert(upd.ok && upd.value.website === 'https://example.com' && upd.value.phone === '555 1234' && upd.value.confidence === 0.7, 'venues.update carries website/phone/confidence')
+  const award = await client.venueAwards.add({ venueId: vid, awardType: 'grapevine-best-of', title: 'Test Award', url: 'https://grapevine.is/x' })
+  assert(award.ok, 'venueAwards.add ok')
+  const dup = await client.venueAwards.add({ venueId: vid, awardType: 'grapevine-best-of', title: 'Dup', url: null })
+  assert(!dup.ok && dup.error._tag === 'venue-award/exists', 'venueAwards.add rejects duplicates')
+  const list = await client.venueAwards.list({ venueId: vid })
+  assert(list.ok && list.value.length === 1 && list.value[0].title === 'Test Award', 'venueAwards.list ok')
+  const rm = await client.venueAwards.remove({ id: award.value.id })
+  assert(rm.ok, 'venueAwards.remove ok')
+  const empty = await client.venueAwards.list({ venueId: vid })
+  assert(empty.ok && empty.value.length === 0, 'venueAwards.list empty after remove')
+  const del = await client.venues.setStatus({ id: vid, status: 'closed' })
+  assert(del.ok && del.value.status === 'closed', 'CRUD venue cleaned up (closed)')
+}

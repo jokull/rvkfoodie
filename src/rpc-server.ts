@@ -43,6 +43,9 @@ import {
   setGuideConfigContract,
   setVenueStatusContract,
   updateBusinessContract,
+  venueAwardAddContract,
+  venueAwardListContract,
+  venueAwardRemoveContract,
   updateContactContract,
   updateDealContract,
   updateHotelContract,
@@ -62,11 +65,13 @@ import {
   guideVenues,
   guides,
   hotels,
+  venueAwards,
   venueLifecycleEvents,
   venues,
   type Db,
 } from './db.js'
 import { draftItinerary } from './guide-gen.js'
+import { VENUE_AWARD_TYPES } from './schema.js'
 
 export interface AppContext {
   db: Db
@@ -98,6 +103,8 @@ const toVenue = (row: typeof venues.$inferSelect) => ({
   lon: row.lon,
   googlePlacesId: row.googlePlacesId,
   dineoutId: row.dineoutId,
+  website: row.website,
+  phone: row.phone,
   openingHours: row.openingHours,
   photos: row.photos,
 })
@@ -113,6 +120,8 @@ const toVenuePublic = (row: typeof venues.$inferSelect) => ({
   note: row.note,
   recommendedDishes: row.recommendedDishes,
   dineoutId: row.dineoutId,
+  website: row.website,
+  phone: row.phone,
   lat: row.lat,
   lon: row.lon,
   confidence: row.confidence,
@@ -189,6 +198,15 @@ const toLifecycle = (row: typeof venueLifecycleEvents.$inferSelect) => ({
   startedAt: row.startedAt,
   endedAt: row.endedAt,
   note: row.note,
+})
+
+const toAward = (row: typeof venueAwards.$inferSelect) => ({
+  id: row.id,
+  venueId: row.venueId,
+  awardType: row.awardType,
+  title: row.title,
+  url: row.url,
+  createdAt: row.createdAt,
 })
 
 const slugFromName = (name: string) =>
@@ -276,6 +294,8 @@ const addVenue = server.implement(addVenueContract).handler(async ({ input, erro
     lon: input.lon ?? null,
     googlePlacesId: input.googlePlacesId ?? null,
     dineoutId: input.dineoutId ?? null,
+    website: input.website ?? null,
+    phone: input.phone ?? null,
     openingHours: input.openingHours ?? null,
     photos: [],
     createdAt: now,
@@ -323,6 +343,10 @@ const updateVenue = server.implement(updateVenueContract).handler(async ({ input
     ...(input.openingHours !== undefined ? { openingHours: input.openingHours } : {}),
     ...(input.dineoutId !== undefined ? { dineoutId: input.dineoutId } : {}),
     ...(input.googlePlacesId !== undefined ? { googlePlacesId: input.googlePlacesId } : {}),
+    ...(input.website !== undefined ? { website: input.website } : {}),
+    ...(input.phone !== undefined ? { phone: input.phone } : {}),
+    ...(input.confidence !== undefined ? { confidence: input.confidence } : {}),
+    ...(input.lastVerifiedAt !== undefined ? { lastVerifiedAt: input.lastVerifiedAt } : {}),
     ...(input.lat !== undefined ? { lat: input.lat } : {}),
     ...(input.lon !== undefined ? { lon: input.lon } : {}),
     ...(input.tags !== undefined ? { tags: [...input.tags] } : {}),
@@ -434,6 +458,74 @@ const listLifecycle = server.implement(listLifecycleContract).handler(async ({ i
     .where(eq(venueLifecycleEvents.venueId, input.venueId))
     .orderBy(desc(venueLifecycleEvents.startedAt))
   return ok(rows.map(toLifecycle))
+})
+
+const listAwards = server.implement(venueAwardListContract).handler(async ({ input, errors, context }) => {
+  const venue = (await context.db.select().from(venues).where(eq(venues.id, input.venueId)).limit(1))[0]
+  if (!venue) return err(errors.notFound({ venueId: input.venueId }))
+  const rows = await context.db
+    .select()
+    .from(venueAwards)
+    .where(eq(venueAwards.venueId, input.venueId))
+    .orderBy(desc(venueAwards.createdAt))
+  return ok(rows.map(toAward))
+})
+
+const addAward = server.implement(venueAwardAddContract).handler(async ({ input, errors, context }) => {
+  const venue = (await context.db.select().from(venues).where(eq(venues.id, input.venueId)).limit(1))[0]
+  if (!venue) return err(errors.notFound({ venueId: input.venueId }))
+  const inserted = await tryDb(
+    context.db
+      .insert(venueAwards)
+      .values({
+        id: createId(),
+        venueId: input.venueId,
+        awardType: input.awardType as (typeof VENUE_AWARD_TYPES)[number],
+        title: input.title,
+        url: input.url ?? null,
+        createdAt: new Date(),
+      })
+      .returning(),
+  )
+  if (!inserted.ok) {
+    return matchError(inserted.error, {
+      'db/unique-violation': () => err(errors.exists({ venueId: input.venueId })),
+      'db/foreign-key-violation': (e) => {
+        throw e
+      },
+      'db/query-failure': (e) => {
+        throw e
+      },
+      'db/not-null-violation': (e) => {
+        throw e
+      },
+      'db/check-violation': (e) => {
+        throw e
+      },
+    })
+  }
+  await audit(context.db, {
+    actor: 'staff',
+    action: 'venue.award.add',
+    entityType: 'venue',
+    entityId: input.venueId,
+    after: { awardType: input.awardType, title: input.title, url: input.url ?? null },
+  })
+  return ok(toAward(inserted.value[0]!))
+})
+
+const removeAward = server.implement(venueAwardRemoveContract).handler(async ({ input, errors, context }) => {
+  const deleted = await context.db.delete(venueAwards).where(eq(venueAwards.id, input.id)).returning()
+  const row = deleted[0]
+  if (!row) return err(errors.notFound({ awardId: input.id }))
+  await audit(context.db, {
+    actor: 'staff',
+    action: 'venue.award.remove',
+    entityType: 'venue',
+    entityId: row.venueId,
+    before: { awardType: row.awardType, title: row.title },
+  })
+  return ok({ removed: true })
 })
 
 const auditList = server.implement(auditListContract).handler(async ({ input, context }) => {
@@ -1266,6 +1358,11 @@ export const router = server.router({
     setStatus: setVenueStatus,
     addLifecycleEvent,
     listLifecycle,
+  },
+  venueAwards: {
+    list: listAwards,
+    add: addAward,
+    remove: removeAward,
   },
   audit: { list: auditList },
   hotels: {

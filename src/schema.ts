@@ -71,6 +71,8 @@ export const venues = sqliteTable(
     googlePlacesId: text('google_places_id'),
     /** Dineout booking id — "reserve a table" deep link. */
     dineoutId: text('dineout_id'),
+    website: text('website'),
+    phone: text('phone'),
     /** Free text, not structured. */
     openingHours: text('opening_hours'),
     /** R2 object keys, resolved to URLs at read time. */

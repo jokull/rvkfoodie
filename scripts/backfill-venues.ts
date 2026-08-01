@@ -119,7 +119,7 @@ const JSON_VERIFIED_AT = Date.parse('2026-03-15T00:00:00Z')
 
 const plan = () => {
   const existing = d1(
-    'SELECT id, name, order_key, category, category_secondary, status, cuisine, tags, note, recommended_dishes, last_verified_at, confidence, source, address, lat, lon, opening_hours, photos FROM venues ORDER BY order_key',
+    'SELECT id, name, order_key, category, category_secondary, status, cuisine, tags, note, recommended_dishes, last_verified_at, confidence, source, address, lat, lon, opening_hours, photos, website, phone FROM venues ORDER BY order_key',
   )
   const byName = new Map(existing.map((v: any) => [norm(v.name), v]))
   const inserts: any[] = []
@@ -153,6 +153,8 @@ const plan = () => {
       lat: v.jsonLat ?? v.lat,
       lon: v.jsonLon ?? v.lon,
       openingHours: v.jsonHours ?? v.openingHours,
+      website: v.website,
+      phone: v.phone,
       photos: PHOTOS[v.key] ? [PHOTOS[v.key]] : [],
     }
     keys.push(target.orderKey)
@@ -168,7 +170,9 @@ const plan = () => {
         hit.status === target.status &&
         hit.confidence === target.confidence &&
         hit.source === target.source &&
-        hit.photos === JSON.stringify(target.photos)
+        hit.photos === JSON.stringify(target.photos) &&
+        hit.website === target.website &&
+        hit.phone === target.phone
 
       if (!same) updates.push({ id: hit.id, ...target })
     }
@@ -208,7 +212,7 @@ const render = (p: ReturnType<typeof plan>) => {
   const audit: string[] = []
   for (const v of p.inserts) {
     sql.push(
-      `INSERT INTO venues (id, name, category, category_secondary, status, order_key, cuisine, tags, note, recommended_dishes, last_verified_at, confidence, source, address, lat, lon, opening_hours, photos, price_level, google_places_id, dineout_id, created_at, updated_at) VALUES (${esc(v.id)}, ${esc(v.name)}, ${esc(v.category)}, ${esc(v.categorySecondary)}, 'live', ${esc(v.orderKey)}, ${esc(v.cuisine)}, ${json(v.tags)}, ${esc(v.note)}, ${json(v.recommendedDishes)}, ${v.lastVerifiedAt ? esc(v.lastVerifiedAt) : 'NULL'}, ${v.confidence}, ${esc(v.source)}, ${esc(v.address)}, ${v.lat}, ${v.lon}, ${esc(v.openingHours)}, ${json(v.photos)}, NULL, NULL, NULL, ${Date.now()}, ${Date.now()});`,
+      `INSERT INTO venues (id, name, category, category_secondary, status, order_key, cuisine, tags, note, recommended_dishes, last_verified_at, confidence, source, address, lat, lon, opening_hours, photos, website, phone, price_level, google_places_id, dineout_id, created_at, updated_at) VALUES (${esc(v.id)}, ${esc(v.name)}, ${esc(v.category)}, ${esc(v.categorySecondary)}, 'live', ${esc(v.orderKey)}, ${esc(v.cuisine)}, ${json(v.tags)}, ${esc(v.note)}, ${json(v.recommendedDishes)}, ${v.lastVerifiedAt ? esc(v.lastVerifiedAt) : 'NULL'}, ${v.confidence}, ${esc(v.source)}, ${esc(v.address)}, ${v.lat}, ${v.lon}, ${esc(v.openingHours)}, ${json(v.photos)}, ${esc(v.website)}, ${esc(v.phone)}, NULL, NULL, NULL, ${Date.now()}, ${Date.now()});`,
     )
     audit.push(
       `INSERT INTO audit_log (id, actor, action, entity_type, entity_id, after, at) VALUES ('${createId()}', 'backfill:legacy', 'venue.backfill.insert', 'venue', '${v.id}', ${json({ name: v.name, category: v.category, orderKey: v.orderKey })}, ${Date.now()});`,
@@ -216,7 +220,7 @@ const render = (p: ReturnType<typeof plan>) => {
   }
   for (const v of p.updates) {
     sql.push(
-      `UPDATE venues SET name = ${esc(v.name)}, category = ${esc(v.category)}, category_secondary = ${esc(v.categorySecondary)}, status = 'live', order_key = ${esc(v.orderKey)}, cuisine = ${esc(v.cuisine)}, tags = ${json(v.tags)}, note = ${esc(v.note)}, recommended_dishes = ${json(v.recommendedDishes)}, last_verified_at = ${v.lastVerifiedAt ? esc(v.lastVerifiedAt) : 'NULL'}, confidence = ${v.confidence}, source = ${esc(v.source)}, address = ${esc(v.address)}, lat = ${v.lat}, lon = ${v.lon}, opening_hours = ${esc(v.openingHours)}, photos = ${json(v.photos)}, updated_at = ${Date.now()} WHERE id = '${v.id}';`,
+      `UPDATE venues SET name = ${esc(v.name)}, category = ${esc(v.category)}, category_secondary = ${esc(v.categorySecondary)}, status = 'live', order_key = ${esc(v.orderKey)}, cuisine = ${esc(v.cuisine)}, tags = ${json(v.tags)}, note = ${esc(v.note)}, recommended_dishes = ${json(v.recommendedDishes)}, last_verified_at = ${v.lastVerifiedAt ? esc(v.lastVerifiedAt) : 'NULL'}, confidence = ${v.confidence}, source = ${esc(v.source)}, address = ${esc(v.address)}, lat = ${v.lat}, lon = ${v.lon}, opening_hours = ${esc(v.openingHours)}, photos = ${json(v.photos)}, website = ${esc(v.website)}, phone = ${esc(v.phone)}, updated_at = ${Date.now()} WHERE id = '${v.id}';`,
     )
     audit.push(
       `INSERT INTO audit_log (id, actor, action, entity_type, entity_id, after, at) VALUES ('${createId()}', 'backfill:legacy', 'venue.backfill.update', 'venue', '${v.id}', ${json({ name: v.name, category: v.category, orderKey: v.orderKey })}, ${Date.now()});`,

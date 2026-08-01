@@ -13,9 +13,14 @@ import type {
   guideVenues,
   guides,
   hotels,
+  venueAwards,
   venueLifecycleEvents,
   venues,
 } from './schema.js'
+import { VENUE_AWARD_TYPES } from './schema.js'
+
+const enumOf = <const TValues extends readonly [string, ...string[]]>(values: TValues) =>
+  wire.union(values.map((v) => wire.literal(v)))
 
 export const Venue = defineModel('venue', {
   key: 'id',
@@ -39,6 +44,8 @@ export const Venue = defineModel('venue', {
     lon: wire.nullable(wire.number),
     googlePlacesId: wire.nullable(wire.string),
     dineoutId: wire.nullable(wire.string),
+    website: wire.nullable(wire.string),
+    phone: wire.nullable(wire.string),
     openingHours: wire.nullable(wire.string),
     photos: wire.array(wire.string),
   },
@@ -57,6 +64,19 @@ export const LifecycleEvent = defineModel('lifecycle-event', {
   },
 }).$satisfies<typeof venueLifecycleEvents.$inferSelect>()
 export type LifecycleEventRow = ModelValue<typeof LifecycleEvent>
+
+export const VenueAward = defineModel('venue-award', {
+  key: 'id',
+  shape: {
+    id: wire.string,
+    venueId: wire.string,
+    awardType: enumOf(VENUE_AWARD_TYPES),
+    title: wire.string,
+    url: wire.nullable(wire.string),
+    createdAt: wire.date,
+  },
+})
+export type VenueAwardRow = ModelValue<typeof VenueAward>
 
 export const AuditEntry = defineModel('audit-entry', {
   key: 'id',
@@ -179,6 +199,8 @@ export const GuideVenueViewCodec = wire.object({
     'note',
     'recommendedDishes',
     'dineoutId',
+    'website',
+    'phone',
     'lat',
     'lon',
     'confidence',

@@ -166,6 +166,16 @@ function VenueCard({
             Reserve a table
           </a>
         )}
+        {v.website && (
+          <a href={v.website} target="_blank" rel="noreferrer" onClick={() => onVenueClick(v.id)}>
+            Website
+          </a>
+        )}
+        {v.phone && (
+          <a href={`tel:${v.phone.replace(/\s/g, '')}`} onClick={() => onVenueClick(v.id)}>
+            Call
+          </a>
+        )}
       </div>
     </li>
   )

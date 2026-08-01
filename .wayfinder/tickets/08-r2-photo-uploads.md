@@ -20,3 +20,13 @@ R2 uploads via presigned URLs, no in-request upload path):
 
 Blocks nothing in the critical path (venue photos can be URL-referenced in
 the meantime) but unblocks the backfill's photo import (ticket 04).
+
+## Scope (locked 2026-08-01, grilling with user)
+
+- Bucket: reuse the live legacy bucket `rvkfoodie-cms` (custom domain
+  media.rvkfoodie.is + Image Resizing) — proven by the backfill photo wiring.
+- Backfill established the serving pattern: `photos` stores raw CDN URLs,
+  renderers append `cdn-cgi/image` options. Upload flow (ticket 08) will
+  mint presigned PUTs for the same bucket and record the resulting URL.
+- Key scheme + variants (thumbnail/full) still open; venue form also needs
+  photo add/remove/reorder UI.
