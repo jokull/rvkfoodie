@@ -9,7 +9,7 @@ import { env } from 'cloudflare:workers'
 import { EmailMessage } from 'cloudflare:email'
 import { and, asc, count, desc, eq, gt, inArray, ne, sum } from 'drizzle-orm'
 import { generateKeyBetween } from 'fractional-indexing'
-import { err, matchError, ok } from 'result-rpc'
+import { err, matchError, ok, pickErrors } from 'result-rpc'
 import { tryDb } from 'result-rpc/db'
 import { createFetchHandler, serverRpc } from 'result-rpc/server'
 import {
@@ -72,12 +72,25 @@ import {
 } from './db.js'
 import { draftItinerary } from './guide-gen.js'
 import { VENUE_AWARD_TYPES } from './schema.js'
+import { auth } from './auth.js'
+import { authErrors } from './errors.js'
 
 export interface AppContext {
   db: Db
+  /** The signed-in session for this request — null when public. */
+  session: Awaited<ReturnType<typeof auth.api.getSession>> | null
 }
 
 const server = serverRpc.context<AppContext>()
+
+/** Staff gate — the shared contract must declare the auth error it raises. */
+const requireStaff = server
+  .middleware()
+  .errors({ ...pickErrors(authErrors, 'unauthorized') })
+  .use(async ({ context, errors, next }) => {
+    if (!context.session) return err(errors.unauthorized({}))
+    return next({ context: {} })
+  })
 
 const PAGE_SIZE = 50
 
@@ -265,7 +278,7 @@ const venueById = server.implement(venueByIdContract).handler(async ({ input, er
   return ok(toVenue(row))
 })
 
-const addVenue = server.implement(addVenueContract).handler(async ({ input, errors, context }) => {
+const addVenue = server.implement(addVenueContract).use(requireStaff).handler(async ({ input, errors, context }) => {
   const now = new Date()
   const last = (
     await context.db
@@ -329,7 +342,7 @@ const addVenue = server.implement(addVenueContract).handler(async ({ input, erro
   return ok(toVenue(inserted.value[0]!))
 })
 
-const updateVenue = server.implement(updateVenueContract).handler(async ({ input, errors, context }) => {
+const updateVenue = server.implement(updateVenueContract).use(requireStaff).handler(async ({ input, errors, context }) => {
   const before = (await context.db.select().from(venues).where(eq(venues.id, input.id)).limit(1))[0]
   if (!before) return err(errors.notFound({ venueId: input.id }))
   const set = {
@@ -387,7 +400,7 @@ const updateVenue = server.implement(updateVenueContract).handler(async ({ input
 })
 
 const setVenueStatus = server
-  .implement(setVenueStatusContract)
+  .implement(setVenueStatusContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
     const before = (await context.db.select().from(venues).where(eq(venues.id, input.id)).limit(1))[0]
     if (!before) return err(errors.notFound({ venueId: input.id }))
@@ -410,7 +423,7 @@ const setVenueStatus = server
   })
 
 const addLifecycleEvent = server
-  .implement(addLifecycleEventContract)
+  .implement(addLifecycleEventContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
     const venue = (
       await context.db.select().from(venues).where(eq(venues.id, input.venueId)).limit(1)
@@ -471,7 +484,7 @@ const listAwards = server.implement(venueAwardListContract).handler(async ({ inp
   return ok(rows.map(toAward))
 })
 
-const addAward = server.implement(venueAwardAddContract).handler(async ({ input, errors, context }) => {
+const addAward = server.implement(venueAwardAddContract).use(requireStaff).handler(async ({ input, errors, context }) => {
   const venue = (await context.db.select().from(venues).where(eq(venues.id, input.venueId)).limit(1))[0]
   if (!venue) return err(errors.notFound({ venueId: input.venueId }))
   const inserted = await tryDb(
@@ -514,7 +527,7 @@ const addAward = server.implement(venueAwardAddContract).handler(async ({ input,
   return ok(toAward(inserted.value[0]!))
 })
 
-const removeAward = server.implement(venueAwardRemoveContract).handler(async ({ input, errors, context }) => {
+const removeAward = server.implement(venueAwardRemoveContract).use(requireStaff).handler(async ({ input, errors, context }) => {
   const deleted = await context.db.delete(venueAwards).where(eq(venueAwards.id, input.id)).returning()
   const row = deleted[0]
   if (!row) return err(errors.notFound({ awardId: input.id }))
@@ -557,7 +570,7 @@ const hotelsByBusiness = server
   })
 
 const addHotel = server
-  .implement(addHotelContract)
+  .implement(addHotelContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
   const now = new Date()
   const row = {
@@ -599,7 +612,7 @@ const addHotel = server
   return ok(toHotel(inserted.value[0]!))
 })
 
-const updateHotel = server.implement(updateHotelContract).handler(async ({ input, errors, context }) => {
+const updateHotel = server.implement(updateHotelContract).use(requireStaff).handler(async ({ input, errors, context }) => {
   const before = (await context.db.select().from(hotels).where(eq(hotels.id, input.id)).limit(1))[0]
   if (!before) return err(errors.notFound({ hotelId: input.id }))
   const set = {
@@ -661,7 +674,7 @@ const businessById = server
   })
 
 const addBusiness = server
-  .implement(addBusinessContract)
+  .implement(addBusinessContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
     const now = new Date()
     const row = {
@@ -702,7 +715,7 @@ const addBusiness = server
   })
 
 const updateBusiness = server
-  .implement(updateBusinessContract)
+  .implement(updateBusinessContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
     const before = (
       await context.db.select().from(businesses).where(eq(businesses.id, input.id)).limit(1)
@@ -759,7 +772,7 @@ const contactsByBusiness = server
   })
 
 const addContact = server
-  .implement(addContactContract)
+  .implement(addContactContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
   const now = new Date()
   const row = {
@@ -807,7 +820,7 @@ const addContact = server
 })
 
 const updateContact = server
-  .implement(updateContactContract)
+  .implement(updateContactContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
     const before = (await context.db.select().from(contacts).where(eq(contacts.id, input.id)).limit(1))[0]
     if (!before) return err(errors.notFound({ contactId: input.id }))
@@ -859,7 +872,7 @@ const computedAnnualValue = async (db: Db, businessId: string, pricePerRoom: num
 }
 
 const addDeal = server
-  .implement(addDealContract)
+  .implement(addDealContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
   const now = new Date()
   const annualValue =
@@ -910,7 +923,7 @@ const addDeal = server
   return ok(toDeal(inserted.value[0]!))
 })
 
-const updateDeal = server.implement(updateDealContract).handler(async ({ input, errors, context }) => {
+const updateDeal = server.implement(updateDealContract).use(requireStaff).handler(async ({ input, errors, context }) => {
   const before = (await context.db.select().from(deals).where(eq(deals.id, input.id)).limit(1))[0]
   if (!before) return err(errors.notFound({ dealId: input.id }))
   const annualValue =
@@ -982,7 +995,7 @@ const guideById = server.implement(guideByIdContract).handler(async ({ input, er
   return ok(toGuide(row))
 })
 
-const createGuide = server.implement(createGuideContract).handler(async ({ input, errors, context }) => {
+const createGuide = server.implement(createGuideContract).use(requireStaff).handler(async ({ input, errors, context }) => {
   const hotel = (await context.db.select().from(hotels).where(eq(hotels.id, input.hotelId)).limit(1))[0]
   if (!hotel) return err(errors.notFound({ guideId: input.hotelId }))
   const existing = (
@@ -1011,7 +1024,7 @@ const createGuide = server.implement(createGuideContract).handler(async ({ input
   return ok(toGuide(inserted[0]!))
 })
 
-const draftGuide = server.implement(draftGuideContract).handler(async ({ input, errors, context }) => {
+const draftGuide = server.implement(draftGuideContract).use(requireStaff).handler(async ({ input, errors, context }) => {
   const guide = (await context.db.select().from(guides).where(eq(guides.id, input.id)).limit(1))[0]
   if (!guide) return err(errors.notFound({ guideId: input.id }))
   const hotel = (await context.db.select().from(hotels).where(eq(hotels.id, guide.hotelId)).limit(1))[0]
@@ -1110,7 +1123,7 @@ const draftGuide = server.implement(draftGuideContract).handler(async ({ input, 
 })
 
 const approveGuideCandidates = server
-  .implement(approveGuideCandidatesContract)
+  .implement(approveGuideCandidatesContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
     const guide = (
       await context.db.select().from(guides).where(eq(guides.id, input.guideId)).limit(1)
@@ -1144,7 +1157,7 @@ const approveGuideCandidates = server
   })
 
 const setGuideConfig = server
-  .implement(setGuideConfigContract)
+  .implement(setGuideConfigContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
     const guide = (
       await context.db.select().from(guides).where(eq(guides.id, input.guideId)).limit(1)
@@ -1172,7 +1185,7 @@ const setGuideConfig = server
     return ok(toGuide(updated!))
   })
 
-const publishGuide = server.implement(publishGuideContract).handler(async ({ input, errors, context }) => {
+const publishGuide = server.implement(publishGuideContract).use(requireStaff).handler(async ({ input, errors, context }) => {
   const guide = (await context.db.select().from(guides).where(eq(guides.id, input.id)).limit(1))[0]
   if (!guide) return err(errors.notFound({ guideId: input.id }))
   const updated = (
@@ -1194,7 +1207,7 @@ const publishGuide = server.implement(publishGuideContract).handler(async ({ inp
 })
 
 const addGuideExclude = server
-  .implement(addGuideExcludeContract)
+  .implement(addGuideExcludeContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
     const guide = (
       await context.db.select().from(guides).where(eq(guides.id, input.guideId)).limit(1)
@@ -1208,7 +1221,7 @@ const addGuideExclude = server
   })
 
 const removeGuideExclude = server
-  .implement(removeGuideExcludeContract)
+  .implement(removeGuideExcludeContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
     const guide = (
       await context.db.select().from(guides).where(eq(guides.id, input.guideId)).limit(1)
@@ -1409,7 +1422,14 @@ export const router = server.router({
   stats: { overview },
 })
 
-export const createContext = (): AppContext => ({ db })
+export const createContext = async ({
+  request,
+}: {
+  request?: Request
+} = {}): Promise<AppContext> => ({
+  db,
+  session: request ? await auth.api.getSession({ headers: request.headers }) : null,
+})
 
 /**
  * Mounted at POST /api/rpc by `src/routes/api.rpc.ts` (a TanStack Start

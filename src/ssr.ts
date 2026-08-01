@@ -19,16 +19,16 @@ import { createServerClient } from 'result-rpc/server'
 import { auth } from './auth.js'
 import { createContext, router } from './rpc-server.js'
 
-const buildRuntime = () => {
+const buildRuntime = async () => {
   const serverClient = createServerClient(router, {
-    context: createContext(),
+    context: await createContext(),
   })
   return { runtime: createQueryRuntime({ client: serverClient }), serverClient }
 }
 
 /** Home route loader: feed + aggregate + hotels, in one payload. */
 export const prefetchHome = createServerFn({ method: 'GET' }).handler(async () => {
-  const { runtime, serverClient } = buildRuntime()
+  const { runtime, serverClient } = await buildRuntime()
   await Promise.all([
     runtime.prefetchPaginated(serverClient.venues.feed, {}),
     runtime.prefetch(serverClient.stats.overview, {}),
@@ -41,7 +41,7 @@ export const prefetchHome = createServerFn({ method: 'GET' }).handler(async () =
 export const prefetchGuide = createServerFn({ method: 'GET' })
   .validator((data: { slug: string }) => data)
   .handler(async ({ data }) => {
-    const { runtime, serverClient } = buildRuntime()
+    const { runtime, serverClient } = await buildRuntime()
     await runtime.prefetch(serverClient.guides.viewBySlug, { slug: data.slug })
     return runtime.dehydrate()
   })
@@ -53,7 +53,7 @@ export const getSession = createServerFn({ method: 'GET' }).handler(async () => 
 
 /** /app dashboard: aggregates + hotels, one payload. */
 export const prefetchAppDashboard = createServerFn({ method: 'GET' }).handler(async () => {
-  const { runtime, serverClient } = buildRuntime()
+  const { runtime, serverClient } = await buildRuntime()
   await Promise.all([
     runtime.prefetch(serverClient.stats.overview, {}),
     runtime.prefetch(serverClient.hotels.list, {}),
@@ -63,7 +63,7 @@ export const prefetchAppDashboard = createServerFn({ method: 'GET' }).handler(as
 
 /** /app/venues: the full venue inventory + overview, one payload. */
 export const prefetchVenues = createServerFn({ method: 'GET' }).handler(async () => {
-  const { runtime, serverClient } = buildRuntime()
+  const { runtime, serverClient } = await buildRuntime()
   await Promise.all([
     runtime.prefetchPaginated(serverClient.venues.feed, {}),
     runtime.prefetch(serverClient.stats.overview, {}),
@@ -75,7 +75,7 @@ export const prefetchVenues = createServerFn({ method: 'GET' }).handler(async ()
 export const prefetchVenueDetail = createServerFn({ method: 'GET' })
   .validator((data: { id: string }) => data)
   .handler(async ({ data }) => {
-    const { runtime, serverClient } = buildRuntime()
+    const { runtime, serverClient } = await buildRuntime()
     await Promise.all([
       runtime.prefetch(serverClient.venues.byId, { id: data.id }),
       runtime.prefetch(serverClient.venues.listLifecycle, { venueId: data.id }),

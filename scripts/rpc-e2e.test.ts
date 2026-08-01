@@ -4,13 +4,43 @@
  * up: pnpm dev, then npx tsx rpc-e2e.test.ts
  */
 import { execFileSync } from 'node:child_process'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { createBrowserClient, fetchTransport } from 'result-rpc/client'
 import { appContract } from '../src/contract.js'
 
 const base = process.env.RPC_URL ?? 'http://localhost:3000'
+
+// Staff session: real OTP login against the dev server, then every mutation
+// below rides the session cookie (the wire gates mutations on auth). The OTP
+// is delivered by miniflare's email emulation to .wrangler/tmp/email/*.eml.
+const login = async () => {
+  const send = await fetch(`${base}/api/auth/email-otp/send-verification-otp`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', origin: base },
+    body: JSON.stringify({ email: 'jokull@solberg.is', type: 'sign-in' }),
+  })
+  if (send.status !== 200) throw new Error(`send-otp failed: ${send.status}`)
+  const emls = readdirSync('.wrangler/tmp/email', { recursive: true })
+    .filter((f) => typeof f === 'string' && f.endsWith('.eml'))
+    .map((f) => `.wrangler/tmp/email/${f}`)
+    .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)
+  const eml = readFileSync(emls[0], 'utf8')
+  const otp = eml.match(/sign-in code is (\d{6})/)?.[1]
+  if (!otp) throw new Error('otp not found in eml')
+  const signIn = await fetch(`${base}/api/auth/sign-in/email-otp`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', origin: base },
+    body: JSON.stringify({ email: 'jokull@solberg.is', otp }),
+  })
+  const cookie = signIn.headers.get('set-cookie')?.split(';')[0]
+  if (!cookie) throw new Error('no session cookie')
+  return cookie
+}
+
+const cookie = await login()
 const client = createBrowserClient({
   contract: appContract,
-  transport: fetchTransport({ url: `${base}/api/rpc` }),
+  transport: fetchTransport({ url: `${base}/api/rpc`, headers: { cookie } }),
   contractVersion: 'rvkfoodie-scaffold',
 })
 
@@ -30,24 +60,33 @@ if (view.ok) {
 
 // 2) create + draft for hotel_02 (101 Hotel), then approve + publish.
 // Reset that guide's state first so the flow is deterministic on re-runs.
-const q = (sql: string) =>
-  JSON.parse(
-    execFileSync('npx', ['wrangler', 'd1', 'execute', 'rvkfoodie-cms-v4b', '--local', '--json', '--command', sql], {
-      encoding: 'utf8',
-    }),
-  )[0].results
-for (const row of q(`SELECT id FROM guides WHERE hotel_id = 'hotel_02'`)) {
-  q(`DELETE FROM guide_events WHERE guide_id = '${row.id}'`)
-  q(`DELETE FROM guide_captures WHERE guide_id = '${row.id}'`)
-  q(`DELETE FROM guide_venues WHERE guide_id = '${row.id}'`)
-  q(`DELETE FROM guide_excludes WHERE guide_id = '${row.id}'`)
-  q(`DELETE FROM guides WHERE id = '${row.id}'`)
-}
-// Idempotent CRUD venue (cascade removes its awards/lifecycle rows).
-for (const row of q(`SELECT id FROM venues WHERE name = 'E2E Test Spot'`)) {
-  q(`DELETE FROM venues WHERE id = '${row.id}'`)
-}
+// Reset state in ONE wrangler call — separate wrangler invocations against
+// the same SQLite file while the dev server is running intermittently reset
+// the workerd connection (ECONNRESET on the next mutation). A settle pause
+// after the batch keeps the smoke test stable.
+execFileSync(
+  'npx',
+  [
+    'wrangler',
+    'd1',
+    'execute',
+    'rvkfoodie-cms-v4b',
+    '--local',
+    '--command',
+    `
+DELETE FROM guide_events WHERE guide_id IN (SELECT id FROM guides WHERE hotel_id = 'hotel_02');
+DELETE FROM guide_captures WHERE guide_id IN (SELECT id FROM guides WHERE hotel_id = 'hotel_02');
+DELETE FROM guide_venues WHERE guide_id IN (SELECT id FROM guides WHERE hotel_id = 'hotel_02');
+DELETE FROM guide_excludes WHERE guide_id IN (SELECT id FROM guides WHERE hotel_id = 'hotel_02');
+DELETE FROM guides WHERE hotel_id = 'hotel_02';
+DELETE FROM venues WHERE name = 'E2E Test Spot';
+`,
+  ],
+  { encoding: 'utf8', stdio: 'pipe' },
+)
+await new Promise((r) => setTimeout(r, 800))
 const created = await client.guides.create({ hotelId: 'hotel_02' })
+if (!created.ok) console.log('create error:', JSON.stringify(created.error).slice(0, 200))
 assert(created.ok, 'guides.create ok')
 if (created.ok) {
   const guideId = created.value.id

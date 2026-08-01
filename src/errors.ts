@@ -6,6 +6,10 @@ export const venueErrors = defineErrors('venue', {
   nameTaken: { data: wire.object({ name: wire.string }), httpStatus: 409 },
 })
 
+export const authErrors = defineErrors('auth', {
+  unauthorized: { data: wire.object({}), httpStatus: 401 },
+})
+
 export const venueAwardErrors = defineErrors('venue-award', {
   notFound: { data: wire.object({ awardId: wire.string }), httpStatus: 404 },
   exists: { data: wire.object({ venueId: wire.string }), httpStatus: 409 },

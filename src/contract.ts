@@ -6,6 +6,7 @@
  */
 import { pickErrors, rpc, wire } from 'result-rpc'
 import {
+  authErrors,
   businessErrors,
   contactErrors,
   dealErrors,
@@ -84,7 +85,7 @@ export const addVenueContract = app
     }),
   )
   .output(Venue.all('every venue field is public'))
-  .errors({ ...pickErrors(venueErrors, 'nameTaken') })
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(venueErrors, 'nameTaken') })
   .affects(venueFeedContract)
   .affects(overviewContract)
   .mutation()
@@ -118,7 +119,7 @@ export const updateVenueContract = app
     }),
   )
   .output(Venue.all('every venue field is public'))
-  .errors({ ...pickErrors(venueErrors, 'notFound', 'nameTaken') })
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(venueErrors, 'notFound', 'nameTaken') })
   .affects(venueFeedContract)
   .affects(overviewContract)
   .mutation()
@@ -142,7 +143,7 @@ export const venueAwardAddContract = app
     }),
   )
   .output(VenueAward.all('awards are staff-visible'))
-  .errors({ ...pickErrors(venueErrors, 'notFound'), ...pickErrors(venueAwardErrors, 'exists') })
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(venueErrors, 'notFound'), ...pickErrors(venueAwardErrors, 'exists') })
   .affects(venueAwardListContract)
   .mutation()
 
@@ -150,7 +151,7 @@ export const venueAwardRemoveContract = app
   .procedure()
   .input(wire.object({ id: wire.string }))
   .output(wire.object({ removed: wire.boolean }))
-  .errors({ ...pickErrors(venueAwardErrors, 'notFound') })
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(venueAwardErrors, 'notFound') })
   .affects(venueAwardListContract)
   .mutation()
 
@@ -159,7 +160,7 @@ export const setVenueStatusContract = app
   .procedure()
   .input(wire.object({ id: wire.string, status: wire.string }))
   .output(Venue.all('every venue field is public'))
-  .errors({ ...pickErrors(venueErrors, 'notFound') })
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(venueErrors, 'notFound') })
   .affects(overviewContract)
   .mutation()
 
@@ -185,7 +186,7 @@ export const addLifecycleEventContract = app
     }),
   )
   .output(LifecycleEvent.all('lifecycle events are public'))
-  .errors({ ...pickErrors(venueErrors, 'notFound') })
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(venueErrors, 'notFound') })
   .affects(venueFeedContract)
   .affects(venueByIdContract)
   .affects(listLifecycleContract)
@@ -230,7 +231,7 @@ export const addBusinessContract = app
     }),
   )
   .output(Business.all('every business field is staff-visible'))
-  .errors({ ...pickErrors(businessErrors, 'nameTaken') })
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(businessErrors, 'nameTaken') })
   .affects(businessListContract)
   .mutation()
 
@@ -246,7 +247,7 @@ export const updateBusinessContract = app
     }),
   )
   .output(Business.all('every business field is staff-visible'))
-  .errors({ ...pickErrors(businessErrors, 'notFound', 'nameTaken') })
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(businessErrors, 'notFound', 'nameTaken') })
   .affects(businessListContract)
   .mutation()
 
@@ -273,7 +274,7 @@ export const addHotelContract = app
     }),
   )
   .output(Hotel.all('every hotel field is public'))
-  .errors({ ...pickErrors(hotelErrors, 'notFound') })
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(hotelErrors, 'notFound') })
   .affects(hotelsListContract)
   .affects(hotelsByBusinessContract)
   .mutation()
@@ -294,7 +295,7 @@ export const updateHotelContract = app
     }),
   )
   .output(Hotel.all('every hotel field is public'))
-  .errors({ ...pickErrors(hotelErrors, 'notFound') })
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(hotelErrors, 'notFound') })
   .affects(hotelsListContract)
   .affects(hotelsByBusinessContract)
   .mutation()
@@ -322,6 +323,7 @@ export const addContactContract = app
       notes: wire.optional(wire.string),
     }),
   )
+  .errors({ ...pickErrors(authErrors, 'unauthorized') })
   .output(Contact.all('every contact field is staff-visible'))
   .affects(contactsByBusinessContract)
   .mutation()
@@ -342,7 +344,7 @@ export const updateContactContract = app
     }),
   )
   .output(Contact.all('every contact field is staff-visible'))
-  .errors({ ...pickErrors(contactErrors, 'notFound') })
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(contactErrors, 'notFound') })
   .affects(contactsByBusinessContract)
   .mutation()
 
@@ -368,6 +370,7 @@ export const addDealContract = app
       notes: wire.optional(wire.string),
     }),
   )
+  .errors({ ...pickErrors(authErrors, 'unauthorized') })
   .output(Deal.all('every deal field is staff-visible'))
   .affects(dealsByBusinessContract)
   .mutation()
@@ -387,7 +390,7 @@ export const updateDealContract = app
     }),
   )
   .output(Deal.all('every deal field is staff-visible'))
-  .errors({ ...pickErrors(dealErrors, 'notFound') })
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(dealErrors, 'notFound') })
   .affects(dealsByBusinessContract)
   .mutation()
 
@@ -432,7 +435,7 @@ export const createGuideContract = app
     }),
   )
   .output(Guide.all('guide metadata is staff-visible'))
-  .errors({ ...pickErrors(guideErrors, 'notFound') })
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(guideErrors, 'notFound') })
   .affects(guideListContract)
   .mutation()
 
@@ -447,7 +450,7 @@ export const draftGuideContract = app
       added: wire.array(wire.string),
     }),
   )
-  .errors({ ...pickErrors(guideErrors, 'notFound', 'noPool') })
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(guideErrors, 'notFound', 'noPool') })
   .affects(guideViewContract)
   .affects(guideByIdContract)
   .mutation()
@@ -457,7 +460,7 @@ export const approveGuideCandidatesContract = app
   .procedure()
   .input(wire.object({ guideId: wire.string, venueIds: wire.array(wire.string) }))
   .output(wire.array(GuideVenue.all('guide venue rows are staff-visible')))
-  .errors({ ...pickErrors(guideErrors, 'notFound') })
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(guideErrors, 'notFound') })
   .affects(guideViewContract)
   .mutation()
 
@@ -471,7 +474,7 @@ export const setGuideConfigContract = app
     }),
   )
   .output(Guide.all('guide metadata is staff-visible'))
-  .errors({ ...pickErrors(guideErrors, 'notFound') })
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(guideErrors, 'notFound') })
   .affects(guideByIdContract)
   .mutation()
 
@@ -479,7 +482,7 @@ export const publishGuideContract = app
   .procedure()
   .input(wire.object({ id: wire.string }))
   .output(Guide.all('guide metadata is staff-visible'))
-  .errors({ ...pickErrors(guideErrors, 'notFound') })
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(guideErrors, 'notFound') })
   .affects(guideListContract)
   .affects(guideByIdContract)
   .mutation()
@@ -488,7 +491,7 @@ export const addGuideExcludeContract = app
   .procedure()
   .input(wire.object({ guideId: wire.string, venueId: wire.string }))
   .output(wire.object({}))
-  .errors({ ...pickErrors(guideErrors, 'notFound') })
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(guideErrors, 'notFound') })
   .affects(guideViewContract)
   .mutation()
 
@@ -496,7 +499,7 @@ export const removeGuideExcludeContract = app
   .procedure()
   .input(wire.object({ guideId: wire.string, venueId: wire.string }))
   .output(wire.object({}))
-  .errors({ ...pickErrors(guideErrors, 'notFound') })
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(guideErrors, 'notFound') })
   .affects(guideViewContract)
   .mutation()
 
