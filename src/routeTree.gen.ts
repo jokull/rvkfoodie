@@ -15,9 +15,11 @@ import { Route as ApiQrRouteImport } from './routes/api.qr'
 import { Route as ApiRpcRouteImport } from './routes/api.rpc'
 import { Route as ApiUploadRouteImport } from './routes/api.upload'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppCrmRouteImport } from './routes/app.crm'
 import { Route as AppVenuesRouteImport } from './routes/app.venues'
 import { Route as GSlugRouteImport } from './routes/g.$slug'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
+import { Route as AppCrmBusinessIdRouteImport } from './routes/app.crm_.$businessId'
 import { Route as AppVenuesVenueIdRouteImport } from './routes/app.venues_.$venueId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -50,6 +52,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCrmRoute = AppCrmRouteImport.update({
+  id: '/crm',
+  path: '/crm',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppVenuesRoute = AppVenuesRouteImport.update({
   id: '/venues',
   path: '/venues',
@@ -65,6 +72,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppCrmBusinessIdRoute = AppCrmBusinessIdRouteImport.update({
+  id: '/crm_/$businessId',
+  path: '/crm/$businessId',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppVenuesVenueIdRoute = AppVenuesVenueIdRouteImport.update({
   id: '/venues_/$venueId',
   path: '/venues/$venueId',
@@ -77,10 +89,12 @@ export interface FileRoutesByFullPath {
   '/api/qr': typeof ApiQrRoute
   '/api/rpc': typeof ApiRpcRoute
   '/api/upload': typeof ApiUploadRoute
+  '/app/crm': typeof AppCrmRoute
   '/app/venues': typeof AppVenuesRoute
   '/g/$slug': typeof GSlugRoute
   '/app/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/app/crm/$businessId': typeof AppCrmBusinessIdRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
 }
 export interface FileRoutesByTo {
@@ -88,10 +102,12 @@ export interface FileRoutesByTo {
   '/api/qr': typeof ApiQrRoute
   '/api/rpc': typeof ApiRpcRoute
   '/api/upload': typeof ApiUploadRoute
+  '/app/crm': typeof AppCrmRoute
   '/app/venues': typeof AppVenuesRoute
   '/g/$slug': typeof GSlugRoute
   '/app': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/app/crm/$businessId': typeof AppCrmBusinessIdRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
 }
 export interface FileRoutesById {
@@ -101,10 +117,12 @@ export interface FileRoutesById {
   '/api/qr': typeof ApiQrRoute
   '/api/rpc': typeof ApiRpcRoute
   '/api/upload': typeof ApiUploadRoute
+  '/app/crm': typeof AppCrmRoute
   '/app/venues': typeof AppVenuesRoute
   '/g/$slug': typeof GSlugRoute
   '/app/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/app/crm_/$businessId': typeof AppCrmBusinessIdRoute
   '/app/venues_/$venueId': typeof AppVenuesVenueIdRoute
 }
 export interface FileRouteTypes {
@@ -115,10 +133,12 @@ export interface FileRouteTypes {
     | '/api/qr'
     | '/api/rpc'
     | '/api/upload'
+    | '/app/crm'
     | '/app/venues'
     | '/g/$slug'
     | '/app/'
     | '/api/auth/$'
+    | '/app/crm/$businessId'
     | '/app/venues/$venueId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -126,10 +146,12 @@ export interface FileRouteTypes {
     | '/api/qr'
     | '/api/rpc'
     | '/api/upload'
+    | '/app/crm'
     | '/app/venues'
     | '/g/$slug'
     | '/app'
     | '/api/auth/$'
+    | '/app/crm/$businessId'
     | '/app/venues/$venueId'
   id:
     | '__root__'
@@ -138,10 +160,12 @@ export interface FileRouteTypes {
     | '/api/qr'
     | '/api/rpc'
     | '/api/upload'
+    | '/app/crm'
     | '/app/venues'
     | '/g/$slug'
     | '/app/'
     | '/api/auth/$'
+    | '/app/crm_/$businessId'
     | '/app/venues_/$venueId'
   fileRoutesById: FileRoutesById
 }
@@ -199,6 +223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/crm': {
+      id: '/app/crm'
+      path: '/crm'
+      fullPath: '/app/crm'
+      preLoaderRoute: typeof AppCrmRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/venues': {
       id: '/app/venues'
       path: '/venues'
@@ -220,6 +251,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/crm_/$businessId': {
+      id: '/app/crm_/$businessId'
+      path: '/crm/$businessId'
+      fullPath: '/app/crm/$businessId'
+      preLoaderRoute: typeof AppCrmBusinessIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/venues_/$venueId': {
       id: '/app/venues_/$venueId'
       path: '/venues/$venueId'
@@ -231,14 +269,18 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppCrmRoute: typeof AppCrmRoute
   AppVenuesRoute: typeof AppVenuesRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppCrmBusinessIdRoute: typeof AppCrmBusinessIdRoute
   AppVenuesVenueIdRoute: typeof AppVenuesVenueIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppCrmRoute: AppCrmRoute,
   AppVenuesRoute: AppVenuesRoute,
   AppIndexRoute: AppIndexRoute,
+  AppCrmBusinessIdRoute: AppCrmBusinessIdRoute,
   AppVenuesVenueIdRoute: AppVenuesVenueIdRoute,
 }
 

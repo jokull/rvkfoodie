@@ -80,6 +80,10 @@ DELETE FROM guide_venues WHERE guide_id IN (SELECT id FROM guides WHERE hotel_id
 DELETE FROM guide_excludes WHERE guide_id IN (SELECT id FROM guides WHERE hotel_id = 'hotel_02');
 DELETE FROM guides WHERE hotel_id = 'hotel_02';
 DELETE FROM venues WHERE name = 'E2E Test Spot';
+DELETE FROM deals WHERE business_id IN (SELECT id FROM businesses WHERE name LIKE 'E2E%');
+DELETE FROM contacts WHERE business_id IN (SELECT id FROM businesses WHERE name LIKE 'E2E%');
+DELETE FROM hotels WHERE business_id IN (SELECT id FROM businesses WHERE name LIKE 'E2E%');
+DELETE FROM businesses WHERE name LIKE 'E2E%';
 `,
   ],
   { encoding: 'utf8', stdio: 'pipe' },
@@ -212,4 +216,28 @@ if (addV.ok) {
   assert(attach.ok && attach.value.photos.length === 1, 'attach photo via venues.update')
   const del = await client.venues.setStatus({ id: vid, status: 'closed' })
   assert(del.ok && del.value.status === 'closed', 'CRUD venue cleaned up (closed)')
+}
+
+// --- CRM (business → hotel → contact → deal, annualValue computed) ---
+const biz = await client.businesses.add({ name: 'E2E Operator', industry: 'hotel-operator' })
+assert(biz.ok, 'businesses.add ok')
+if (biz.ok) {
+  const bid = biz.value.id
+  const hotel = await client.hotels.add({ businessId: bid, name: 'E2E Hotel', roomCount: 40 })
+  assert(hotel.ok, 'hotels.add ok')
+  const contact = await client.contacts.add({ businessId: bid, firstName: 'E2E', lastName: 'Contact', isDecisionMaker: true })
+  assert(contact.ok && contact.value.isDecisionMaker === true, 'contacts.add ok')
+  const deal = await client.deals.add({ businessId: bid, name: 'E2E Deal', pricePerRoom: 1000 })
+  assert(deal.ok, 'deals.add ok')
+  if (deal.ok) {
+    assert(deal.value.annualValue === 40_000, `annualValue = pricePerRoom × rooms (got ${deal.value.annualValue})`)
+    const stage = await client.deals.update({ id: deal.value.id, stage: 'won' })
+    assert(stage.ok && stage.value.stage === 'won', 'deals.update stage ok')
+    const deals = await client.deals.listByBusiness({ businessId: bid })
+    assert(deals.ok && deals.value.length === 1, 'deals.listByBusiness ok')
+    const hotels = await client.hotels.listByBusiness({ businessId: bid })
+    assert(hotels.ok && hotels.value.length === 1, 'hotels.listByBusiness ok')
+  }
+  const del = await client.businesses.update({ id: bid, name: 'E2E Operator (done)' })
+  assert(del.ok, 'businesses.update ok')
 }

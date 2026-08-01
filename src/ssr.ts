@@ -84,3 +84,24 @@ export const prefetchVenueDetail = createServerFn({ method: 'GET' })
     ])
     return runtime.dehydrate()
   })
+
+/** /app/crm: the business list, one payload. */
+export const prefetchCrm = createServerFn({ method: 'GET' }).handler(async () => {
+  const { runtime, serverClient } = await buildRuntime()
+  await runtime.prefetch(serverClient.businesses.list, {})
+  return runtime.dehydrate()
+})
+
+/** /app/crm/$businessId: business + hotels + contacts + deals, one payload. */
+export const prefetchBusinessDetail = createServerFn({ method: 'GET' })
+  .validator((data: { id: string }) => data)
+  .handler(async ({ data }) => {
+    const { runtime, serverClient } = await buildRuntime()
+    await Promise.all([
+      runtime.prefetch(serverClient.businesses.byId, { id: data.id }),
+      runtime.prefetch(serverClient.hotels.listByBusiness, { businessId: data.id }),
+      runtime.prefetch(serverClient.contacts.listByBusiness, { businessId: data.id }),
+      runtime.prefetch(serverClient.deals.listByBusiness, { businessId: data.id }),
+    ])
+    return runtime.dehydrate()
+  })
