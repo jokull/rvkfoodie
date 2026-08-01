@@ -38,9 +38,7 @@ function AppShell() {
           </NavLink>
           <NavLink to="/app/venues">Venues</NavLink>
           <NavLink to="/app/crm">CRM</NavLink>
-          <span className="app-nav-item app-nav-disabled">
-            Guide builder <small>soon</small>
-          </span>
+          <NavLink to="/app/guides">Guide builder</NavLink>
           <span className="app-nav-item app-nav-disabled">
             Monthly pass <small>soon</small>
           </span>

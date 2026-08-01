@@ -41,3 +41,15 @@ agent-cms inference closed four gaps before building the Venues screen:
   either (draft/versions).
 Venues screen = list w/ status+lifecycle filters, edit form (incl. the
 above), lifecycle events, audit trail, photo manager (ticket 08).
+
+## Progress (2026-08-01)
+
+- Venues screen (list + detail + add dialog) and CRM screens (business list +
+  detail with hotels/contacts/deals) are live under /app.
+- Guide builder live: /app/guides list with create-picker, /app/guides/$id
+  with config (radius/target), run-draft, grouped snapshot review (reorder
+  via fractional orderKeys between neighbors, pin, override text, exclude),
+  approve pending, publish, exclude management. New procedures:
+  guides.builder (staff-gated snapshot query) + guideVenues.update
+  (reorder/pin/override, affects builder + public view).
+- Remaining: monthly pass screen (ticket 12 queue).

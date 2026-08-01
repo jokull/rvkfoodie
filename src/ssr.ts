@@ -20,8 +20,10 @@ import { auth } from './auth.js'
 import { createContext, router } from './rpc-server.js'
 
 const buildRuntime = async () => {
+  // The request headers ride into the context so session-gated queries
+  // (guide builder) prefetch with the caller's auth.
   const serverClient = createServerClient(router, {
-    context: await createContext(),
+    context: await createContext({ request: { headers: getRequestHeaders() } as Request }),
   })
   return { runtime: createQueryRuntime({ client: serverClient }), serverClient }
 }
@@ -103,5 +105,24 @@ export const prefetchBusinessDetail = createServerFn({ method: 'GET' })
       runtime.prefetch(serverClient.contacts.listByBusiness, { businessId: data.id }),
       runtime.prefetch(serverClient.deals.listByBusiness, { businessId: data.id }),
     ])
+    return runtime.dehydrate()
+  })
+
+/** /app/guides: all guides + hotels (for the create picker), one payload. */
+export const prefetchGuides = createServerFn({ method: 'GET' }).handler(async () => {
+  const { runtime, serverClient } = await buildRuntime()
+  await Promise.all([
+    runtime.prefetch(serverClient.guides.list, {}),
+    runtime.prefetch(serverClient.hotels.list, {}),
+  ])
+  return runtime.dehydrate()
+})
+
+/** /app/guides/$guideId: the builder snapshot (rows + excludes), one payload. */
+export const prefetchGuideBuilder = createServerFn({ method: 'GET' })
+  .validator((data: { id: string }) => data)
+  .handler(async ({ data }) => {
+    const { runtime, serverClient } = await buildRuntime()
+    await runtime.prefetch(serverClient.guides.builder, { guideId: data.id })
     return runtime.dehydrate()
   })

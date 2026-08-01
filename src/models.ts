@@ -213,6 +213,25 @@ export const GuideViewCodec = wire.object({
   venueRows: wire.array(GuideVenueViewCodec),
 })
 export type GuideView = InputOf<typeof GuideViewCodec>
+
+/** The builder's snapshot row — every status, with the venue attached. */
+export const GuideBuilderRowCodec = wire.object({
+  id: wire.string,
+  venueId: wire.string,
+  status: wire.string,
+  orderKey: wire.string,
+  overrideText: wire.nullable(wire.string),
+  pinned: wire.boolean,
+  venue: Venue.pick('id', 'name', 'category', 'address', 'confidence', 'photos'),
+})
+export type GuideBuilderRow = InputOf<typeof GuideBuilderRowCodec>
+
+export const GuideBuilderCodec = wire.object({
+  guide: Guide.all('guide metadata is staff-visible'),
+  rows: wire.array(GuideBuilderRowCodec),
+  excludes: wire.array(wire.object({ venueId: wire.string, name: wire.string })),
+})
+export type GuideBuilder = InputOf<typeof GuideBuilderCodec>
 export const OverviewCodec = wire.object({
   venueCount: wire.number,
   liveVenueCount: wire.number,

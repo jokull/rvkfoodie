@@ -16,10 +16,12 @@ import { Route as ApiRpcRouteImport } from './routes/api.rpc'
 import { Route as ApiUploadRouteImport } from './routes/api.upload'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppCrmRouteImport } from './routes/app.crm'
+import { Route as AppGuidesRouteImport } from './routes/app.guides'
 import { Route as AppVenuesRouteImport } from './routes/app.venues'
 import { Route as GSlugRouteImport } from './routes/g.$slug'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
 import { Route as AppCrmBusinessIdRouteImport } from './routes/app.crm_.$businessId'
+import { Route as AppGuidesGuideIdRouteImport } from './routes/app.guides_.$guideId'
 import { Route as AppVenuesVenueIdRouteImport } from './routes/app.venues_.$venueId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -57,6 +59,11 @@ const AppCrmRoute = AppCrmRouteImport.update({
   path: '/crm',
   getParentRoute: () => AppRoute,
 } as any)
+const AppGuidesRoute = AppGuidesRouteImport.update({
+  id: '/guides',
+  path: '/guides',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppVenuesRoute = AppVenuesRouteImport.update({
   id: '/venues',
   path: '/venues',
@@ -77,6 +84,11 @@ const AppCrmBusinessIdRoute = AppCrmBusinessIdRouteImport.update({
   path: '/crm/$businessId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppGuidesGuideIdRoute = AppGuidesGuideIdRouteImport.update({
+  id: '/guides_/$guideId',
+  path: '/guides/$guideId',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppVenuesVenueIdRoute = AppVenuesVenueIdRouteImport.update({
   id: '/venues_/$venueId',
   path: '/venues/$venueId',
@@ -90,11 +102,13 @@ export interface FileRoutesByFullPath {
   '/api/rpc': typeof ApiRpcRoute
   '/api/upload': typeof ApiUploadRoute
   '/app/crm': typeof AppCrmRoute
+  '/app/guides': typeof AppGuidesRoute
   '/app/venues': typeof AppVenuesRoute
   '/g/$slug': typeof GSlugRoute
   '/app/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/crm/$businessId': typeof AppCrmBusinessIdRoute
+  '/app/guides/$guideId': typeof AppGuidesGuideIdRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
 }
 export interface FileRoutesByTo {
@@ -103,11 +117,13 @@ export interface FileRoutesByTo {
   '/api/rpc': typeof ApiRpcRoute
   '/api/upload': typeof ApiUploadRoute
   '/app/crm': typeof AppCrmRoute
+  '/app/guides': typeof AppGuidesRoute
   '/app/venues': typeof AppVenuesRoute
   '/g/$slug': typeof GSlugRoute
   '/app': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/crm/$businessId': typeof AppCrmBusinessIdRoute
+  '/app/guides/$guideId': typeof AppGuidesGuideIdRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
 }
 export interface FileRoutesById {
@@ -118,11 +134,13 @@ export interface FileRoutesById {
   '/api/rpc': typeof ApiRpcRoute
   '/api/upload': typeof ApiUploadRoute
   '/app/crm': typeof AppCrmRoute
+  '/app/guides': typeof AppGuidesRoute
   '/app/venues': typeof AppVenuesRoute
   '/g/$slug': typeof GSlugRoute
   '/app/': typeof AppIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/crm_/$businessId': typeof AppCrmBusinessIdRoute
+  '/app/guides_/$guideId': typeof AppGuidesGuideIdRoute
   '/app/venues_/$venueId': typeof AppVenuesVenueIdRoute
 }
 export interface FileRouteTypes {
@@ -134,11 +152,13 @@ export interface FileRouteTypes {
     | '/api/rpc'
     | '/api/upload'
     | '/app/crm'
+    | '/app/guides'
     | '/app/venues'
     | '/g/$slug'
     | '/app/'
     | '/api/auth/$'
     | '/app/crm/$businessId'
+    | '/app/guides/$guideId'
     | '/app/venues/$venueId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -147,11 +167,13 @@ export interface FileRouteTypes {
     | '/api/rpc'
     | '/api/upload'
     | '/app/crm'
+    | '/app/guides'
     | '/app/venues'
     | '/g/$slug'
     | '/app'
     | '/api/auth/$'
     | '/app/crm/$businessId'
+    | '/app/guides/$guideId'
     | '/app/venues/$venueId'
   id:
     | '__root__'
@@ -161,11 +183,13 @@ export interface FileRouteTypes {
     | '/api/rpc'
     | '/api/upload'
     | '/app/crm'
+    | '/app/guides'
     | '/app/venues'
     | '/g/$slug'
     | '/app/'
     | '/api/auth/$'
     | '/app/crm_/$businessId'
+    | '/app/guides_/$guideId'
     | '/app/venues_/$venueId'
   fileRoutesById: FileRoutesById
 }
@@ -230,6 +254,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCrmRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/guides': {
+      id: '/app/guides'
+      path: '/guides'
+      fullPath: '/app/guides'
+      preLoaderRoute: typeof AppGuidesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/venues': {
       id: '/app/venues'
       path: '/venues'
@@ -258,6 +289,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCrmBusinessIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/guides_/$guideId': {
+      id: '/app/guides_/$guideId'
+      path: '/guides/$guideId'
+      fullPath: '/app/guides/$guideId'
+      preLoaderRoute: typeof AppGuidesGuideIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/venues_/$venueId': {
       id: '/app/venues_/$venueId'
       path: '/venues/$venueId'
@@ -270,17 +308,21 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppCrmRoute: typeof AppCrmRoute
+  AppGuidesRoute: typeof AppGuidesRoute
   AppVenuesRoute: typeof AppVenuesRoute
   AppIndexRoute: typeof AppIndexRoute
   AppCrmBusinessIdRoute: typeof AppCrmBusinessIdRoute
+  AppGuidesGuideIdRoute: typeof AppGuidesGuideIdRoute
   AppVenuesVenueIdRoute: typeof AppVenuesVenueIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppCrmRoute: AppCrmRoute,
+  AppGuidesRoute: AppGuidesRoute,
   AppVenuesRoute: AppVenuesRoute,
   AppIndexRoute: AppIndexRoute,
   AppCrmBusinessIdRoute: AppCrmBusinessIdRoute,
+  AppGuidesGuideIdRoute: AppGuidesGuideIdRoute,
   AppVenuesVenueIdRoute: AppVenuesVenueIdRoute,
 }
 

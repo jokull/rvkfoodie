@@ -36,3 +36,7 @@ export const guideErrors = defineErrors('guide', {
   notFound: { data: wire.object({ guideId: wire.string }), httpStatus: 404 },
   noPool: { data: wire.object({ guideId: wire.string }), httpStatus: 422 },
 })
+
+export const guideVenueErrors = defineErrors('guide-venue', {
+  notFound: { data: wire.object({ id: wire.string }), httpStatus: 404 },
+})

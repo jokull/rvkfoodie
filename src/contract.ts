@@ -11,6 +11,7 @@ import {
   contactErrors,
   dealErrors,
   guideErrors,
+  guideVenueErrors,
   hotelErrors,
   venueAwardErrors,
   venueErrors,
@@ -22,6 +23,7 @@ import {
   Deal,
   Guide,
   GuideVenue,
+  GuideBuilderCodec,
   GuideViewCodec,
   Hotel,
   LifecycleEvent,
@@ -439,6 +441,30 @@ export const createGuideContract = app
   .affects(guideListContract)
   .mutation()
 
+export const guideBuilderContract = app
+  .procedure()
+  .input(wire.object({ guideId: wire.string }))
+  .output(GuideBuilderCodec)
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(guideErrors, 'notFound') })
+  .query()
+
+/** Snapshot-row edits: reorder (fractional orderKey), pin, override text. */
+export const updateGuideVenueContract = app
+  .procedure()
+  .input(
+    wire.object({
+      id: wire.string,
+      orderKey: wire.optional(wire.string),
+      pinned: wire.optional(wire.boolean),
+      overrideText: wire.optional(wire.nullable(wire.string)),
+    }),
+  )
+  .output(GuideVenue.all('guide venue rows are staff-visible'))
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(guideVenueErrors, 'notFound') })
+  .affects(guideBuilderContract)
+  .affects(guideViewContract)
+  .mutation()
+
 /** Merge re-draft: keep qualifying rows, drop closed, append pending picks. */
 export const draftGuideContract = app
   .procedure()
@@ -453,6 +479,7 @@ export const draftGuideContract = app
   .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(guideErrors, 'notFound', 'noPool') })
   .affects(guideViewContract)
   .affects(guideByIdContract)
+  .affects(guideBuilderContract)
   .mutation()
 
 /** Promote generated pending rows to live — the maintenance-cycle approval. */
@@ -576,6 +603,10 @@ export const appContract = app.contract({
     publish: publishGuideContract,
     addExclude: addGuideExcludeContract,
     removeExclude: removeGuideExcludeContract,
+    builder: guideBuilderContract,
+  },
+  guideVenues: {
+    update: updateGuideVenueContract,
   },
   captures: {
     request: requestGuideCaptureContract,

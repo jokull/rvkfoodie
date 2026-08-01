@@ -116,6 +116,26 @@ if (created.ok) {
     const publish = await client.guides.publish({ id: guideId })
     assert(publish.ok, 'guides.publish ok')
     if (publish.ok) assert(publish.value.status === 'live', 'guide now live')
+
+    // builder snapshot + row edits (reorder / pin / override / exclude)
+    const builder = await client.guides.builder({ guideId })
+    assert(builder.ok && builder.value.rows.length === draft.value.added.length, 'guides.builder lists the draft rows')
+    if (builder.ok) {
+      const first = builder.value.rows[0]
+      const second = builder.value.rows[1]
+      const pin = await client.guideVenues.update({ id: first.id, pinned: true })
+      assert(pin.ok && pin.value.pinned === true, 'guideVenues.update pinned ok')
+      const override = await client.guideVenues.update({ id: first.id, overrideText: 'Staff note' })
+      assert(override.ok && override.value.overrideText === 'Staff note', 'guideVenues.update override ok')
+      const clear = await client.guideVenues.update({ id: first.id, overrideText: null })
+      assert(clear.ok && clear.value.overrideText === null, 'guideVenues.update clears override')
+      const ex = await client.guides.addExclude({ guideId, venueId: second.venueId })
+      assert(ex.ok, 'guides.addExclude ok')
+      const b2 = await client.guides.builder({ guideId })
+      assert(b2.ok && b2.value.excludes.length === 1, 'builder lists the exclude')
+      const ux = await client.guides.removeExclude({ guideId, venueId: second.venueId })
+      assert(ux.ok, 'guides.removeExclude ok')
+    }
   }
 }
 

@@ -49,9 +49,11 @@ import {
   updateContactContract,
   updateDealContract,
   updateHotelContract,
+  updateGuideVenueContract,
   updateVenueContract,
   venueByIdContract,
   venueFeedContract,
+  guideBuilderContract,
 } from './contract.js'
 import {
   auditLog,
@@ -73,7 +75,7 @@ import {
 import { draftItinerary } from './guide-gen.js'
 import { VENUE_AWARD_TYPES } from './schema.js'
 import { auth } from './auth.js'
-import { authErrors } from './errors.js'
+import { authErrors, guideVenueErrors } from './errors.js'
 
 export interface AppContext {
   db: Db
@@ -1362,6 +1364,90 @@ const guideViewBySlug = server
     return ok(view!)
   })
 
+const guideBuilder = server
+  .implement(guideBuilderContract).use(requireStaff)
+  .handler(async ({ input, errors, context }) => {
+    const guide = (
+      await context.db.select().from(guides).where(eq(guides.id, input.guideId)).limit(1)
+    )[0]
+    if (!guide) return err(errors.notFound({ guideId: input.guideId }))
+    const rows = await context.db
+      .select()
+      .from(guideVenues)
+      .where(and(eq(guideVenues.guideId, input.guideId), ne(guideVenues.status, 'removed')))
+      .orderBy(asc(guideVenues.orderKey))
+    const venueIds = rows.map((r) => r.venueId)
+    const venueRows = venueIds.length
+      ? await context.db.select().from(venues).where(inArray(venues.id, venueIds))
+      : []
+    const venueById = new Map(venueRows.map((v) => [v.id, v]))
+    const excludes = await context.db
+      .select({ venueId: guideExcludes.venueId, name: venues.name })
+      .from(guideExcludes)
+      .leftJoin(venues, eq(venues.id, guideExcludes.venueId))
+      .where(eq(guideExcludes.guideId, input.guideId))
+    return ok({
+      guide: toGuide(guide),
+      rows: rows
+        .map((r) => {
+          const venue = venueById.get(r.venueId)
+          if (!venue) return null
+          return {
+            id: r.id,
+            venueId: r.venueId,
+            status: r.status,
+            orderKey: r.orderKey,
+            overrideText: r.overrideText,
+            pinned: r.pinned,
+            // Exactly the picked fields — pick() rejects unknown properties.
+            venue: {
+              id: venue.id,
+              name: venue.name,
+              category: venue.category,
+              address: venue.address,
+              confidence: venue.confidence,
+              photos: venue.photos,
+            },
+          }
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null),
+      excludes: excludes.map((e) => ({ venueId: e.venueId, name: e.name ?? '' })),
+    })
+  })
+
+const updateGuideVenue = server
+  .implement(updateGuideVenueContract).use(requireStaff)
+  .handler(async ({ input, errors, context }) => {
+    const row = (
+      await context.db.select().from(guideVenues).where(eq(guideVenues.id, input.id)).limit(1)
+    )[0]
+    if (!row) return err(errors.notFound({ id: input.id }))
+    const updated = (
+      await context.db
+        .update(guideVenues)
+        .set({
+          ...(input.orderKey !== undefined ? { orderKey: input.orderKey } : {}),
+          ...(input.pinned !== undefined ? { pinned: input.pinned } : {}),
+          ...(input.overrideText !== undefined ? { overrideText: input.overrideText } : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(guideVenues.id, input.id))
+        .returning()
+    )[0]
+    await audit(context.db, {
+      actor: 'staff',
+      action: 'guide-venue.update',
+      entityType: 'guide',
+      entityId: row.guideId,
+      after: {
+        ...(input.orderKey !== undefined ? { orderKey: input.orderKey } : {}),
+        ...(input.pinned !== undefined ? { pinned: input.pinned } : {}),
+        ...(input.overrideText !== undefined ? { overrideText: input.overrideText } : {}),
+      },
+    })
+    return ok(toGuideVenue(updated!))
+  })
+
 export const router = server.router({
   venues: {
     feed: venueFeed,
@@ -1412,6 +1498,10 @@ export const router = server.router({
     publish: publishGuide,
     addExclude: addGuideExclude,
     removeExclude: removeGuideExclude,
+    builder: guideBuilder,
+  },
+  guideVenues: {
+    update: updateGuideVenue,
   },
   captures: {
     request: requestGuideCapture,
