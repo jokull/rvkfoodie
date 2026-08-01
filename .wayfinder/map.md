@@ -33,7 +33,6 @@ build tickets as the frontier resolves.
 
 ## Tickets
 
-03 [CRM data model](tickets/03-crm-data-model.md) — task. Blocks 11.
 04 [Legacy venue backfill](tickets/04-legacy-venue-backfill.md) — task.
 05 [Guide model + drafting engine](tickets/05-guide-model-drafting-engine.md)
    — grilling. Blocks 06, 12.
@@ -42,9 +41,11 @@ build tickets as the frontier resolves.
 08 [R2 photo uploads](tickets/08-r2-photo-uploads.md) — task.
 09 [Analytics events](tickets/09-analytics-events.md) — task.
 10 [Auth: better-auth on D1 + Start SSR](tickets/10-auth-better-auth.md) —
-   research. Blocks 11.
+   research (subagent findings captured). Blocks 11.
 11 [Internal SPA screens](tickets/11-internal-spa-screens.md) — grilling.
 12 [Monthly pass + digest](tickets/12-monthly-pass-digest.md) — task.
+
+Closed: 01 categories, 02 venue data model, 03 CRM data model.
 
 ## Decisions so far
 
