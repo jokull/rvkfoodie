@@ -6,6 +6,7 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { ResultRpcHydrationBoundary, useResultPaginatedQuery } from 'result-rpc/react'
+import { AddVenueDialog } from '../components/add-venue-dialog.js'
 import type { VenueRow } from '../models.js'
 import { client } from '../rpc-client.js'
 import { VENUE_CATEGORIES } from '../schema.js'
@@ -34,6 +35,7 @@ function Venues() {
 
 function VenuesInner() {
   const [status, setStatus] = useState<string>('all')
+  const [addOpen, setAddOpen] = useState(false)
   const [category, setCategory] = useState<string>('all')
   const [q, setQ] = useState('')
   const feed = useResultPaginatedQuery(client.venues.feed, {}, { staleTime: 60_000 })
@@ -53,6 +55,9 @@ function VenuesInner() {
       <div className="page-head">
         <h1 className="page-title">Venues</h1>
         <span className="muted">{rows.length} shown</span>
+        <button className="add-button" onClick={() => setAddOpen(true)}>
+          Add venue
+        </button>
       </div>
       <div className="venue-filters">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, address, cuisine…" aria-label="Search venues" />
@@ -92,6 +97,7 @@ function VenuesInner() {
           )
         })}
       </ul>
+      <AddVenueDialog open={addOpen} onClose={() => setAddOpen(false)} />
       {feed.hasNext && (
         <button className="load-more" onClick={feed.fetchNext} disabled={feed.fetchingNext}>
           {feed.fetchingNext ? 'Loading…' : 'Load more'}

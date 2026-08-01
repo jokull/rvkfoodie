@@ -378,3 +378,12 @@ main {
 .badge-pick {
   @apply bg-amber-100 text-amber-800;
 }
+.add-button {
+  @apply ml-auto rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white;
+}
+.add-dialog {
+  @apply flex flex-col gap-3 p-4;
+}
+.ghost {
+  @apply rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700;
+}
