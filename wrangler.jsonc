@@ -17,6 +17,11 @@
     }
   ],
 
+  // Media bucket — the legacy rvkfoodie-cms bucket behind media.rvkfoodie.is
+  // (custom domain + Image Resizing). Uploads land here; photos store the
+  // raw CDN URLs and renderers append cdn-cgi/image options.
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "rvkfoodie-cms" }],
+
   // Email binding — send_email is in beta (remote deploy requires the beta
   // grant; local emulation works without it). No destination restriction:
   // the guide-capture flow sends to arbitrary guest emails. The from-address

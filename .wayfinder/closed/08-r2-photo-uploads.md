@@ -30,3 +30,16 @@ the meantime) but unblocks the backfill's photo import (ticket 04).
   mint presigned PUTs for the same bucket and record the resulting URL.
 - Key scheme + variants (thumbnail/full) still open; venue form also needs
   photo add/remove/reorder UI.
+
+## Resolution (claimed 2026-08-01)
+
+- Upload transport is the session-gated in-request route /api/upload for
+  now (streams to the MEDIA binding on the legacy rvkfoodie-cms bucket).
+  The decided presigned-PUT flow needs an R2 API token (dashboard) for
+  SigV4 — ops-blocked; the key scheme + raw CDN URL contract are unchanged
+  by the swap, so only the write path differs later.
+- Key scheme: venues/<venueId>/<ts>-<safeName>. Content-type allowlist
+  (jpeg/png/webp/heic/avif), 10 MB cap, 401/415/413 enforcement.
+- Attach/remove = venues.update photos (entity patch — no new RPC needed).
+- Photo manager UI on the venue detail (strip + upload + remove).
+- e2e: 401 anonymous, 415 non-image, auth upload, CDN url shape, attach.

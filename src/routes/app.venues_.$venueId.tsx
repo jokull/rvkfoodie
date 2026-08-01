@@ -10,6 +10,7 @@ import { client } from '../rpc-client.js'
 import { VenueAwards } from '../components/venue-awards.js'
 import { VenueEditForm } from '../components/venue-edit-form.js'
 import { VenueLifecycle } from '../components/venue-lifecycle.js'
+import { VenuePhotos } from '../components/venue-photos.js'
 import { prefetchVenueDetail } from '../ssr.js'
 
 export const Route = createFileRoute('/app/venues_/$venueId')({
@@ -104,6 +105,7 @@ function VenueDetailInner() {
         </div>
       </div>
       <VenueEditForm venue={v} />
+      <VenuePhotos venueId={v.id} photos={v.photos} />
       <VenueLifecycle venueId={v.id} />
       <VenueAwards venueId={v.id} />
       <section className="panel">

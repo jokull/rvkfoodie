@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as ApiQrRouteImport } from './routes/api.qr'
 import { Route as ApiRpcRouteImport } from './routes/api.rpc'
+import { Route as ApiUploadRouteImport } from './routes/api.upload'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppVenuesRouteImport } from './routes/app.venues'
 import { Route as GSlugRouteImport } from './routes/g.$slug'
@@ -37,6 +38,11 @@ const ApiQrRoute = ApiQrRouteImport.update({
 const ApiRpcRoute = ApiRpcRouteImport.update({
   id: '/api/rpc',
   path: '/api/rpc',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiUploadRoute = ApiUploadRouteImport.update({
+  id: '/api/upload',
+  path: '/api/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/api/qr': typeof ApiQrRoute
   '/api/rpc': typeof ApiRpcRoute
+  '/api/upload': typeof ApiUploadRoute
   '/app/venues': typeof AppVenuesRoute
   '/g/$slug': typeof GSlugRoute
   '/app/': typeof AppIndexRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/qr': typeof ApiQrRoute
   '/api/rpc': typeof ApiRpcRoute
+  '/api/upload': typeof ApiUploadRoute
   '/app/venues': typeof AppVenuesRoute
   '/g/$slug': typeof GSlugRoute
   '/app': typeof AppIndexRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/api/qr': typeof ApiQrRoute
   '/api/rpc': typeof ApiRpcRoute
+  '/api/upload': typeof ApiUploadRoute
   '/app/venues': typeof AppVenuesRoute
   '/g/$slug': typeof GSlugRoute
   '/app/': typeof AppIndexRoute
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/api/qr'
     | '/api/rpc'
+    | '/api/upload'
     | '/app/venues'
     | '/g/$slug'
     | '/app/'
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/'
     | '/api/qr'
     | '/api/rpc'
+    | '/api/upload'
     | '/app/venues'
     | '/g/$slug'
     | '/app'
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/api/qr'
     | '/api/rpc'
+    | '/api/upload'
     | '/app/venues'
     | '/g/$slug'
     | '/app/'
@@ -138,6 +150,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   ApiQrRoute: typeof ApiQrRoute
   ApiRpcRoute: typeof ApiRpcRoute
+  ApiUploadRoute: typeof ApiUploadRoute
   GSlugRoute: typeof GSlugRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
@@ -170,6 +183,13 @@ declare module '@tanstack/react-router' {
       path: '/api/rpc'
       fullPath: '/api/rpc'
       preLoaderRoute: typeof ApiRpcRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/upload': {
+      id: '/api/upload'
+      path: '/api/upload'
+      fullPath: '/api/upload'
+      preLoaderRoute: typeof ApiUploadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/': {
@@ -229,6 +249,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   ApiQrRoute: ApiQrRoute,
   ApiRpcRoute: ApiRpcRoute,
+  ApiUploadRoute: ApiUploadRoute,
   GSlugRoute: GSlugRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }

@@ -387,3 +387,15 @@ main {
 .ghost {
   @apply rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700;
 }
+.photo-strip {
+  @apply flex flex-wrap gap-2;
+}
+.photo-cell {
+  @apply flex flex-col items-center gap-1;
+}
+.photo-cell img {
+  @apply h-20 w-20 rounded-md object-cover;
+}
+.photo-upload {
+  @apply mt-3 flex items-center gap-3;
+}

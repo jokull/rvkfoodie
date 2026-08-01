@@ -187,6 +187,29 @@ if (addV.ok) {
   }
   const empty = await client.venueAwards.list({ venueId: vid })
   assert(empty.ok && empty.value.length === 0, 'venueAwards.list empty after remove')
+  // photo upload: session-gated route + attach via updateVenue
+  const anonUp = await fetch(`${base}/api/upload`, {
+    method: 'POST',
+    headers: { 'content-type': 'image/png', 'x-venue-id': vid, 'x-filename': 'x.png' },
+    body: new Uint8Array([1, 2, 3]),
+  })
+  assert(anonUp.status === 401, 'upload rejects anonymous (401)')
+  const badUp = await fetch(`${base}/api/upload`, {
+    method: 'POST',
+    headers: { cookie, 'content-type': 'text/plain', 'x-venue-id': vid, 'x-filename': 'x.txt' },
+    body: 'hello',
+  })
+  assert(badUp.status === 415, 'upload rejects non-image types (415)')
+  const up = await fetch(`${base}/api/upload`, {
+    method: 'POST',
+    headers: { cookie, 'content-type': 'image/png', 'x-venue-id': vid, 'x-filename': 'photo.png' },
+    body: new Uint8Array([137, 80, 78, 71]),
+  })
+  assert(up.ok, 'authenticated upload ok')
+  const { url } = (await up.json()) as { url: string }
+  assert(url.startsWith('https://media.rvkfoodie.is/venues/'), 'upload returns a CDN url under venues/<id>')
+  const attach = await client.venues.update({ id: vid, photos: [url] })
+  assert(attach.ok && attach.value.photos.length === 1, 'attach photo via venues.update')
   const del = await client.venues.setStatus({ id: vid, status: 'closed' })
   assert(del.ok && del.value.status === 'closed', 'CRUD venue cleaned up (closed)')
 }
