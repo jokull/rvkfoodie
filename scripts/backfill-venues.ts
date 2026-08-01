@@ -98,13 +98,28 @@ const CURATED: Record<string, Curated> = {
   gaetagelato: { category: 'sweet-treats', dishes: ['pistachio gelato', 'salted caramel gelato'] },
 }
 
+// Legacy photos — live objects on media.rvkfoodie.is (R2 bucket rvkfoodie-cms,
+// custom domain + Image Resizing). Raw URLs; renderers append cdn-cgi/image
+// options. Two venues needed their newer asset variant (old key 404s).
+const PHOTOS: Record<string, string> = {
+  austurindiafelagid: 'https://media.rvkfoodie.is/2025-05-16_10-30-00_UTC_3.jpg',
+  skal: 'https://media.rvkfoodie.is/skal-steak-wine.jpg',
+  skreid: 'https://media.rvkfoodie.is/skreid-2.jpg',
+  vinstukantiusopar: 'https://media.rvkfoodie.is/2026-01-24_13-40-44_UTC_3.jpg',
+  lekock: 'https://media.rvkfoodie.is/uploads/td5cucw0c5/le-kock-burger.jpg',
+  chickpea: 'https://media.rvkfoodie.is/uploads/01KM5ERE8VKMRQG8K8TJG7SG5B/chickpea-falafel.jpeg',
+  lapoblana: 'https://media.rvkfoodie.is/uploads/nkpti6fxvu/la-poblana.jpeg',
+  bullan: 'https://media.rvkfoodie.is/uploads/t6gzo781k7/bullan.jpeg',
+  jomfruin: 'https://media.rvkfoodie.is/uploads/01KM5ERJ1CZS8CT1B6MY0F9K9E/jomfruin-smorrebrod.jpeg',
+}
+
 type Row = (typeof data)[number]
 const data: any[] = JSON.parse(readFileSync('scripts/backfill-data.json', 'utf8'))
 const JSON_VERIFIED_AT = Date.parse('2026-03-15T00:00:00Z')
 
 const plan = () => {
   const existing = d1(
-    'SELECT id, name, order_key, category, category_secondary, status, cuisine, tags, note, recommended_dishes, last_verified_at, confidence, source, address, lat, lon, opening_hours FROM venues ORDER BY order_key',
+    'SELECT id, name, order_key, category, category_secondary, status, cuisine, tags, note, recommended_dishes, last_verified_at, confidence, source, address, lat, lon, opening_hours, photos FROM venues ORDER BY order_key',
   )
   const byName = new Map(existing.map((v: any) => [norm(v.name), v]))
   const inserts: any[] = []
@@ -138,6 +153,7 @@ const plan = () => {
       lat: v.jsonLat ?? v.lat,
       lon: v.jsonLon ?? v.lon,
       openingHours: v.jsonHours ?? v.openingHours,
+      photos: PHOTOS[v.key] ? [PHOTOS[v.key]] : [],
     }
     keys.push(target.orderKey)
     // Seed lookup: the two seed overlaps are 'Bæjarins Beztu Pylsur' (norm
@@ -151,11 +167,16 @@ const plan = () => {
         hit.category_secondary === target.categorySecondary &&
         hit.status === target.status &&
         hit.confidence === target.confidence &&
-        hit.source === target.source
+        hit.source === target.source &&
+        hit.photos === JSON.stringify(target.photos)
+
       if (!same) updates.push({ id: hit.id, ...target })
     }
-    if (v.bestOfAward)
-      awards.push({ venueKey: v.key, awardType: 'grapevine-best-of', title: v.bestOfAward, url: v.grapevineUrl })
+    if (v.bestOfAward) {
+      const hit = byName.get(v.key) ?? byName.get(`the${v.key}`)
+      if (!hit) throw new Error(`Award venue not found: ${v.key}`)
+      awards.push({ venueId: hit.id, awardType: 'grapevine-best-of', title: v.bestOfAward, url: v.grapevineUrl })
+    }
   })
 
   // Non-overlapping seed venues keep existing, reindexed to the tail.
@@ -181,7 +202,7 @@ const render = (p: ReturnType<typeof plan>) => {
   const audit: string[] = []
   for (const v of p.inserts) {
     sql.push(
-      `INSERT INTO venues (id, name, category, category_secondary, status, order_key, cuisine, tags, note, recommended_dishes, last_verified_at, confidence, source, address, lat, lon, opening_hours, photos, price_level, google_places_id, dineout_id, created_at, updated_at) VALUES (${esc(v.id)}, ${esc(v.name)}, ${esc(v.category)}, ${esc(v.categorySecondary)}, 'live', ${esc(v.orderKey)}, ${esc(v.cuisine)}, ${json(v.tags)}, ${esc(v.note)}, ${json(v.recommendedDishes)}, ${v.lastVerifiedAt ? esc(v.lastVerifiedAt) : 'NULL'}, ${v.confidence}, ${esc(v.source)}, ${esc(v.address)}, ${v.lat}, ${v.lon}, ${esc(v.openingHours)}, '[]', NULL, NULL, NULL, ${Date.now()}, ${Date.now()});`,
+      `INSERT INTO venues (id, name, category, category_secondary, status, order_key, cuisine, tags, note, recommended_dishes, last_verified_at, confidence, source, address, lat, lon, opening_hours, photos, price_level, google_places_id, dineout_id, created_at, updated_at) VALUES (${esc(v.id)}, ${esc(v.name)}, ${esc(v.category)}, ${esc(v.categorySecondary)}, 'live', ${esc(v.orderKey)}, ${esc(v.cuisine)}, ${json(v.tags)}, ${esc(v.note)}, ${json(v.recommendedDishes)}, ${v.lastVerifiedAt ? esc(v.lastVerifiedAt) : 'NULL'}, ${v.confidence}, ${esc(v.source)}, ${esc(v.address)}, ${v.lat}, ${v.lon}, ${esc(v.openingHours)}, ${json(v.photos)}, NULL, NULL, NULL, ${Date.now()}, ${Date.now()});`,
     )
     audit.push(
       `INSERT INTO audit_log (id, actor, action, entity_type, entity_id, after, at) VALUES ('${createId()}', 'backfill:legacy', 'venue.backfill.insert', 'venue', '${v.id}', ${json({ name: v.name, category: v.category, orderKey: v.orderKey })}, ${Date.now()});`,
@@ -189,7 +210,7 @@ const render = (p: ReturnType<typeof plan>) => {
   }
   for (const v of p.updates) {
     sql.push(
-      `UPDATE venues SET name = ${esc(v.name)}, category = ${esc(v.category)}, category_secondary = ${esc(v.categorySecondary)}, status = 'live', order_key = ${esc(v.orderKey)}, cuisine = ${esc(v.cuisine)}, tags = ${json(v.tags)}, note = ${esc(v.note)}, recommended_dishes = ${json(v.recommendedDishes)}, last_verified_at = ${v.lastVerifiedAt ? esc(v.lastVerifiedAt) : 'NULL'}, confidence = ${v.confidence}, source = ${esc(v.source)}, address = ${esc(v.address)}, lat = ${v.lat}, lon = ${v.lon}, opening_hours = ${esc(v.openingHours)}, updated_at = ${Date.now()} WHERE id = '${v.id}';`,
+      `UPDATE venues SET name = ${esc(v.name)}, category = ${esc(v.category)}, category_secondary = ${esc(v.categorySecondary)}, status = 'live', order_key = ${esc(v.orderKey)}, cuisine = ${esc(v.cuisine)}, tags = ${json(v.tags)}, note = ${esc(v.note)}, recommended_dishes = ${json(v.recommendedDishes)}, last_verified_at = ${v.lastVerifiedAt ? esc(v.lastVerifiedAt) : 'NULL'}, confidence = ${v.confidence}, source = ${esc(v.source)}, address = ${esc(v.address)}, lat = ${v.lat}, lon = ${v.lon}, opening_hours = ${esc(v.openingHours)}, photos = ${json(v.photos)}, updated_at = ${Date.now()} WHERE id = '${v.id}';`,
     )
     audit.push(
       `INSERT INTO audit_log (id, actor, action, entity_type, entity_id, after, at) VALUES ('${createId()}', 'backfill:legacy', 'venue.backfill.update', 'venue', '${v.id}', ${json({ name: v.name, category: v.category, orderKey: v.orderKey })}, ${Date.now()});`,
@@ -202,10 +223,8 @@ const render = (p: ReturnType<typeof plan>) => {
     )
   }
   for (const a of p.awards) {
-    const venue = p.inserts.find((x: any) => x.name && norm(x.name) === a.venueKey)
-      ?? p.updates.find((x: any) => norm(x.name) === a.venueKey)
     sql.push(
-      `INSERT INTO venue_awards (id, venue_id, award_type, title, url, created_at) VALUES ('${createId()}', '${venue?.id}', 'grapevine-best-of', ${esc(a.title)}, ${esc(a.url)}, ${Date.now()})
+      `INSERT INTO venue_awards (id, venue_id, award_type, title, url, created_at) VALUES ('${createId()}', '${a.venueId}', 'grapevine-best-of', ${esc(a.title)}, ${esc(a.url)}, ${Date.now()})
        ON CONFLICT (venue_id, award_type) DO UPDATE SET title = excluded.title, url = excluded.url;`,
     )
   }
@@ -223,7 +242,7 @@ const main = () => {
   console.log('\nREINDEX:')
   for (const v of p.reindexes) console.log(`  ${v.orderKey} ${v.name}`)
   console.log('\nAWARDS:')
-  for (const a of p.awards) console.log(`  ${a.title} (${a.venueKey})`)
+  for (const a of p.awards) console.log(`  ${a.title}`)
   if (DRY_RUN) {
     console.log('\ndry-run — nothing applied')
     return

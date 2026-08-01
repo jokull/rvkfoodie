@@ -54,8 +54,11 @@ tables in D1 are the fallback for anything the dumps miss.
 - Categories/cuisine/dishes curated by hand from the legacy prose (sources
   carried none); tags derived (free, family-friendly, multiple-locations);
   confidence 0.9 for the 25 venue-data.json venues (verified 2026-03-15),
-  0.5 for block-only; photos left empty (legacy R2 bucket now empty — the 9
-  refs are dead, re-upload under ticket 08).
+  0.5 for block-only; photos wired from the live CDN for all 9 venues with refs — the legacy R2
+  bucket rvkfoodie-cms is alive behind media.rvkfoodie.is (my earlier
+  "empty bucket" was a wrangler tooling misread: r2 object list isn't a
+  command in wrangler 4). Two refs (Chickpea, Jómfrúin) needed their newer
+  asset variant — old keys 404.
 - New `venue_awards` table with `VENUE_AWARD_TYPES` enum const
   (grapevine-best-of first); 5 awards linked (Sandholt, Roasters, Austur,
   Vínstúkan, Röntgen) with grapevine URLs.
