@@ -24,3 +24,23 @@ then get dropped):
 
 The per-table dumps in `.oldsite/d1/tables/` are the source; the live legacy
 tables in D1 are the fallback for anything the dumps miss.
+
+## Research prep (subagent findings, 2026-08-01)
+
+- 47 unique venues after normalization (55 block rows across 4 guides).
+- 38/47 have coords; 9 countryside entries need geocoding (Matkráin —
+  address likely misspelled "Hvergardi"→Hveragerði — GK Bakarí, Friðheimar,
+  Vínstofa Friðheima, Laugarás Lagoon, Pylsuvagninn, Rauða Húsið,
+  Flúðasveppir, Tommi's Burger Joint).
+- venue-data.json = 25 venues, all present in block data (strict subset) —
+  authoritative coords/hours for those; no json-only venues.
+- 29/47 have opening-hours text; 9 have resolvable image asset ids
+  (r2 prefix uploads/{id}/); 5 best_of_award → tags; no dineout or gplaces ids.
+- Alias to merge: "2guys" → "2guys at Hlemmur"; Kramber/Skreið address
+  discrepancies (coords agree — prefer json coords).
+- description → note; block note → recommended_dishes when it lists dishes.
+- order_key: a0..a46 in first-appearance order (main → kids → countryside →
+  night guides); idempotent on normalized name.
+- confidence: high (json-verified 2026-03-15), medium (block-only + coords),
+  low (countryside, geocode+pending). source: legacy:block_venue /
+  legacy:venue-data.json.

@@ -5,9 +5,24 @@
  * from the server half (erased at build).
  */
 import { pickErrors, rpc, wire } from 'result-rpc'
-import { venueErrors } from './errors.js'
-import { AuditEntry, Hotel, LifecycleEvent, OverviewCodec, Venue } from './models.js'
-import { LIFECYCLE_TYPES, VENUE_CATEGORIES } from './schema.js'
+import {
+  businessErrors,
+  contactErrors,
+  dealErrors,
+  hotelErrors,
+  venueErrors,
+} from './errors.js'
+import {
+  AuditEntry,
+  Business,
+  Contact,
+  Deal,
+  Hotel,
+  LifecycleEvent,
+  OverviewCodec,
+  Venue,
+} from './models.js'
+import { LIFECYCLE_TYPES, PIPELINE_STAGES, VENUE_CATEGORIES } from './schema.js'
 import type { AppContext } from './rpc-server.js'
 
 export const app = rpc.context<AppContext>()
@@ -144,6 +159,193 @@ export const hotelsListContract = app
   .output(wire.array(Hotel.all('every hotel field is public')))
   .query()
 
+// --- CRM: businesses -----------------------------------------------------
+
+export const businessListContract = app
+  .procedure()
+  .input(wire.object({}))
+  .output(wire.array(Business.all('every business field is staff-visible')))
+  .query()
+
+export const businessByIdContract = app
+  .procedure()
+  .input(wire.object({ id: wire.string }))
+  .output(Business.all('every business field is staff-visible'))
+  .errors({ ...pickErrors(businessErrors, 'notFound') })
+  .query()
+
+export const addBusinessContract = app
+  .procedure()
+  .input(
+    wire.object({
+      name: wire.string,
+      website: wire.optional(wire.string),
+      industry: wire.optional(wire.string),
+      notes: wire.optional(wire.string),
+    }),
+  )
+  .output(Business.all('every business field is staff-visible'))
+  .errors({ ...pickErrors(businessErrors, 'nameTaken') })
+  .affects(businessListContract)
+  .mutation()
+
+export const updateBusinessContract = app
+  .procedure()
+  .input(
+    wire.object({
+      id: wire.string,
+      name: wire.optional(wire.string),
+      website: wire.optional(wire.string),
+      industry: wire.optional(wire.string),
+      notes: wire.optional(wire.string),
+    }),
+  )
+  .output(Business.all('every business field is staff-visible'))
+  .errors({ ...pickErrors(businessErrors, 'notFound', 'nameTaken') })
+  .affects(businessListContract)
+  .mutation()
+
+// --- CRM: hotels (properties) -------------------------------------------
+
+export const hotelsByBusinessContract = app
+  .procedure()
+  .input(wire.object({ businessId: wire.string }))
+  .output(wire.array(Hotel.all('every hotel field is public')))
+  .query()
+
+export const addHotelContract = app
+  .procedure()
+  .input(
+    wire.object({
+      businessId: wire.optional(wire.string),
+      name: wire.string,
+      address: wire.optional(wire.string),
+      lat: wire.optional(wire.number),
+      lon: wire.optional(wire.number),
+      roomCount: wire.optional(wire.integer({ min: 0 })),
+      website: wire.optional(wire.string),
+      notes: wire.optional(wire.string),
+    }),
+  )
+  .output(Hotel.all('every hotel field is public'))
+  .errors({ ...pickErrors(hotelErrors, 'notFound') })
+  .affects(hotelsListContract)
+  .affects(hotelsByBusinessContract)
+  .mutation()
+
+export const updateHotelContract = app
+  .procedure()
+  .input(
+    wire.object({
+      id: wire.string,
+      businessId: wire.optional(wire.string),
+      name: wire.optional(wire.string),
+      address: wire.optional(wire.string),
+      lat: wire.optional(wire.number),
+      lon: wire.optional(wire.number),
+      roomCount: wire.optional(wire.integer({ min: 0 })),
+      website: wire.optional(wire.string),
+      notes: wire.optional(wire.string),
+    }),
+  )
+  .output(Hotel.all('every hotel field is public'))
+  .errors({ ...pickErrors(hotelErrors, 'notFound') })
+  .affects(hotelsListContract)
+  .affects(hotelsByBusinessContract)
+  .mutation()
+
+// --- CRM: contacts -------------------------------------------------------
+
+export const contactsByBusinessContract = app
+  .procedure()
+  .input(wire.object({ businessId: wire.string }))
+  .output(wire.array(Contact.all('every contact field is staff-visible')))
+  .query()
+
+export const addContactContract = app
+  .procedure()
+  .input(
+    wire.object({
+      businessId: wire.string,
+      hotelId: wire.optional(wire.string),
+      firstName: wire.optional(wire.string),
+      lastName: wire.optional(wire.string),
+      email: wire.optional(wire.string),
+      phone: wire.optional(wire.string),
+      title: wire.optional(wire.string),
+      isDecisionMaker: wire.optional(wire.boolean),
+      notes: wire.optional(wire.string),
+    }),
+  )
+  .output(Contact.all('every contact field is staff-visible'))
+  .affects(contactsByBusinessContract)
+  .mutation()
+
+export const updateContactContract = app
+  .procedure()
+  .input(
+    wire.object({
+      id: wire.string,
+      hotelId: wire.optional(wire.string),
+      firstName: wire.optional(wire.string),
+      lastName: wire.optional(wire.string),
+      email: wire.optional(wire.string),
+      phone: wire.optional(wire.string),
+      title: wire.optional(wire.string),
+      isDecisionMaker: wire.optional(wire.boolean),
+      notes: wire.optional(wire.string),
+    }),
+  )
+  .output(Contact.all('every contact field is staff-visible'))
+  .errors({ ...pickErrors(contactErrors, 'notFound') })
+  .affects(contactsByBusinessContract)
+  .mutation()
+
+// --- CRM: deals ----------------------------------------------------------
+
+export const dealsByBusinessContract = app
+  .procedure()
+  .input(wire.object({ businessId: wire.string }))
+  .output(wire.array(Deal.all('every deal field is staff-visible')))
+  .query()
+
+export const addDealContract = app
+  .procedure()
+  .input(
+    wire.object({
+      businessId: wire.string,
+      name: wire.string,
+      stage: wire.optional(enumOf(PIPELINE_STAGES)),
+      pricePerRoom: wire.optional(wire.integer({ min: 0 })),
+      annualValue: wire.optional(wire.integer({ min: 0 })),
+      startDate: wire.optional(wire.date),
+      renewalDate: wire.optional(wire.date),
+      notes: wire.optional(wire.string),
+    }),
+  )
+  .output(Deal.all('every deal field is staff-visible'))
+  .affects(dealsByBusinessContract)
+  .mutation()
+
+export const updateDealContract = app
+  .procedure()
+  .input(
+    wire.object({
+      id: wire.string,
+      name: wire.optional(wire.string),
+      stage: wire.optional(enumOf(PIPELINE_STAGES)),
+      pricePerRoom: wire.optional(wire.integer({ min: 0 })),
+      annualValue: wire.optional(wire.integer({ min: 0 })),
+      startDate: wire.optional(wire.date),
+      renewalDate: wire.optional(wire.date),
+      notes: wire.optional(wire.string),
+    }),
+  )
+  .output(Deal.all('every deal field is staff-visible'))
+  .errors({ ...pickErrors(dealErrors, 'notFound') })
+  .affects(dealsByBusinessContract)
+  .mutation()
+
 export const appContract = app.contract({
   venues: {
     feed: venueFeedContract,
@@ -159,6 +361,25 @@ export const appContract = app.contract({
   },
   hotels: {
     list: hotelsListContract,
+    listByBusiness: hotelsByBusinessContract,
+    add: addHotelContract,
+    update: updateHotelContract,
+  },
+  businesses: {
+    list: businessListContract,
+    byId: businessByIdContract,
+    add: addBusinessContract,
+    update: updateBusinessContract,
+  },
+  contacts: {
+    listByBusiness: contactsByBusinessContract,
+    add: addContactContract,
+    update: updateContactContract,
+  },
+  deals: {
+    listByBusiness: dealsByBusinessContract,
+    add: addDealContract,
+    update: updateDealContract,
   },
   stats: {
     overview: overviewContract,

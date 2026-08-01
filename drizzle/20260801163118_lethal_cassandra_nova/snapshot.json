@@ -1,13 +1,25 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "13ed162b-2601-49b1-ae54-15f7d6ed05cf",
+  "id": "be4e1577-66c3-4bb0-8e60-7433eacb217f",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
   "ddl": [
     {
       "name": "audit_log",
+      "entityType": "tables"
+    },
+    {
+      "name": "businesses",
+      "entityType": "tables"
+    },
+    {
+      "name": "contacts",
+      "entityType": "tables"
+    },
+    {
+      "name": "deals",
       "entityType": "tables"
     },
     {
@@ -110,6 +122,316 @@
       "generated": null,
       "name": "id",
       "entityType": "columns",
+      "table": "businesses"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "businesses"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "website",
+      "entityType": "columns",
+      "table": "businesses"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "industry",
+      "entityType": "columns",
+      "table": "businesses"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "businesses"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "businesses"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "businesses"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "contacts"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "business_id",
+      "entityType": "columns",
+      "table": "contacts"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "hotel_id",
+      "entityType": "columns",
+      "table": "contacts"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "first_name",
+      "entityType": "columns",
+      "table": "contacts"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_name",
+      "entityType": "columns",
+      "table": "contacts"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "email",
+      "entityType": "columns",
+      "table": "contacts"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "phone",
+      "entityType": "columns",
+      "table": "contacts"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "contacts"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "is_decision_maker",
+      "entityType": "columns",
+      "table": "contacts"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "contacts"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "contacts"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "contacts"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "deals"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "business_id",
+      "entityType": "columns",
+      "table": "deals"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "deals"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "'prospect'",
+      "generated": null,
+      "name": "stage",
+      "entityType": "columns",
+      "table": "deals"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "price_per_room",
+      "entityType": "columns",
+      "table": "deals"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "annual_value",
+      "entityType": "columns",
+      "table": "deals"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "start_date",
+      "entityType": "columns",
+      "table": "deals"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "renewal_date",
+      "entityType": "columns",
+      "table": "deals"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "deals"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "deals"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "table": "deals"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "hotels"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "business_id",
+      "entityType": "columns",
       "table": "hotels"
     },
     {
@@ -119,6 +441,36 @@
       "default": null,
       "generated": null,
       "name": "name",
+      "entityType": "columns",
+      "table": "hotels"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "address",
+      "entityType": "columns",
+      "table": "hotels"
+    },
+    {
+      "type": "real",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "lat",
+      "entityType": "columns",
+      "table": "hotels"
+    },
+    {
+      "type": "real",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "lon",
       "entityType": "columns",
       "table": "hotels"
     },
@@ -139,16 +491,6 @@
       "default": null,
       "generated": null,
       "name": "website",
-      "entityType": "columns",
-      "table": "hotels"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": "'prospect'",
-      "generated": null,
-      "name": "pipeline_stage",
       "entityType": "columns",
       "table": "hotels"
     },
@@ -496,6 +838,33 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "businesses_pk",
+      "table": "businesses",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "contacts_pk",
+      "table": "contacts",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "deals_pk",
+      "table": "deals",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "hotels_pk",
       "table": "hotels",
       "entityType": "pks"
@@ -553,14 +922,70 @@
     {
       "columns": [
         {
-          "value": "pipeline_stage",
+          "value": "name",
           "isExpression": false
         }
       ],
       "isUnique": false,
       "where": null,
       "origin": "manual",
-      "name": "hotels_pipeline_idx",
+      "name": "businesses_name_idx",
+      "entityType": "indexes",
+      "table": "businesses"
+    },
+    {
+      "columns": [
+        {
+          "value": "business_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "contacts_business_idx",
+      "entityType": "indexes",
+      "table": "contacts"
+    },
+    {
+      "columns": [
+        {
+          "value": "business_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "deals_business_idx",
+      "entityType": "indexes",
+      "table": "deals"
+    },
+    {
+      "columns": [
+        {
+          "value": "stage",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "deals_stage_idx",
+      "entityType": "indexes",
+      "table": "deals"
+    },
+    {
+      "columns": [
+        {
+          "value": "business_id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "hotels_business_idx",
       "entityType": "indexes",
       "table": "hotels"
     },

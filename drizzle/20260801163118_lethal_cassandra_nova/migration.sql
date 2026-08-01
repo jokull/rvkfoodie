@@ -9,12 +9,54 @@ CREATE TABLE `audit_log` (
 	`at` integer NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE `businesses` (
+	`id` text PRIMARY KEY,
+	`name` text NOT NULL,
+	`website` text,
+	`industry` text,
+	`notes` text,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `contacts` (
+	`id` text PRIMARY KEY,
+	`business_id` text NOT NULL,
+	`hotel_id` text,
+	`first_name` text,
+	`last_name` text,
+	`email` text,
+	`phone` text,
+	`title` text,
+	`is_decision_maker` integer DEFAULT false NOT NULL,
+	`notes` text,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `deals` (
+	`id` text PRIMARY KEY,
+	`business_id` text NOT NULL,
+	`name` text NOT NULL,
+	`stage` text DEFAULT 'prospect' NOT NULL,
+	`price_per_room` integer,
+	`annual_value` integer,
+	`start_date` integer,
+	`renewal_date` integer,
+	`notes` text,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE `hotels` (
 	`id` text PRIMARY KEY,
+	`business_id` text,
 	`name` text NOT NULL UNIQUE,
+	`address` text,
+	`lat` real,
+	`lon` real,
 	`room_count` integer DEFAULT 0 NOT NULL,
 	`website` text,
-	`pipeline_stage` text DEFAULT 'prospect' NOT NULL,
 	`notes` text,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL
@@ -58,7 +100,11 @@ CREATE TABLE `venues` (
 --> statement-breakpoint
 CREATE INDEX `audit_entity_idx` ON `audit_log` (`entity_type`,`entity_id`);--> statement-breakpoint
 CREATE INDEX `audit_at_idx` ON `audit_log` (`at`);--> statement-breakpoint
-CREATE INDEX `hotels_pipeline_idx` ON `hotels` (`pipeline_stage`);--> statement-breakpoint
+CREATE INDEX `businesses_name_idx` ON `businesses` (`name`);--> statement-breakpoint
+CREATE INDEX `contacts_business_idx` ON `contacts` (`business_id`);--> statement-breakpoint
+CREATE INDEX `deals_business_idx` ON `deals` (`business_id`);--> statement-breakpoint
+CREATE INDEX `deals_stage_idx` ON `deals` (`stage`);--> statement-breakpoint
+CREATE INDEX `hotels_business_idx` ON `hotels` (`business_id`);--> statement-breakpoint
 CREATE INDEX `vle_venue_idx` ON `venue_lifecycle_events` (`venue_id`);--> statement-breakpoint
 CREATE INDEX `vle_type_idx` ON `venue_lifecycle_events` (`type`);--> statement-breakpoint
 CREATE INDEX `venues_status_idx` ON `venues` (`status`);--> statement-breakpoint

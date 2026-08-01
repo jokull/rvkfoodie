@@ -150,7 +150,8 @@ export const HotelList = () => {
       <ul>
         {hotels.value.map((hotel: HotelRow) => (
           <li key={hotel.id}>
-            {hotel.name} — {hotel.roomCount} rooms · {hotel.pipelineStage}
+            {hotel.name} — {hotel.roomCount} rooms
+            {hotel.address ? ` · ${hotel.address}` : ''}
           </li>
         ))}
       </ul>

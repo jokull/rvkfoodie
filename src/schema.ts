@@ -22,6 +22,14 @@ export const VENUE_CATEGORIES = [
   'sweet-treats',
 ] as const
 export const LIFECYCLE_TYPES = ['closed', 'temporarily-closed', 'reopened'] as const
+export const PIPELINE_STAGES = [
+  'prospect',
+  'contacted',
+  'sample-sent',
+  'proposal',
+  'won',
+  'lost',
+] as const
 
 /** The editorial database — one curated venue. */
 export const venues = sqliteTable(
@@ -128,16 +136,14 @@ export const auditLog = sqliteTable(
   ],
 )
 
-/** The sales CRM — one hotel property (secondary to a business). */
-export const hotels = sqliteTable(
-  'hotels',
+/** The sales CRM — the business (account) that hotels belong to. */
+export const businesses = sqliteTable(
+  'businesses',
   {
     id: text('id').primaryKey(),
     name: text('name').notNull().unique(),
-    roomCount: integer('room_count').notNull().default(0),
     website: text('website'),
-    /** prospect | contacted | sample-sent | proposal | won | lost */
-    pipelineStage: text('pipeline_stage').notNull().default('prospect'),
+    industry: text('industry'),
     notes: text('notes'),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .$defaultFn(() => new Date())
@@ -146,5 +152,87 @@ export const hotels = sqliteTable(
       .$defaultFn(() => new Date())
       .notNull(),
   },
-  (t) => [index('hotels_pipeline_idx').on(t.pipelineStage)],
+  (t) => [index('businesses_name_idx').on(t.name)],
+)
+
+/** The sales CRM — one hotel property, secondary to a business. */
+export const hotels = sqliteTable(
+  'hotels',
+  {
+    id: text('id').primaryKey(),
+    businessId: text('business_id'),
+    name: text('name').notNull().unique(),
+    address: text('address'),
+    /** The pin the guide generator measures proximity from. */
+    lat: real('lat'),
+    lon: real('lon'),
+    roomCount: integer('room_count').notNull().default(0),
+    website: text('website'),
+    notes: text('notes'),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (t) => [index('hotels_business_idx').on(t.businessId)],
+)
+
+/** The sales CRM — a person at a business (optionally at one of its hotels). */
+export const contacts = sqliteTable(
+  'contacts',
+  {
+    id: text('id').primaryKey(),
+    businessId: text('business_id').notNull(),
+    hotelId: text('hotel_id'),
+    firstName: text('first_name'),
+    lastName: text('last_name'),
+    email: text('email'),
+    phone: text('phone'),
+    title: text('title'),
+    isDecisionMaker: integer('is_decision_maker', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    notes: text('notes'),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (t) => [index('contacts_business_idx').on(t.businessId)],
+)
+
+/**
+ * The sales CRM — an annual subscription opportunity. Price is stored as
+ * pricePerRoom (the rate card at deal time) with annualValue =
+ * pricePerRoom × rooms computed at write, so history stays accurate even
+ * if room counts change later.
+ */
+export const deals = sqliteTable(
+  'deals',
+  {
+    id: text('id').primaryKey(),
+    businessId: text('business_id').notNull(),
+    name: text('name').notNull(),
+    /** prospect | contacted | sample-sent | proposal | won | lost */
+    stage: text('stage').notNull().default('prospect'),
+    pricePerRoom: integer('price_per_room'),
+    annualValue: integer('annual_value'),
+    startDate: integer('start_date', { mode: 'timestamp_ms' }),
+    renewalDate: integer('renewal_date', { mode: 'timestamp_ms' }),
+    notes: text('notes'),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (t) => [
+    index('deals_business_idx').on(t.businessId),
+    index('deals_stage_idx').on(t.stage),
+  ],
 )

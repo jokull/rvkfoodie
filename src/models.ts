@@ -5,7 +5,15 @@
  * in place. Nullable columns use wire.nullable to match the row type.
  */
 import { defineModel, wire, type InputOf, type ModelValue } from 'result-rpc'
-import type { auditLog, hotels, venueLifecycleEvents, venues } from './schema.js'
+import type {
+  auditLog,
+  businesses,
+  contacts,
+  deals,
+  hotels,
+  venueLifecycleEvents,
+  venues,
+} from './schema.js'
 
 export const Venue = defineModel('venue', {
   key: 'id',
@@ -67,12 +75,60 @@ export const Hotel = defineModel('hotel', {
   key: 'id',
   shape: {
     id: wire.string,
+    businessId: wire.nullable(wire.string),
     name: wire.string,
+    address: wire.nullable(wire.string),
+    lat: wire.nullable(wire.number),
+    lon: wire.nullable(wire.number),
     roomCount: wire.number,
-    pipelineStage: wire.string,
+    website: wire.nullable(wire.string),
   },
 }).$satisfies<typeof hotels.$inferSelect>()
 export type HotelRow = ModelValue<typeof Hotel>
+
+export const Business = defineModel('business', {
+  key: 'id',
+  shape: {
+    id: wire.string,
+    name: wire.string,
+    website: wire.nullable(wire.string),
+    industry: wire.nullable(wire.string),
+    notes: wire.nullable(wire.string),
+  },
+}).$satisfies<typeof businesses.$inferSelect>()
+export type BusinessRow = ModelValue<typeof Business>
+
+export const Contact = defineModel('contact', {
+  key: 'id',
+  shape: {
+    id: wire.string,
+    businessId: wire.string,
+    hotelId: wire.nullable(wire.string),
+    firstName: wire.nullable(wire.string),
+    lastName: wire.nullable(wire.string),
+    email: wire.nullable(wire.string),
+    phone: wire.nullable(wire.string),
+    title: wire.nullable(wire.string),
+    isDecisionMaker: wire.boolean,
+  },
+}).$satisfies<typeof contacts.$inferSelect>()
+export type ContactRow = ModelValue<typeof Contact>
+
+export const Deal = defineModel('deal', {
+  key: 'id',
+  shape: {
+    id: wire.string,
+    businessId: wire.string,
+    name: wire.string,
+    stage: wire.string,
+    pricePerRoom: wire.nullable(wire.integer({ min: 0 })),
+    annualValue: wire.nullable(wire.integer({ min: 0 })),
+    startDate: wire.nullable(wire.date),
+    renewalDate: wire.nullable(wire.date),
+    notes: wire.nullable(wire.string),
+  },
+}).$satisfies<typeof deals.$inferSelect>()
+export type DealRow = ModelValue<typeof Deal>
 
 /** One-off aggregate — no entity identity, kept fresh via `.affects()`. */
 export const OverviewCodec = wire.object({

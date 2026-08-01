@@ -6,6 +6,19 @@ export const venueErrors = defineErrors('venue', {
   nameTaken: { data: wire.object({ name: wire.string }), httpStatus: 409 },
 })
 
+export const businessErrors = defineErrors('business', {
+  notFound: { data: wire.object({ businessId: wire.string }), httpStatus: 404 },
+  nameTaken: { data: wire.object({ name: wire.string }), httpStatus: 409 },
+})
+
 export const hotelErrors = defineErrors('hotel', {
   notFound: { data: wire.object({ hotelId: wire.string }), httpStatus: 404 },
+})
+
+export const contactErrors = defineErrors('contact', {
+  notFound: { data: wire.object({ contactId: wire.string }), httpStatus: 404 },
+})
+
+export const dealErrors = defineErrors('deal', {
+  notFound: { data: wire.object({ dealId: wire.string }), httpStatus: 404 },
 })

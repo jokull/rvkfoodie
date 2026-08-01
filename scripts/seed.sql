@@ -12,9 +12,25 @@ INSERT OR IGNORE INTO venues (id, name, category, category_secondary, status, or
 ('venue_07', 'Café Loki', 'cafe', NULL, 'live', 'a6', 'icelandic classics', 2, '["hallgrimskirkja","traditional"]', 'Icelandic classics near Hallgrímskirkja. Good view of the church.', '["rye bread ice cream","fish stew"]', 1747000000000, 0.9, 'backfill', 'Lokastígur 28', 64.1441, -21.9269, NULL, NULL, 'Mo-Su 09:00-21:00', '[]', 1719792000000, 1719792000000),
 ('venue_08', 'Kol', 'restaurant', 'bar', 'live', 'a7', 'bistro', 4, '["tasting menu","cocktails"]', 'Bistro with a tasting menu and a serious cocktail list.', '["tasting menu","bistro classics"]', 1747000000000, 0.85, 'backfill', 'Skólavörðustígur 40', 64.145, -21.9305, NULL, NULL, 'Mo-Su 11:30-15:00, 17:30-23:00', '[]', 1719792000000, 1719792000000);
 
-INSERT OR IGNORE INTO hotels (id, name, room_count, website, pipeline_stage, notes, created_at, updated_at) VALUES
-('hotel_01', 'Hotel Borg', 58, 'https://www.keahotels.is', 'sample-sent', 'Boutique classic, Austurvöllur', 1719792000000, 1719792000000),
-('hotel_02', '101 Hotel', 38, 'https://www.101hotel.is', 'prospect', '', 1719792000000, 1719792000000),
-('hotel_03', 'Kex Hostel', 42, 'https://www.kexhostel.is', 'won', 'Design hostel, Grandi', 1719792000000, 1719792000000),
-('hotel_04', 'Sand Hotel', 96, 'https://www.sandhotel.is', 'contacted', '', 1719792000000, 1719792000000),
-('hotel_05', 'Icelandair Hotel Reykjavík', 103, 'https://www.icelandairhotels.com', 'prospect', '', 1719792000000, 1719792000000);
+INSERT OR IGNORE INTO businesses (id, name, website, industry, notes, created_at, updated_at) VALUES
+('biz_01', 'Keahotels', 'https://www.keahotels.is', 'hotel-operator', 'Icelandic hotel chain', 1719792000000, 1719792000000),
+('biz_02', 'Kex Hostel', 'https://www.kexhostel.is', 'hotel-operator', 'Design hostel brand', 1719792000000, 1719792000000),
+('biz_03', 'Icelandair Hotels', 'https://www.icelandairhotels.com', 'hotel-operator', 'Flag carrier hotel group', 1719792000000, 1719792000000);
+
+INSERT OR IGNORE INTO hotels (id, business_id, name, address, lat, lon, room_count, website, notes, created_at, updated_at) VALUES
+('hotel_01', 'biz_01', 'Hotel Borg', 'Pósthússtræti 11', 64.1471, -21.9369, 58, 'https://www.keahotels.is', 'Boutique classic, Austurvöllur', 1719792000000, 1719792000000),
+('hotel_02', 'biz_01', '101 Hotel', 'Hverfisgata 10', 64.1477, -21.9354, 38, 'https://www.101hotel.is', '', 1719792000000, 1719792000000),
+('hotel_03', 'biz_02', 'Kex Hostel', 'Skúlagata 28', 64.1515, -21.9418, 42, 'https://www.kexhostel.is', 'Design hostel, Grandi', 1719792000000, 1719792000000),
+('hotel_04', 'biz_01', 'Sand Hotel', 'Laugavegur 34', 64.1457, -21.9296, 96, 'https://www.sandhotel.is', '', 1719792000000, 1719792000000),
+('hotel_05', 'biz_03', 'Icelandair Hotel Reykjavík', 'Nauthólsvegur 52', 64.1258, -21.9295, 103, 'https://www.icelandairhotels.com', '', 1719792000000, 1719792000000);
+
+INSERT OR IGNORE INTO contacts (id, business_id, hotel_id, first_name, last_name, email, phone, title, is_decision_maker, notes, created_at, updated_at) VALUES
+('contact_01', 'biz_01', 'hotel_01', 'Guðrún', 'Jónsdóttir', 'gudrun@keahotels.is', '555 0100', 'General Manager', 1, 'Decision maker for Reykjavík properties', 1719792000000, 1719792000000),
+('contact_02', 'biz_01', NULL, 'Ólafur', 'Sigurðsson', 'olafur@keahotels.is', '555 0101', 'Revenue Manager', 0, '', 1719792000000, 1719792000000),
+('contact_03', 'biz_02', 'hotel_03', 'Helga', 'Pétursdóttir', 'helga@kexhostel.is', '555 0200', 'Founder', 1, '', 1719792000000, 1719792000000),
+('contact_04', 'biz_03', NULL, 'Anna', 'Magnúsdóttir', 'anna@icelandairhotels.com', '555 0300', 'Marketing Director', 1, '', 1719792000000, 1719792000000);
+
+INSERT OR IGNORE INTO deals (id, business_id, name, stage, price_per_room, annual_value, start_date, renewal_date, notes, created_at, updated_at) VALUES
+('deal_01', 'biz_01', 'Annual guide subscription — Keahotels Reykjavík', 'sample-sent', 1500, 288000, NULL, NULL, 'Sample guide sent to Guðrún; awaiting response', 1719792000000, 1719792000000),
+('deal_02', 'biz_02', 'Annual guide subscription — Kex Hostel', 'won', 1200, 50400, 1720000000000, 1751536000000, 'Signed 2026', 1719792000000, 1719792000000),
+('deal_03', 'biz_03', 'Annual guide subscription — Icelandair Hotel Reykjavík', 'prospect', 1500, 154500, NULL, NULL, 'Cold outreach phase', 1719792000000, 1719792000000);
