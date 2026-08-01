@@ -44,3 +44,21 @@ tables in D1 are the fallback for anything the dumps miss.
 - confidence: high (json-verified 2026-03-15), medium (block-only + coords),
   low (countryside, geocode+pending). source: legacy:block_venue /
   legacy:venue-data.json.
+
+## Resolution (claimed 2026-08-01)
+
+- Backfilled 37 city venues (skipped the 9 countryside per decision — revisit
+  when a Golden Circle guide exists). 35 inserted, 2 merged in place over
+  seed overlaps (Bæjarins, Laundromat), 6 non-overlapping seeds reindexed to
+  the tail. OrderKeys a0..a36 = first-appearance across legacy guides.
+- Categories/cuisine/dishes curated by hand from the legacy prose (sources
+  carried none); tags derived (free, family-friendly, multiple-locations);
+  confidence 0.9 for the 25 venue-data.json venues (verified 2026-03-15),
+  0.5 for block-only; photos left empty (legacy R2 bucket now empty — the 9
+  refs are dead, re-upload under ticket 08).
+- New `venue_awards` table with `VENUE_AWARD_TYPES` enum const
+  (grapevine-best-of first); 5 awards linked (Sandholt, Roasters, Austur,
+  Vínstúkan, Röntgen) with grapevine URLs.
+- scripts/backfill-venues.ts is idempotent (dry-run diff + no-op re-runs),
+  audit-logs every write as `backfill:legacy`. data snapshot committed at
+  scripts/backfill-data.json.

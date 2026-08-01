@@ -39,8 +39,9 @@ build tickets as the frontier resolves.
 12 [Monthly pass + digest](tickets/12-monthly-pass-digest.md) — task.
 
 Closed: 01 categories, 02 venue data model, 03 CRM data model,
-05 guide model + drafting engine, 06 guide page, 09 analytics events,
-10 auth (better-auth adapter verified on drizzle 1.0-rc.4).
+04 legacy venue backfill (37 city venues + awards table), 05 guide model +
+drafting engine, 06 guide page, 09 analytics events, 10 auth (better-auth
+adapter verified on drizzle 1.0-rc.4).
 07 email: product part done (capture + HTML email); ops remaining
 (from-address verification); Turnstile punted to GitHub issue #2.
 

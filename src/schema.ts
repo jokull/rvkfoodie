@@ -92,6 +92,27 @@ export const venues = sqliteTable(
   ],
 )
 
+/** Award types a venue can carry; drives editor's-pick markers on guides. */
+export const VENUE_AWARD_TYPES = ['grapevine-best-of'] as const
+
+/** Curated awards — one row per (venue, type). */
+export const venueAwards = sqliteTable(
+  'venue_awards',
+  {
+    id: text('id').primaryKey(),
+    venueId: text('venue_id')
+      .notNull()
+      .references(() => venues.id, { onDelete: 'cascade' }),
+    awardType: text('award_type', { enum: VENUE_AWARD_TYPES }).notNull(),
+    title: text('title').notNull(),
+    url: text('url'),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (t) => [unique('venue_awards_venue_type').on(t.venueId, t.awardType)],
+)
+
 /** Venue lifecycle events — closures, temporary closures, reopenings. */
 export const venueLifecycleEvents = sqliteTable(
   'venue_lifecycle_events',
