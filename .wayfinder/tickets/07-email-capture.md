@@ -23,3 +23,13 @@ Stand up the email side (execution + ops; send_email is beta):
   the offline-"keeping" artifact. HTML template decision (hand-rolled
   table-based vs. a renderer) is a small research question.
 - OTP emails for better-auth (ticket 10) share this sending path.
+
+## Status (2026-08-01)
+
+- Product part done: guide_captures table, captures.request, table-based HTML
+  guide email via the EMAIL binding (Message-ID/Date headers), guide page
+  capture form.
+- Ops: send_email beta granted (email enabled); from-address
+  guides@rvkfoodie.is needs domain verification.
+- Turnstile PUNTED → GitHub issue #2 (hostname blocker; approach recorded;
+  revisit when spam is real).

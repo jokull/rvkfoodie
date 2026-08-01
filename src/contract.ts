@@ -7,7 +7,6 @@
 import { pickErrors, rpc, wire } from 'result-rpc'
 import {
   businessErrors,
-  captureErrors,
   contactErrors,
   dealErrors,
   guideErrors,
@@ -460,18 +459,12 @@ export const removeGuideExcludeContract = app
   .affects(guideViewContract)
   .mutation()
 
-/** Public: “email me this guide” — Turnstile token verified server-side. */
+/** Public: “email me this guide” — sends the guide as an HTML email. */
 export const requestGuideCaptureContract = app
   .procedure()
-  .input(
-    wire.object({
-      slug: wire.string,
-      email: wire.string,
-      turnstileToken: wire.optional(wire.string),
-    }),
-  )
+  .input(wire.object({ slug: wire.string, email: wire.string }))
   .output(wire.object({}))
-  .errors({ ...pickErrors(guideErrors, 'notFound'), ...pickErrors(captureErrors, 'verificationFailed') })
+  .errors({ ...pickErrors(guideErrors, 'notFound') })
   .mutation()
 
 /** Fire-and-forget analytics beacon — failures never surface. */

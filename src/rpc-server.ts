@@ -1181,20 +1181,8 @@ const requestGuideCapture = server
     const view = await loadGuideView(context.db, guide.id)
     if (!view) return err(errors.notFound({ guideId: input.slug }))
 
-    // Turnstile: verify when a secret key is configured; dev runs without
-    // one (and without the widget) skip verification.
-    const secret = env.TURNSTILE_SECRET_KEY
-    if (secret) {
-      if (!input.turnstileToken) return err(errors.verificationFailed({}))
-      const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ secret, response: input.turnstileToken }),
-      })
-      const data = (await res.json()) as { success?: boolean }
-      if (data.success !== true) return err(errors.verificationFailed({}))
-    }
-
+    // Bot protection (Turnstile) is punted — tracked in GitHub issue; the
+    // capture endpoint is currently open. Revisit when spam is real.
     await context.db.insert(guideCaptures).values({
       id: createId(),
       guideId: guide.id,

@@ -33,10 +33,10 @@ export const Route = createFileRoute('/g/$slug')({
 
 function GuideRoute() {
   const { slug } = Route.useParams()
-  const { state, turnstileSiteKey } = Route.useLoaderData()
+  const state = Route.useLoaderData()
   return (
     <ResultRpcHydrationBoundary state={state}>
-      <GuidePage slug={slug} turnstileSiteKey={turnstileSiteKey} />
+      <GuidePage slug={slug} />
     </ResultRpcHydrationBoundary>
   )
 }

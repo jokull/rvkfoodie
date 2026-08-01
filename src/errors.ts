@@ -27,7 +27,3 @@ export const guideErrors = defineErrors('guide', {
   notFound: { data: wire.object({ guideId: wire.string }), httpStatus: 404 },
   noPool: { data: wire.object({ guideId: wire.string }), httpStatus: 422 },
 })
-
-export const captureErrors = defineErrors('capture', {
-  verificationFailed: { data: wire.object({}), httpStatus: 400 },
-})

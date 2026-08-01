@@ -23,12 +23,4 @@
   // (guides@rvkfoodie.is) needs domain verification for production.
   "send_email": [{ "name": "EMAIL" }],
 
-  // Public Turnstile site key — add the rvkfoodie.is hostname to the site in
-  // the Turnstile dashboard, then put the key here (and add localhost too for
-  // dev, or use a Turnstile test site key). The SECRET key goes in .dev.vars
-  // locally and `wrangler secret put TURNSTILE_SECRET_KEY` in production.
-  "vars": {
-    "TURNSTILE_SITE_KEY": "",
-    "TURNSTILE_SECRET_KEY": ""
-  }
 }

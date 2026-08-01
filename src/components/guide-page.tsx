@@ -15,7 +15,7 @@ import { VENUE_CATEGORIES } from '../schema.js'
 
 const sample = (value: GuideView) => value.guide.status !== 'live' || value.venueRows.length === 0
 
-export function GuidePage({ slug, turnstileSiteKey }: { slug: string; turnstileSiteKey: string }) {
+export function GuidePage({ slug }: { slug: string }) {
   const view = useResultQuery(client.guides.viewBySlug, { slug }, { staleTime: 60_000 })
 
   // Analytics beacon — fire-and-forget, failures never surface.
@@ -91,7 +91,7 @@ export function GuidePage({ slug, turnstileSiteKey }: { slug: string; turnstileS
         <p>
           Made for <strong>your stay</strong> · curated by Reykjavík Foodie
         </p>
-        <CaptureForm slug={slug} siteKey={turnstileSiteKey} onCaptured={() => beacon.mutate({ slug, event: 'email-captured' })} />
+        <CaptureForm slug={slug} onCaptured={() => beacon.mutate({ slug, event: 'email-captured' })} />
       </footer>
     </div>
   )
@@ -164,48 +164,24 @@ function VenueCard({
 }
 
 /**
- * "Email me this guide" — offline keeping. When a Turnstile site key is
- * configured the widget renders and the token rides the mutation; without
- * one (dev) the form works without it and the server skips verification.
+ * "Email me this guide" — offline keeping. Bot protection (Turnstile) is
+ * punted (GitHub issue); the form is open for now.
  */
 function CaptureForm({
   slug,
-  siteKey,
   onCaptured,
 }: {
   slug: string
-  siteKey: string
   onCaptured: () => void
 }) {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
-  const [token, setToken] = useState<string | null>(null)
-  const widgetRef = useRef<HTMLDivElement>(null)
   const capture = useResultMutation(client.captures.request, {
     onSuccess: () => {
       setSent(true)
       onCaptured()
     },
   })
-
-  useEffect(() => {
-    if (!siteKey || !widgetRef.current) return
-    let cancelled = false
-    void (async () => {
-      await loadTurnstileScript()
-      if (cancelled || !widgetRef.current) return
-      const turnstile = (window as unknown as { turnstile?: TurnstileRender }).turnstile
-      if (!turnstile) return
-      turnstile.render(widgetRef.current, {
-        sitekey: siteKey,
-        callback: (t: string) => setToken(t),
-        'expired-callback': () => setToken(null),
-      })
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [siteKey])
 
   if (sent) return <p className="capture-done">Check your inbox — the guide is on its way.</p>
   return (
@@ -214,8 +190,7 @@ function CaptureForm({
       onSubmit={(e) => {
         e.preventDefault()
         if (!email.trim()) return
-        if (siteKey && !token) return
-        capture.mutate({ slug, email: email.trim(), ...(token ? { turnstileToken: token } : {}) })
+        capture.mutate({ slug, email: email.trim() })
       }}
     >
       <label htmlFor="capture-email">Keep this guide — email it to yourself</label>
@@ -228,47 +203,13 @@ function CaptureForm({
           placeholder="you@example.com"
           autoComplete="email"
         />
-        <button type="submit" disabled={capture.state === 'pending' || (siteKey !== '' && !token)}>
+        <button type="submit" disabled={capture.state === 'pending'}>
           {capture.state === 'pending' ? 'Sending…' : 'Email me'}
         </button>
       </div>
-      {siteKey && <div ref={widgetRef} className="turnstile-widget" />}
       {capture.state === 'failure' && (
         <p className="error">Couldn't send right now — try again later.</p>
       )}
     </form>
   )
-}
-
-interface TurnstileRender {
-  render: (
-    element: HTMLElement,
-    options: {
-      sitekey: string
-      callback: (token: string) => void
-      'expired-callback': () => void
-    },
-  ) => void
-}
-
-let scriptPromise: Promise<void> | null = null
-const loadTurnstileScript = () => {
-  if (!scriptPromise) {
-    scriptPromise = new Promise<void>((resolve, reject) => {
-      const existing = document.querySelector<HTMLScriptElement>(
-        'script[src="https://challenges.cloudflare.com/turnstile/v0/api.js"]',
-      )
-      if (existing) {
-        resolve()
-        return
-      }
-      const script = document.createElement('script')
-      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
-      script.async = true
-      script.onload = () => resolve()
-      script.onerror = () => reject(new Error('turnstile script failed to load'))
-      document.head.appendChild(script)
-    })
-  }
-  return scriptPromise
 }
