@@ -9,10 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as PublicRouteImport } from './routes/_public'
 import { Route as AppRouteImport } from './routes/app'
+import { Route as SitemapRouteImport } from './routes/sitemap'
+import { Route as PublicIndexRouteImport } from './routes/_public.index'
+import { Route as PublicAboutRouteImport } from './routes/_public.about'
+import { Route as PublicChangelogRouteImport } from './routes/_public.changelog'
+import { Route as ApiCheckoutRouteImport } from './routes/api.checkout'
+import { Route as ApiClaimRouteImport } from './routes/api.claim'
+import { Route as ApiGumroadPingRouteImport } from './routes/api.gumroad-ping'
 import { Route as ApiQrRouteImport } from './routes/api.qr'
 import { Route as ApiRpcRouteImport } from './routes/api.rpc'
+import { Route as ApiUnlockRouteImport } from './routes/api.unlock'
 import { Route as ApiUploadRouteImport } from './routes/api.upload'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppCrmRouteImport } from './routes/app.crm'
@@ -20,19 +28,56 @@ import { Route as AppGuidesRouteImport } from './routes/app.guides'
 import { Route as AppPassRouteImport } from './routes/app.pass'
 import { Route as AppVenuesRouteImport } from './routes/app.venues'
 import { Route as GSlugRouteImport } from './routes/g.$slug'
+import { Route as PublicBlogIndexRouteImport } from './routes/_public.blog.index'
+import { Route as PublicBlogSlugRouteImport } from './routes/_public.blog.$slug'
+import { Route as PublicGuidesSlugRouteImport } from './routes/_public.guides.$slug'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
 import { Route as AppCrmBusinessIdRouteImport } from './routes/app.crm_.$businessId'
 import { Route as AppGuidesGuideIdRouteImport } from './routes/app.guides_.$guideId'
 import { Route as AppVenuesVenueIdRouteImport } from './routes/app.venues_.$venueId'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const PublicRoute = PublicRouteImport.update({
+  id: '/_public',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
   id: '/app',
   path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapRoute = SitemapRouteImport.update({
+  id: '/sitemap',
+  path: '/sitemap',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PublicIndexRoute = PublicIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicAboutRoute = PublicAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicChangelogRoute = PublicChangelogRouteImport.update({
+  id: '/changelog',
+  path: '/changelog',
+  getParentRoute: () => PublicRoute,
+} as any)
+const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
+  id: '/api/checkout',
+  path: '/api/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiClaimRoute = ApiClaimRouteImport.update({
+  id: '/api/claim',
+  path: '/api/claim',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGumroadPingRoute = ApiGumroadPingRouteImport.update({
+  id: '/api/gumroad-ping',
+  path: '/api/gumroad-ping',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiQrRoute = ApiQrRouteImport.update({
@@ -43,6 +88,11 @@ const ApiQrRoute = ApiQrRouteImport.update({
 const ApiRpcRoute = ApiRpcRouteImport.update({
   id: '/api/rpc',
   path: '/api/rpc',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiUnlockRoute = ApiUnlockRouteImport.update({
+  id: '/api/unlock',
+  path: '/api/unlock',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiUploadRoute = ApiUploadRouteImport.update({
@@ -80,6 +130,21 @@ const GSlugRoute = GSlugRouteImport.update({
   path: '/g/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PublicBlogIndexRoute = PublicBlogIndexRouteImport.update({
+  id: '/blog/',
+  path: '/blog/',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicBlogSlugRoute = PublicBlogSlugRouteImport.update({
+  id: '/blog/$slug',
+  path: '/blog/$slug',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicGuidesSlugRoute = PublicGuidesSlugRouteImport.update({
+  id: '/guides/$slug',
+  path: '/guides/$slug',
+  getParentRoute: () => PublicRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -102,10 +167,17 @@ const AppVenuesVenueIdRoute = AppVenuesVenueIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof PublicIndexRoute
   '/app': typeof AppRouteWithChildren
+  '/sitemap': typeof SitemapRoute
+  '/about': typeof PublicAboutRoute
+  '/changelog': typeof PublicChangelogRoute
+  '/api/checkout': typeof ApiCheckoutRoute
+  '/api/claim': typeof ApiClaimRoute
+  '/api/gumroad-ping': typeof ApiGumroadPingRoute
   '/api/qr': typeof ApiQrRoute
   '/api/rpc': typeof ApiRpcRoute
+  '/api/unlock': typeof ApiUnlockRoute
   '/api/upload': typeof ApiUploadRoute
   '/app/crm': typeof AppCrmRoute
   '/app/guides': typeof AppGuidesRoute
@@ -113,52 +185,83 @@ export interface FileRoutesByFullPath {
   '/app/venues': typeof AppVenuesRoute
   '/g/$slug': typeof GSlugRoute
   '/app/': typeof AppIndexRoute
+  '/blog/$slug': typeof PublicBlogSlugRoute
+  '/guides/$slug': typeof PublicGuidesSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/crm/$businessId': typeof AppCrmBusinessIdRoute
   '/app/guides/$guideId': typeof AppGuidesGuideIdRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
+  '/blog/': typeof PublicBlogIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/sitemap': typeof SitemapRoute
+  '/about': typeof PublicAboutRoute
+  '/changelog': typeof PublicChangelogRoute
+  '/api/checkout': typeof ApiCheckoutRoute
+  '/api/claim': typeof ApiClaimRoute
+  '/api/gumroad-ping': typeof ApiGumroadPingRoute
   '/api/qr': typeof ApiQrRoute
   '/api/rpc': typeof ApiRpcRoute
+  '/api/unlock': typeof ApiUnlockRoute
   '/api/upload': typeof ApiUploadRoute
   '/app/crm': typeof AppCrmRoute
   '/app/guides': typeof AppGuidesRoute
   '/app/pass': typeof AppPassRoute
   '/app/venues': typeof AppVenuesRoute
   '/g/$slug': typeof GSlugRoute
+  '/': typeof PublicIndexRoute
   '/app': typeof AppIndexRoute
+  '/blog/$slug': typeof PublicBlogSlugRoute
+  '/guides/$slug': typeof PublicGuidesSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/crm/$businessId': typeof AppCrmBusinessIdRoute
   '/app/guides/$guideId': typeof AppGuidesGuideIdRoute
   '/app/venues/$venueId': typeof AppVenuesVenueIdRoute
+  '/blog': typeof PublicBlogIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_public': typeof PublicRouteWithChildren
   '/app': typeof AppRouteWithChildren
+  '/sitemap': typeof SitemapRoute
+  '/_public/about': typeof PublicAboutRoute
+  '/_public/changelog': typeof PublicChangelogRoute
+  '/api/checkout': typeof ApiCheckoutRoute
+  '/api/claim': typeof ApiClaimRoute
+  '/api/gumroad-ping': typeof ApiGumroadPingRoute
   '/api/qr': typeof ApiQrRoute
   '/api/rpc': typeof ApiRpcRoute
+  '/api/unlock': typeof ApiUnlockRoute
   '/api/upload': typeof ApiUploadRoute
   '/app/crm': typeof AppCrmRoute
   '/app/guides': typeof AppGuidesRoute
   '/app/pass': typeof AppPassRoute
   '/app/venues': typeof AppVenuesRoute
   '/g/$slug': typeof GSlugRoute
+  '/_public/': typeof PublicIndexRoute
   '/app/': typeof AppIndexRoute
+  '/_public/blog/$slug': typeof PublicBlogSlugRoute
+  '/_public/guides/$slug': typeof PublicGuidesSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/crm_/$businessId': typeof AppCrmBusinessIdRoute
   '/app/guides_/$guideId': typeof AppGuidesGuideIdRoute
   '/app/venues_/$venueId': typeof AppVenuesVenueIdRoute
+  '/_public/blog/': typeof PublicBlogIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/app'
+    | '/sitemap'
+    | '/about'
+    | '/changelog'
+    | '/api/checkout'
+    | '/api/claim'
+    | '/api/gumroad-ping'
     | '/api/qr'
     | '/api/rpc'
+    | '/api/unlock'
     | '/api/upload'
     | '/app/crm'
     | '/app/guides'
@@ -166,50 +269,79 @@ export interface FileRouteTypes {
     | '/app/venues'
     | '/g/$slug'
     | '/app/'
+    | '/blog/$slug'
+    | '/guides/$slug'
     | '/api/auth/$'
     | '/app/crm/$businessId'
     | '/app/guides/$guideId'
     | '/app/venues/$venueId'
+    | '/blog/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
+    | '/sitemap'
+    | '/about'
+    | '/changelog'
+    | '/api/checkout'
+    | '/api/claim'
+    | '/api/gumroad-ping'
     | '/api/qr'
     | '/api/rpc'
+    | '/api/unlock'
     | '/api/upload'
     | '/app/crm'
     | '/app/guides'
     | '/app/pass'
     | '/app/venues'
     | '/g/$slug'
+    | '/'
     | '/app'
+    | '/blog/$slug'
+    | '/guides/$slug'
     | '/api/auth/$'
     | '/app/crm/$businessId'
     | '/app/guides/$guideId'
     | '/app/venues/$venueId'
+    | '/blog'
   id:
     | '__root__'
-    | '/'
+    | '/_public'
     | '/app'
+    | '/sitemap'
+    | '/_public/about'
+    | '/_public/changelog'
+    | '/api/checkout'
+    | '/api/claim'
+    | '/api/gumroad-ping'
     | '/api/qr'
     | '/api/rpc'
+    | '/api/unlock'
     | '/api/upload'
     | '/app/crm'
     | '/app/guides'
     | '/app/pass'
     | '/app/venues'
     | '/g/$slug'
+    | '/_public/'
     | '/app/'
+    | '/_public/blog/$slug'
+    | '/_public/guides/$slug'
     | '/api/auth/$'
     | '/app/crm_/$businessId'
     | '/app/guides_/$guideId'
     | '/app/venues_/$venueId'
+    | '/_public/blog/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  PublicRoute: typeof PublicRouteWithChildren
   AppRoute: typeof AppRouteWithChildren
+  SitemapRoute: typeof SitemapRoute
+  ApiCheckoutRoute: typeof ApiCheckoutRoute
+  ApiClaimRoute: typeof ApiClaimRoute
+  ApiGumroadPingRoute: typeof ApiGumroadPingRoute
   ApiQrRoute: typeof ApiQrRoute
   ApiRpcRoute: typeof ApiRpcRoute
+  ApiUnlockRoute: typeof ApiUnlockRoute
   ApiUploadRoute: typeof ApiUploadRoute
   GSlugRoute: typeof GSlugRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -217,11 +349,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
+    '/_public': {
+      id: '/_public'
+      path: ''
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof PublicRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -229,6 +361,55 @@ declare module '@tanstack/react-router' {
       path: '/app'
       fullPath: '/app'
       preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap': {
+      id: '/sitemap'
+      path: '/sitemap'
+      fullPath: '/sitemap'
+      preLoaderRoute: typeof SitemapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_public/': {
+      id: '/_public/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof PublicIndexRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/about': {
+      id: '/_public/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof PublicAboutRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/changelog': {
+      id: '/_public/changelog'
+      path: '/changelog'
+      fullPath: '/changelog'
+      preLoaderRoute: typeof PublicChangelogRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/api/checkout': {
+      id: '/api/checkout'
+      path: '/api/checkout'
+      fullPath: '/api/checkout'
+      preLoaderRoute: typeof ApiCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/claim': {
+      id: '/api/claim'
+      path: '/api/claim'
+      fullPath: '/api/claim'
+      preLoaderRoute: typeof ApiClaimRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/gumroad-ping': {
+      id: '/api/gumroad-ping'
+      path: '/api/gumroad-ping'
+      fullPath: '/api/gumroad-ping'
+      preLoaderRoute: typeof ApiGumroadPingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/qr': {
@@ -243,6 +424,13 @@ declare module '@tanstack/react-router' {
       path: '/api/rpc'
       fullPath: '/api/rpc'
       preLoaderRoute: typeof ApiRpcRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/unlock': {
+      id: '/api/unlock'
+      path: '/api/unlock'
+      fullPath: '/api/unlock'
+      preLoaderRoute: typeof ApiUnlockRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/upload': {
@@ -294,6 +482,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_public/blog/': {
+      id: '/_public/blog/'
+      path: '/blog'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof PublicBlogIndexRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/blog/$slug': {
+      id: '/_public/blog/$slug'
+      path: '/blog/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof PublicBlogSlugRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/guides/$slug': {
+      id: '/_public/guides/$slug'
+      path: '/guides/$slug'
+      fullPath: '/guides/$slug'
+      preLoaderRoute: typeof PublicGuidesSlugRouteImport
+      parentRoute: typeof PublicRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -325,6 +534,27 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface PublicRouteChildren {
+  PublicAboutRoute: typeof PublicAboutRoute
+  PublicChangelogRoute: typeof PublicChangelogRoute
+  PublicIndexRoute: typeof PublicIndexRoute
+  PublicBlogSlugRoute: typeof PublicBlogSlugRoute
+  PublicGuidesSlugRoute: typeof PublicGuidesSlugRoute
+  PublicBlogIndexRoute: typeof PublicBlogIndexRoute
+}
+
+const PublicRouteChildren: PublicRouteChildren = {
+  PublicAboutRoute: PublicAboutRoute,
+  PublicChangelogRoute: PublicChangelogRoute,
+  PublicIndexRoute: PublicIndexRoute,
+  PublicBlogSlugRoute: PublicBlogSlugRoute,
+  PublicGuidesSlugRoute: PublicGuidesSlugRoute,
+  PublicBlogIndexRoute: PublicBlogIndexRoute,
+}
+
+const PublicRouteWithChildren =
+  PublicRoute._addFileChildren(PublicRouteChildren)
+
 interface AppRouteChildren {
   AppCrmRoute: typeof AppCrmRoute
   AppGuidesRoute: typeof AppGuidesRoute
@@ -350,10 +580,15 @@ const AppRouteChildren: AppRouteChildren = {
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  PublicRoute: PublicRouteWithChildren,
   AppRoute: AppRouteWithChildren,
+  SitemapRoute: SitemapRoute,
+  ApiCheckoutRoute: ApiCheckoutRoute,
+  ApiClaimRoute: ApiClaimRoute,
+  ApiGumroadPingRoute: ApiGumroadPingRoute,
   ApiQrRoute: ApiQrRoute,
   ApiRpcRoute: ApiRpcRoute,
+  ApiUnlockRoute: ApiUnlockRoute,
   ApiUploadRoute: ApiUploadRoute,
   GSlugRoute: GSlugRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

@@ -435,3 +435,55 @@ main {
 .pass-actions {
   @apply ml-auto flex gap-2;
 }
+
+/* ============ Public consumer site theme (legacy tokens) ============ */
+@theme {
+  --color-cream: #fcf8ec;
+  --color-blue: #5071fe;
+  --color-ink: #1a1a1a;
+  --color-ink-light: #666;
+  --font-display: 'Instrument Serif', serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --text-tiny: 0.75rem;
+  --text-tiny--line-height: 1.4;
+  --text-huge: clamp(2.5rem, 5vw, 4.5rem);
+  --text-huge--line-height: 1.1;
+  --leading-tiny: 1.4;
+  --leading-huge: 1.1;
+}
+
+.public-shell {
+  @apply bg-cream text-ink font-body antialiased;
+  min-height: 100vh;
+}
+
+.prose-custom a {
+  color: var(--color-blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-custom blockquote {
+  border-left: 3px solid var(--color-blue);
+  padding-left: 1.25rem;
+  margin: 1.5rem 0;
+  color: var(--color-ink-light);
+}
+.prose-intro p {
+  margin-bottom: 1rem;
+  color: var(--color-ink-light);
+}
+.prose-intro h3 {
+  font-weight: 500;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-ink);
+}
+.prose-intro ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  color: var(--color-ink-light);
+}
+.prose-intro strong {
+  font-weight: 500;
+  color: var(--color-ink);
+}

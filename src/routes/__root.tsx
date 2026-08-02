@@ -4,7 +4,7 @@
  * `ResultRpcProvider` lives here, above every route, so a hydration
  * boundary in any route's component merges into the same runtime.
  */
-import { HeadContent, Link, Outlet, Scripts, createRootRoute } from '@tanstack/react-router'
+import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { isTaggedError } from 'result-rpc'
 import { ResultRpcProvider } from 'result-rpc/react'
@@ -44,20 +44,11 @@ function RootDocument({ children }: { children: ReactNode }) {
 }
 
 function RootLayout() {
+  // The chrome lives in each surface's own layout: /app (operator shell),
+  // /g (hotel guide shell), /_public (consumer site).
   return (
     <ResultRpcProvider client={client}>
-      <header className="site-header">
-        <Link to="/" className="brand">
-          🇮🇸 Reykjavík Foodie
-        </Link>
-        <span className="subtitle">curated guides for hotels</span>
-      </header>
-      <main>
-        <Outlet />
-      </main>
-      <footer className="site-footer">
-        Fresh TanStack Start × result-rpc × D1 scaffold
-      </footer>
+      <Outlet />
     </ResultRpcProvider>
   )
 }
