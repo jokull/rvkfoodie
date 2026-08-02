@@ -135,3 +135,17 @@ guides.digest baseline-diff emails; remote migration pending deploy).
 - Vanity subdomains (future paid feature).
 - Google Maps rendering (future switch), PostHog (future).
 - Scheduled cron automation of the monthly pass (future).
+
+## Update (2026-08-02) — consumer site port
+
+Direction change from "nuke/replace the legacy site": **agent-cms stays the
+CMS for the public consumer site** (the current site keeps selling guides via
+Gumroad). The new TanStack worker bundles agent-cms 0.4.5 in-process and
+renders its content read-only from the same D1 — one worker, three surfaces:
+`/` (consumer), `/g` (hotel guides), `/app` (internal SPA). Ported: home,
+`/guides/<slug>` + Gumroad paywall (checkout/ping/unlock/claim), blog,
+changelog, about, sitemap. Not yet ported: `/places/<slug>`, `/search`
+(Vectorize), preview mode, visual-edit, og images/favicon, robots.txt.
+agent-cms result-rpc codegen bridge: **planned, not shipped** in 0.4.5
+(agent-cms wayfinder tickets 04 + 09) — revisit for /app CMS tooling once it
+lands.
