@@ -79,7 +79,7 @@ function Hotels({ businessId }: { businessId: string }) {
       roomCount: Number.parseInt(input.roomCount, 10),
       website: input.website?.trim() || undefined,
     })
-    if (result.ok) {
+    if (result.status === 'ok') {
       reset(form)
       setOpen(false)
     }
@@ -166,7 +166,7 @@ function Contacts({ businessId }: { businessId: string }) {
       title: input.title?.trim() || undefined,
       isDecisionMaker: input.isDecisionMaker ?? false,
     })
-    if (result.ok) {
+    if (result.status === 'ok') {
       reset(form)
       setOpen(false)
     }
@@ -262,7 +262,7 @@ function Deals({ businessId }: { businessId: string }) {
       renewalDate: input.renewalDate ? new Date(input.renewalDate) : undefined,
       notes: input.notes?.trim() || undefined,
     })
-    if (result.ok) {
+    if (result.status === 'ok') {
       reset(form)
       setOpen(false)
     }
@@ -325,7 +325,7 @@ function Deals({ businessId }: { businessId: string }) {
               <strong>{d.name}</strong>
               <select
                 value={d.stage}
-                onChange={(e) => void update.mutate({ id: d.id, stage: e.target.value as DealRow['stage'] })}
+                onChange={(e) => void update.mutate({ id: d.id, stage: e.target.value as (typeof PIPELINE_STAGES)[number] })}
                 aria-label={`${d.name} stage`}
               >
                 {PIPELINE_STAGES.map((st) => (

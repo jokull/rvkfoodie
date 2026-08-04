@@ -37,11 +37,6 @@ import type { AppContext } from './rpc-server.js'
 
 export const app = rpc.context<AppContext>()
 
-/** Non-empty string-literal union — the wire.enum spelling available in
- * result-rpc 0.2.0 (union of wire.literal, identical contract digest). */
-const enumOf = <const TValues extends readonly [string, ...string[]]>(values: TValues) =>
-  wire.union(values.map((v) => wire.literal(v)))
-
 /**
  * Cursor-paginated feed over the Venue ENTITY in curated order. One cache
  * entry per list identity; the cursor is the last item's orderKey.
@@ -72,7 +67,7 @@ export const addVenueContract = app
   .input(
     wire.object({
       name: wire.string,
-      category: enumOf(VENUE_CATEGORIES),
+      category: wire.enum(VENUE_CATEGORIES),
       address: wire.string,
       categorySecondary: wire.optional(wire.string),
       cuisine: wire.optional(wire.string),
@@ -100,7 +95,7 @@ export const updateVenueContract = app
     wire.object({
       id: wire.string,
       name: wire.optional(wire.string),
-      category: wire.optional(enumOf(VENUE_CATEGORIES)),
+      category: wire.optional(wire.enum(VENUE_CATEGORIES)),
       address: wire.optional(wire.string),
       categorySecondary: wire.optional(wire.string),
       cuisine: wire.optional(wire.string),
@@ -140,7 +135,7 @@ export const venueAwardAddContract = app
   .input(
     wire.object({
       venueId: wire.string,
-      awardType: enumOf(VENUE_AWARD_TYPES),
+      awardType: wire.enum(VENUE_AWARD_TYPES),
       title: wire.string,
       url: wire.optional(wire.string),
     }),
@@ -183,7 +178,7 @@ export const addLifecycleEventContract = app
   .input(
     wire.object({
       venueId: wire.string,
-      type: enumOf(LIFECYCLE_TYPES),
+      type: wire.enum(LIFECYCLE_TYPES),
       startedAt: wire.date,
       note: wire.optional(wire.string),
     }),
@@ -365,7 +360,7 @@ export const addDealContract = app
     wire.object({
       businessId: wire.string,
       name: wire.string,
-      stage: wire.optional(enumOf(PIPELINE_STAGES)),
+      stage: wire.optional(wire.enum(PIPELINE_STAGES)),
       pricePerRoom: wire.optional(wire.integer({ min: 0 })),
       annualValue: wire.optional(wire.integer({ min: 0 })),
       startDate: wire.optional(wire.date),
@@ -384,7 +379,7 @@ export const updateDealContract = app
     wire.object({
       id: wire.string,
       name: wire.optional(wire.string),
-      stage: wire.optional(enumOf(PIPELINE_STAGES)),
+      stage: wire.optional(wire.enum(PIPELINE_STAGES)),
       pricePerRoom: wire.optional(wire.integer({ min: 0 })),
       annualValue: wire.optional(wire.integer({ min: 0 })),
       startDate: wire.optional(wire.date),
@@ -557,7 +552,7 @@ export const recordGuideEventContract = app
   .input(
     wire.object({
       slug: wire.string,
-      event: enumOf(['view', 'qr-scan', 'venue-click', 'email-captured'] as const),
+      event: wire.enum(['view', 'qr-scan', 'venue-click', 'email-captured'] as const),
       venueId: wire.optional(wire.string),
     }),
   )

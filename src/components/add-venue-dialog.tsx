@@ -27,7 +27,7 @@ export function AddVenueDialog({ open, onClose }: { open: boolean; onClose: () =
       address: address.trim(),
       website: website.trim() || undefined,
     })
-    if (result.ok) {
+    if (result.status === 'ok') {
       setName('')
       setAddress('')
       setWebsite('')

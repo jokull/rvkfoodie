@@ -319,7 +319,7 @@ const addVenue = server.implement(addVenueContract).use(requireStaff).handler(as
     updatedAt: now,
   }
   const inserted = await tryDb(context.db.insert(venues).values(row).returning())
-  if (!inserted.ok) {
+  if (inserted.status !== 'ok') {
     return matchError(inserted.error, {
       'db/unique-violation': () => err(errors.nameTaken({ name: input.name })),
       'db/foreign-key-violation': (e) => {
@@ -374,7 +374,7 @@ const updateVenue = server.implement(updateVenueContract).use(requireStaff).hand
   const updated = await tryDb(
     context.db.update(venues).set(set).where(eq(venues.id, input.id)).returning(),
   )
-  if (!updated.ok) {
+  if (updated.status !== 'ok') {
     return matchError(updated.error, {
       'db/unique-violation': () => err(errors.nameTaken({ name: input.name ?? before.name })),
       'db/foreign-key-violation': (e) => {
@@ -504,7 +504,7 @@ const addAward = server.implement(venueAwardAddContract).use(requireStaff).handl
       })
       .returning(),
   )
-  if (!inserted.ok) {
+  if (inserted.status !== 'ok') {
     return matchError(inserted.error, {
       'db/unique-violation': () => err(errors.exists({ venueId: input.venueId })),
       'db/foreign-key-violation': (e) => {
@@ -591,7 +591,7 @@ const addHotel = server
     updatedAt: now,
   }
   const inserted = await tryDb(context.db.insert(hotels).values(row).returning())
-  if (!inserted.ok) {
+  if (inserted.status !== 'ok') {
     return matchError(inserted.error, {
       'db/unique-violation': () => err(errors.notFound({ hotelId: input.name })),
       'db/foreign-key-violation': () => err(errors.notFound({ hotelId: input.businessId ?? '' })),
@@ -633,7 +633,7 @@ const updateHotel = server.implement(updateHotelContract).use(requireStaff).hand
   const updated = await tryDb(
     context.db.update(hotels).set(set).where(eq(hotels.id, input.id)).returning(),
   )
-  if (!updated.ok) {
+  if (updated.status !== 'ok') {
     return matchError(updated.error, {
       'db/unique-violation': () => err(errors.notFound({ hotelId: input.name ?? before.name })),
       'db/foreign-key-violation': () => err(errors.notFound({ hotelId: input.businessId ?? '' })),
@@ -691,7 +691,7 @@ const addBusiness = server
       updatedAt: now,
     }
     const inserted = await tryDb(context.db.insert(businesses).values(row).returning())
-    if (!inserted.ok) {
+    if (inserted.status !== 'ok') {
       return matchError(inserted.error, {
         'db/unique-violation': () => err(errors.nameTaken({ name: input.name })),
         'db/foreign-key-violation': (e) => {
@@ -735,7 +735,7 @@ const updateBusiness = server
     const updated = await tryDb(
       context.db.update(businesses).set(set).where(eq(businesses.id, input.id)).returning(),
     )
-    if (!updated.ok) {
+    if (updated.status !== 'ok') {
       return matchError(updated.error, {
         'db/unique-violation': () => err(errors.nameTaken({ name: input.name ?? before.name })),
         'db/foreign-key-violation': (e) => {
@@ -794,7 +794,7 @@ const addContact = server
     updatedAt: now,
   }
   const inserted = await tryDb(context.db.insert(contacts).values(row).returning())
-  if (!inserted.ok) {
+  if (inserted.status !== 'ok') {
     return matchError(inserted.error, {
       'db/foreign-key-violation': (e) => {
         throw e
@@ -898,7 +898,7 @@ const addDeal = server
     updatedAt: now,
   }
   const inserted = await tryDb(context.db.insert(deals).values(row).returning())
-  if (!inserted.ok) {
+  if (inserted.status !== 'ok') {
     return matchError(inserted.error, {
       'db/foreign-key-violation': (e) => {
         throw e

@@ -91,7 +91,7 @@ export function VenueEditForm({ venue }: { venue: VenueRow }) {
       confidence: num(input.confidence),
       lastVerifiedAt: input.lastVerifiedAt ? new Date(input.lastVerifiedAt) : undefined,
     })
-    if (!result.ok) throw new Error(result.error._tag)
+    if (result.status !== 'ok') throw new Error(result.error._tag)
   }
 
   const FieldText = ({ path, label, ...rest }: { path: readonly string[]; label: string; [k: string]: any }) => (

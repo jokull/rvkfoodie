@@ -26,6 +26,7 @@
     "@tanstack/react-start": "^1.168.34",
     "agent-cms": "0.4.5",
     "better-auth": "^1.6.25",
+    "better-result": "^3.0.0",
     "datocms-structured-text-to-html-string": "^5.1.16",
     "drizzle-orm": "1.0.0-rc.4",
     "fractional-indexing": "^4.0.0",
@@ -33,7 +34,7 @@
     "qrcode": "^1.5.4",
     "react": "~19.2.4",
     "react-dom": "~19.2.4",
-    "result-rpc": "^0.2.0",
+    "result-rpc": "^0.3.0",
     "valibot": "^1.4.2"
   },
   "devDependencies": {

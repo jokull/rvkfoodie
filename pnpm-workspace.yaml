@@ -4,6 +4,8 @@ allowBuilds:
   esbuild: set this to true or false
   msgpackr-extract: set this to true or false
   workerd: set this to true or false
+minimumReleaseAgeExclude:
+  - result-rpc@0.3.0
 onlyBuiltDependencies:
   - esbuild
   - workerd

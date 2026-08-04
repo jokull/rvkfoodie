@@ -35,7 +35,7 @@ function AddBusinessDialog({ open, onClose }: { open: boolean; onClose: () => vo
       industry: input.industry?.trim() || undefined,
       notes: input.notes?.trim() || undefined,
     })
-    if (result.ok) {
+    if (result.status === 'ok') {
       reset(form)
       onClose()
       void router.navigate({ to: '/app/crm/$businessId', params: { businessId: result.value.id } })

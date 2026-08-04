@@ -51,8 +51,8 @@ const assert = (cond: unknown, msg: string) => {
 
 // 1) guide view (public read)
 const view = await client.guides.view({ id: 'guide_01' })
-assert(view.ok, 'guides.view ok')
-if (view.ok) {
+assert(view.status === 'ok', 'guides.view ok')
+if (view.status === 'ok') {
   assert(view.value.guide.slug === 'hotel-borg', 'guide slug')
   assert(view.value.venueRows.length === 7, `7 live venue rows, got ${view.value.venueRows.length}`)
   console.log('  first venue:', view.value.venueRows[0].venue.name, '| cat:', view.value.venueRows[0].venue.category)
@@ -90,85 +90,85 @@ DELETE FROM businesses WHERE name LIKE 'E2E%';
 )
 await new Promise((r) => setTimeout(r, 800))
 const created = await client.guides.create({ hotelId: 'hotel_02' })
-if (!created.ok) console.log('create error:', JSON.stringify(created.error).slice(0, 200))
-assert(created.ok, 'guides.create ok')
-if (created.ok) {
+if (created.status !== 'ok') console.log('create error:', JSON.stringify(created.error).slice(0, 200))
+assert(created.status === 'ok', 'guides.create ok')
+if (created.status === 'ok') {
   const guideId = created.value.id
   const draft = await client.guides.draft({ id: guideId })
-  assert(draft.ok, 'guides.draft ok')
-  if (draft.ok) assert(draft.value.added.length > 0, 'draft adds candidates from the backfilled pool')
-  if (draft.ok) {
+  assert(draft.status === 'ok', 'guides.draft ok')
+  if (draft.status === 'ok') assert(draft.value.added.length > 0, 'draft adds candidates from the backfilled pool')
+  if (draft.status === 'ok') {
     assert(draft.value.added.length > 0, 'draft adds candidates from the backfilled pool')
     const pendingView = await client.guides.view({ id: guideId })
-    assert(pendingView.ok, 'view after draft ok (0 live rows expected)')
-    if (pendingView.ok) assert(pendingView.value.venueRows.length === 0, 'pending rows not live yet')
+    assert(pendingView.status === 'ok', 'view after draft ok (0 live rows expected)')
+    if (pendingView.status === 'ok') assert(pendingView.value.venueRows.length === 0, 'pending rows not live yet')
 
     // Approve the drafted candidates; the view then shows them live.
     const approve = await client.guides.approveCandidates({ guideId, venueIds: draft.value.added })
-    assert(approve.ok && approve.value.length === draft.value.added.length, 'approveCandidates ok')
+    assert(approve.status === 'ok' && approve.value.length === draft.value.added.length, 'approveCandidates ok')
     const liveView = await client.guides.view({ id: guideId })
-    assert(liveView.ok && liveView.value.venueRows.length === draft.value.added.length, 'view shows live rows after approve')
-    if (liveView.ok) {
+    assert(liveView.status === 'ok' && liveView.value.venueRows.length === draft.value.added.length, 'view shows live rows after approve')
+    if (liveView.status === 'ok') {
       assert(liveView.value.venueRows.some((r) => (r.venue.photos?.length ?? 0) > 0), 'guide view includes legacy CDN photos')
       assert(liveView.value.venueRows.some((r) => (r.venue.website?.length ?? 0) > 0 || (r.venue.phone?.length ?? 0) > 0), 'guide view includes website/phone')
     }
 
     const publish = await client.guides.publish({ id: guideId })
-    assert(publish.ok, 'guides.publish ok')
-    if (publish.ok) assert(publish.value.status === 'live', 'guide now live')
+    assert(publish.status === 'ok', 'guides.publish ok')
+    if (publish.status === 'ok') assert(publish.value.status === 'live', 'guide now live')
 
     // builder snapshot + row edits (reorder / pin / override / exclude)
     const builder = await client.guides.builder({ guideId })
-    assert(builder.ok && builder.value.rows.length === draft.value.added.length, 'guides.builder lists the draft rows')
-    if (builder.ok) {
+    assert(builder.status === 'ok' && builder.value.rows.length === draft.value.added.length, 'guides.builder lists the draft rows')
+    if (builder.status === 'ok') {
       const first = builder.value.rows[0]
       const second = builder.value.rows[1]
       const pin = await client.guideVenues.update({ id: first.id, pinned: true })
-      assert(pin.ok && pin.value.pinned === true, 'guideVenues.update pinned ok')
+      assert(pin.status === 'ok' && pin.value.pinned === true, 'guideVenues.update pinned ok')
       const override = await client.guideVenues.update({ id: first.id, overrideText: 'Staff note' })
-      assert(override.ok && override.value.overrideText === 'Staff note', 'guideVenues.update override ok')
+      assert(override.status === 'ok' && override.value.overrideText === 'Staff note', 'guideVenues.update override ok')
       const clear = await client.guideVenues.update({ id: first.id, overrideText: null })
-      assert(clear.ok && clear.value.overrideText === null, 'guideVenues.update clears override')
+      assert(clear.status === 'ok' && clear.value.overrideText === null, 'guideVenues.update clears override')
       const ex = await client.guides.addExclude({ guideId, venueId: second.venueId })
-      assert(ex.ok, 'guides.addExclude ok')
+      assert(ex.status === 'ok', 'guides.addExclude ok')
       const b2 = await client.guides.builder({ guideId })
-      assert(b2.ok && b2.value.excludes.length === 1, 'builder lists the exclude')
+      assert(b2.status === 'ok' && b2.value.excludes.length === 1, 'builder lists the exclude')
       const ux = await client.guides.removeExclude({ guideId, venueId: second.venueId })
-      assert(ux.ok, 'guides.removeExclude ok')
+      assert(ux.status === 'ok', 'guides.removeExclude ok')
     }
 
     // monthly-pass digest: first run snapshots the baseline silently,
     // closures get reported, steady state sends nothing
     const first = await client.guides.digest({})
-    assert(first.ok, 'guides.digest ok')
-    if (first.ok) {
+    assert(first.status === 'ok', 'guides.digest ok')
+    if (first.status === 'ok') {
       const entry = first.value.find((e) => e.guideId === guideId)
       assert(entry && entry.skipped === true, 'first digest snapshots silently (skipped)')
     }
-    const victim = builder.ok ? builder.value.rows[0] : null
+    const victim = builder.status === 'ok' ? builder.value.rows[0] : null
     if (victim) {
       const closed = await client.venues.setStatus({ id: victim.venueId, status: 'closed' })
-      assert(closed.ok, 'digest: venue closed')
+      assert(closed.status === 'ok', 'digest: venue closed')
       const secondDigest = await client.guides.digest({})
-      assert(secondDigest.ok, 'guides.digest run 2 ok')
-      if (secondDigest.ok) {
+      assert(secondDigest.status === 'ok', 'guides.digest run 2 ok')
+      if (secondDigest.status === 'ok') {
         const entry = secondDigest.value.find((e) => e.guideId === guideId)
         assert(entry && entry.skipped === false, 'second digest is not skipped')
         assert(entry && entry.removed.length === 1 && entry.removed[0] === victim.venue.name, 'closure reported as removed')
         assert(entry && entry.added.length === 0, 'no additions on closure')
       }
       const reopened = await client.venues.setStatus({ id: victim.venueId, status: 'live' })
-      assert(reopened.ok, 'digest: venue reopened')
+      assert(reopened.status === 'ok', 'digest: venue reopened')
       const third = await client.guides.digest({})
-      assert(third.ok, 'guides.digest run 3 ok')
-      if (third.ok) {
+      assert(third.status === 'ok', 'guides.digest run 3 ok')
+      if (third.status === 'ok') {
         const entry = third.value.find((e) => e.guideId === guideId)
         assert(entry && entry.skipped === false && entry.added.length === 1, 'reopened venue reported as re-added')
         assert(entry && entry.removed.length === 0, 'no removals on reopen')
       }
       const fourth = await client.guides.digest({})
-      assert(fourth.ok, 'guides.digest run 4 ok')
-      if (fourth.ok) {
+      assert(fourth.status === 'ok', 'guides.digest run 4 ok')
+      if (fourth.status === 'ok') {
         const entry = fourth.value.find((e) => e.guideId === guideId)
         assert(entry && entry.skipped === false && entry.added.length === 0 && entry.removed.length === 0, 'steady state sends nothing')
       }
@@ -178,34 +178,34 @@ if (created.ok) {
 
 // 3) exclude flow on the live guide
 const ex = await client.guides.addExclude({ guideId: 'guide_01', venueId: 'venue_08' })
-assert(ex.ok, 'guides.addExclude ok')
+assert(ex.status === 'ok', 'guides.addExclude ok')
 const exRm = await client.guides.removeExclude({ guideId: 'guide_01', venueId: 'venue_08' })
-assert(exRm.ok, 'guides.removeExclude ok')
+assert(exRm.status === 'ok', 'guides.removeExclude ok')
 
 // 4) lifecycle + audit surfaces
 const lifecycle = await client.venues.addLifecycleEvent({ venueId: 'venue_05', type: 'temporarily-closed', startedAt: new Date(), note: 'renovations' })
-assert(lifecycle.ok, 'addLifecycleEvent ok')
+assert(lifecycle.status === 'ok', 'addLifecycleEvent ok')
 const audit = await client.audit.list({ entityType: 'venue', entityId: 'venue_05' })
-assert(audit.ok, 'audit.list ok')
-if (audit.ok) assert(audit.value.length >= 1, 'audit rows exist')
+assert(audit.status === 'ok', 'audit.list ok')
+if (audit.status === 'ok') assert(audit.value.length >= 1, 'audit rows exist')
 console.log('ALL E2E CHECKS PASSED')
 
 // --- Guide page surfaces (ticket 06) ---
 const bySlug = await client.guides.viewBySlug({ slug: 'hotel-borg' })
-assert(bySlug.ok, 'guides.viewBySlug ok')
-if (bySlug.ok) assert(bySlug.value.venueRows.length === 7, '7 venues via slug')
+assert(bySlug.status === 'ok', 'guides.viewBySlug ok')
+if (bySlug.status === 'ok') assert(bySlug.value.venueRows.length === 7, '7 venues via slug')
 
 const capture = await client.captures.request({ slug: 'hotel-borg', email: 'guest@example.com' })
-assert(capture.ok, 'captures.request ok (EMAIL binding local emulation)')
+assert(capture.status === 'ok', 'captures.request ok (EMAIL binding local emulation)')
 
 const qrRes = await fetch('http://localhost:3000/api/qr?slug=hotel-borg')
 assert(qrRes.status === 200 && (qrRes.headers.get('content-type') ?? '').includes('image/svg+xml'), 'QR endpoint returns SVG')
 
 // --- Analytics beacon (ticket 09) ---
 const ev = await client.events.record({ slug: 'hotel-borg', event: 'view' })
-assert(ev.ok, 'events.record ok')
+assert(ev.status === 'ok', 'events.record ok')
 const evClick = await client.events.record({ slug: 'hotel-borg', event: 'venue-click', venueId: 'venue_01' })
-assert(evClick.ok, 'events.record venue-click ok')
+assert(evClick.status === 'ok', 'events.record venue-click ok')
 
 // --- Auth (ticket 10) — better-auth adapter on drizzle 1.0-rc.4 + D1 ---
 const AUTH = 'http://localhost:3000'
@@ -226,8 +226,8 @@ assert(send.status === 200, 'send-verification-otp ok (adapter INSERT on 1.0-rc.
 
 // --- Venue CRUD extras (website/phone/confidence + awards) ---
 const addV = await client.venues.add({ name: 'E2E Test Spot', category: 'restaurant', address: 'Testavegur 1' })
-assert(addV.ok, 'venues.add ok (CRUD venue)')
-if (addV.ok) {
+assert(addV.status === 'ok', 'venues.add ok (CRUD venue)')
+if (addV.status === 'ok') {
   const vid = addV.value.id
   const upd = await client.venues.update({
     id: vid,
@@ -235,19 +235,19 @@ if (addV.ok) {
     phone: '555 1234',
     confidence: 0.7,
   })
-  assert(upd.ok && upd.value.website === 'https://example.com' && upd.value.phone === '555 1234' && upd.value.confidence === 0.7, 'venues.update carries website/phone/confidence')
+  assert(upd.status === 'ok' && upd.value.website === 'https://example.com' && upd.value.phone === '555 1234' && upd.value.confidence === 0.7, 'venues.update carries website/phone/confidence')
   const award = await client.venueAwards.add({ venueId: vid, awardType: 'grapevine-best-of', title: 'Test Award', url: 'https://grapevine.is/x' })
-  assert(award.ok, 'venueAwards.add ok')
+  assert(award.status === 'ok', 'venueAwards.add ok')
   const dup = await client.venueAwards.add({ venueId: vid, awardType: 'grapevine-best-of', title: 'Dup', url: undefined })
-  assert(!dup.ok && dup.error._tag === 'venue-award/exists', 'venueAwards.add rejects duplicates')
+  assert(dup.status !== 'ok' && dup.error._tag === 'venue-award/exists', 'venueAwards.add rejects duplicates')
   const list = await client.venueAwards.list({ venueId: vid })
-  assert(list.ok && list.value.length === 1 && list.value[0].title === 'Test Award', 'venueAwards.list ok')
-  if (award.ok) {
+  assert(list.status === 'ok' && list.value.length === 1 && list.value[0].title === 'Test Award', 'venueAwards.list ok')
+  if (award.status === 'ok') {
     const rm = await client.venueAwards.remove({ id: award.value.id })
-    assert(rm.ok, 'venueAwards.remove ok')
+    assert(rm.status === 'ok', 'venueAwards.remove ok')
   }
   const empty = await client.venueAwards.list({ venueId: vid })
-  assert(empty.ok && empty.value.length === 0, 'venueAwards.list empty after remove')
+  assert(empty.status === 'ok' && empty.value.length === 0, 'venueAwards.list empty after remove')
   // photo upload: session-gated route + attach via updateVenue
   const anonUp = await fetch(`${base}/api/upload`, {
     method: 'POST',
@@ -270,31 +270,31 @@ if (addV.ok) {
   const { url } = (await up.json()) as { url: string }
   assert(url.startsWith('https://media.rvkfoodie.is/venues/'), 'upload returns a CDN url under venues/<id>')
   const attach = await client.venues.update({ id: vid, photos: [url] })
-  assert(attach.ok && attach.value.photos.length === 1, 'attach photo via venues.update')
+  assert(attach.status === 'ok' && attach.value.photos.length === 1, 'attach photo via venues.update')
   const del = await client.venues.setStatus({ id: vid, status: 'closed' })
-  assert(del.ok && del.value.status === 'closed', 'CRUD venue cleaned up (closed)')
+  assert(del.status === 'ok' && del.value.status === 'closed', 'CRUD venue cleaned up (closed)')
 }
 
 // --- CRM (business → hotel → contact → deal, annualValue computed) ---
 const biz = await client.businesses.add({ name: 'E2E Operator', industry: 'hotel-operator' })
-assert(biz.ok, 'businesses.add ok')
-if (biz.ok) {
+assert(biz.status === 'ok', 'businesses.add ok')
+if (biz.status === 'ok') {
   const bid = biz.value.id
   const hotel = await client.hotels.add({ businessId: bid, name: 'E2E Hotel', roomCount: 40 })
-  assert(hotel.ok, 'hotels.add ok')
+  assert(hotel.status === 'ok', 'hotels.add ok')
   const contact = await client.contacts.add({ businessId: bid, firstName: 'E2E', lastName: 'Contact', isDecisionMaker: true })
-  assert(contact.ok && contact.value.isDecisionMaker === true, 'contacts.add ok')
+  assert(contact.status === 'ok' && contact.value.isDecisionMaker === true, 'contacts.add ok')
   const deal = await client.deals.add({ businessId: bid, name: 'E2E Deal', pricePerRoom: 1000 })
-  assert(deal.ok, 'deals.add ok')
-  if (deal.ok) {
+  assert(deal.status === 'ok', 'deals.add ok')
+  if (deal.status === 'ok') {
     assert(deal.value.annualValue === 40_000, `annualValue = pricePerRoom × rooms (got ${deal.value.annualValue})`)
     const stage = await client.deals.update({ id: deal.value.id, stage: 'won' })
-    assert(stage.ok && stage.value.stage === 'won', 'deals.update stage ok')
+    assert(stage.status === 'ok' && stage.value.stage === 'won', 'deals.update stage ok')
     const deals = await client.deals.listByBusiness({ businessId: bid })
-    assert(deals.ok && deals.value.length === 1, 'deals.listByBusiness ok')
+    assert(deals.status === 'ok' && deals.value.length === 1, 'deals.listByBusiness ok')
     const hotels = await client.hotels.listByBusiness({ businessId: bid })
-    assert(hotels.ok && hotels.value.length === 1, 'hotels.listByBusiness ok')
+    assert(hotels.status === 'ok' && hotels.value.length === 1, 'hotels.listByBusiness ok')
   }
   const del = await client.businesses.update({ id: bid, name: 'E2E Operator (done)' })
-  assert(del.ok, 'businesses.update ok')
+  assert(del.status === 'ok', 'businesses.update ok')
 }

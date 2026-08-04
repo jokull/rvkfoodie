@@ -32,6 +32,9 @@ importers:
       better-auth:
         specifier: ^1.6.25
         version: 1.6.25(@opentelemetry/api@1.9.1)(@tanstack/react-start@1.168.34(esbuild@0.28.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(rolldown@1.2.1)(vite@8.2.0(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.1)(yaml@2.9.0)))(drizzle-kit@1.0.0-rc.4)(drizzle-orm@1.0.0-rc.4(@opentelemetry/api@1.9.1)(effect@3.22.1)(valibot@1.4.2(typescript@5.9.3))(zod@4.4.3))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      better-result:
+        specifier: ^3.0.0
+        version: 3.0.0
       datocms-structured-text-to-html-string:
         specifier: ^5.1.16
         version: 5.1.16
@@ -54,8 +57,8 @@ importers:
         specifier: ~19.2.4
         version: 19.2.8(react@19.2.8)
       result-rpc:
-        specifier: ^0.2.0
-        version: 0.2.0(react@19.2.8)
+        specifier: ^0.3.0
+        version: 0.3.0(better-result@3.0.0)(react@19.2.8)
       valibot:
         specifier: ^1.4.2
         version: 1.4.2(typescript@5.9.3)
@@ -2114,6 +2117,9 @@ packages:
       zod:
         optional: true
 
+  better-result@3.0.0:
+    resolution: {integrity: sha512-6aAtXzewlQYw6BrlKL164xDAsVJ+z2Au3Bwik27tXQBNs3OP3MDVDHznb8ovbqA3jtYxTWbchBikb/K3MjevZA==}
+
   bignumber.js@9.3.1:
     resolution: {integrity: sha512-Ko0uX15oIUS7wJ3Rb30Fs6SkVbLmPBAKdlm7q9+ak9bbIeFf0MwuBsQV6z7+X768/cHsfg+WlysDWJcmthjsjQ==}
 
@@ -3376,10 +3382,11 @@ packages:
   resolve-pkg-maps@1.0.0:
     resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
 
-  result-rpc@0.2.0:
-    resolution: {integrity: sha512-DGj9XKoNyeSVHK5hIUHrrmyoZIiryu5pzRUd9vlnH3kFzYBewOmjKUpmBDnHkIvmoEOlP+fHzFsYOezXuRGs7Q==}
+  result-rpc@0.3.0:
+    resolution: {integrity: sha512-AmGD68DhMNOr1I6qNgsJsI0kbAk5GhZ5rq2l8UXzFv7c96p16FcG/jGsop72x0/f1QeHZ5qZ4+zVu9EyGWiitg==}
     engines: {node: '>=20.19.5'}
     peerDependencies:
+      better-result: ^3.0.0
       react: '>=18.3'
 
   rolldown@1.2.1:
@@ -5770,6 +5777,8 @@ snapshots:
     optionalDependencies:
       zod: 4.4.3
 
+  better-result@3.0.0: {}
+
   bignumber.js@9.3.1: {}
 
   blake3-wasm@2.1.5: {}
@@ -7012,9 +7021,10 @@ snapshots:
 
   resolve-pkg-maps@1.0.0: {}
 
-  result-rpc@0.2.0(react@19.2.8):
+  result-rpc@0.3.0(better-result@3.0.0)(react@19.2.8):
     dependencies:
       '@tanstack/query-core': 5.101.4
+      better-result: 3.0.0
       devalue: 5.8.2
       react: 19.2.8
 

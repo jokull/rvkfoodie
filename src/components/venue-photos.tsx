@@ -36,7 +36,7 @@ export function VenuePhotos({ venueId, photos }: { venueId: string; photos: read
       }
       const { url } = (await res.json()) as { url: string }
       const result = await update.mutateAsync({ id: venueId, photos: [...photos, url] })
-      if (!result.ok) setError(`Failed to save photo: ${result.error._tag}`)
+      if (result.status !== 'ok') setError(`Failed to save photo: ${result.error._tag}`)
     } catch {
       setError('Upload failed.')
     } finally {
