@@ -69,8 +69,8 @@ function Home() {
       )}
 
       {home.authorBlurb && (
-        <section className="text-tiny text-ink-light prose-intro">
-          <div dangerouslySetInnerHTML={{ __html: home.authorBlurb }} />
+        <section className="text-tiny text-ink-light prose-intro whitespace-pre-line">
+          {home.authorBlurb}
         </section>
       )}
     </>

@@ -121,6 +121,7 @@ export const prefetchGuideBuilder = createServerFn({ method: 'GET' })
 // layer has its own cache story (in-process agent-cms GraphQL).
 
 import { getCookie } from '@tanstack/react-start/server'
+import type { Editorial, Venue } from './cms.js'
 
 /** / — home: homePage singleton + guides + editorials. */
 export const prefetchPublicHome = createServerFn({ method: 'GET' }).handler(async () => {
@@ -182,3 +183,52 @@ export const prefetchPublicSitemap = createServerFn({ method: 'GET' }).handler(a
     changelog: changelog.entries.map((e) => e.id),
   }
 })
+
+/** /places/$slug — venue context + nearby free spots + related posts. */
+export const prefetchPublicPlace = createServerFn({ method: 'GET' })
+  .validator((data: { slug: string }) => data)
+  .handler(async ({ data }) => {
+    const cms = await import('./cms.js')
+    const { parseVenueParam } = await import('./venue-url.js')
+    const { guides, editorials } = await cms.getGuidesAndEditorials()
+    const id = parseVenueParam(data.slug)
+
+    let venue: (Venue & { sectionTitle: string; guideSlug: string; guideTitle: string; guidePrice: number }) | null = null
+    let guideVenueCount = 0
+    let guideSectionNames: string[] = []
+    const allVenues: (Venue & { sectionTitle: string; guideSlug: string })[] = []
+
+    for (const guide of guides) {
+      let venueCountForGuide = 0
+      const sectionNames: string[] = []
+      for (const block of guide.content) {
+        if (block.blockType !== 'section') continue
+        sectionNames.push(block.title)
+        venueCountForGuide += block.venues.length
+        for (const v of block.venues) {
+          const ctx = { ...v, sectionTitle: block.title, guideSlug: guide.slug }
+          allVenues.push(ctx)
+          if (v.id === id) {
+            venue = { ...v, sectionTitle: block.title, guideSlug: guide.slug, guideTitle: guide.title, guidePrice: guide.price }
+            guideVenueCount = venueCountForGuide
+            guideSectionNames = sectionNames
+          }
+        }
+      }
+    }
+
+    const nearby = venue
+      ? allVenues
+          .filter((av) => av.id !== venue.id && av.guideSlug === venue.guideSlug && av.sectionTitle === venue.sectionTitle && av.isFree)
+          .slice(0, 3)
+      : []
+    const venueNameLower = venue?.name.toLowerCase().replace(/[!?]/g, '') ?? ''
+    const relatedPosts = editorials
+      .filter((p) => {
+        const text = `${p.title} ${p.excerpt ?? ''}`.toLowerCase()
+        return text.includes(venueNameLower) || venueNameLower.split(' ').every((w) => w.length > 3 && text.includes(w))
+      })
+      .slice(0, 3)
+
+    return { venue, guideVenueCount, guideSectionNames, nearby, relatedPosts }
+  })

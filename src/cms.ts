@@ -1,14 +1,17 @@
 /**
- * agent-cms in-process client for the public consumer site. The SAME worker
- * that serves /app (internal SPA) and /g (hotel guides) also renders the
- * public site: agent-cms runs in-process against the shared D1, so the
- * consumer content (content_guide + block_* DAST trees) is read exactly as
- * the legacy site read it — no reimplementation of the content model.
- * Queries are plain GraphQL strings with hand-typed shapes (the legacy used
- * gql.tada; the codegen step adds nothing here).
+ * agent-cms in-process client for the public consumer site, typed by
+ * gql.tada against the live introspected schema (lib/graphql-schema.graphql).
+ * The SAME worker that serves /app (internal SPA) and /g (hotel guides)
+ * renders the public site: agent-cms runs in-process against the shared D1.
+ * Queries are validated against the schema at typecheck — drift from the CMS
+ * model surfaces as a tsc error, not a runtime 500.
  */
 import { createCMSHandler } from 'agent-cms'
 import { env } from 'cloudflare:workers'
+import { print } from 'graphql'
+import type { Json } from './cms-types.js'
+import type { FragmentOf, ResultOf } from './graphql.js'
+import { graphql } from './graphql.js'
 
 let cached: ReturnType<typeof createCMSHandler> | null = null
 
@@ -38,33 +41,19 @@ export function getCmsHandler() {
 }
 
 const execute = async <T>(
-  query: string,
+  document: Parameters<typeof print>[0],
   variables?: Record<string, unknown>,
 ): Promise<T> => {
-  const result = await getCmsHandler().execute(query, variables)
+  const result = await getCmsHandler().execute(print(document), variables)
   if (result.errors?.length) {
     throw new Error(`CMS GraphQL: ${result.errors.map((e) => e.message).join(', ')}`)
   }
   return result.data as T
 }
 
-// The blocks are inline in the GraphQL response; a fragment is just a
-// repeated inline selection here.
-const GUIDE_BLOCKS = `
-  content {
-    value
-    blocks {
-      __typename
-      ... on SectionRecord {
-        id title
-        venues { value blocks { __typename ...VenueFields } }
-      }
-      ... on TextBlockRecord { id heading isFree content { value } }
-    }
-  }
-`
+// ============ FRAGMENTS ============
 
-const VENUE_FRAGMENT = `
+const VenueFragment = graphql(`
   fragment VenueFields on VenueRecord @_unmask {
     id name address description note time isFree
     location { latitude longitude }
@@ -72,98 +61,170 @@ const VENUE_FRAGMENT = `
     bestOfAward grapevineUrl
     image { id url alt width height }
   }
-`
+`)
 
-const GUIDE_FIELDS = `
-  id title slug subtitle description price
-  gumroadProductId gumroadUrl googleMapsUrl
-  intro { value }
-`
-
-const ALL_GUIDES = `
-  allGuides(orderBy: [price_DESC]) {
-    ${GUIDE_FIELDS}
-    ${GUIDE_BLOCKS}
+const ImageBlockFragment = graphql(`
+  fragment ImageBlockFields on ImageBlockRecord @_unmask {
+    id image { id url alt width height } caption
   }
-`
+`)
 
-const ALL_EDITORIALS = `
-  allEditorials(orderBy: [date_DESC]) {
+const GuideContentFragment = graphql(
+  `
+  fragment GuideContent on GuideRecord @_unmask {
+    intro { value }
+    content {
+      value
+      blocks {
+        __typename
+        ... on SectionRecord {
+          id title
+          venues { value blocks { __typename ...VenueFields } }
+        }
+        ... on TextBlockRecord { id heading isFree content { value } }
+      }
+    }
+  }
+`,
+  [VenueFragment],
+)
+
+const GuideFieldsFragment = graphql(`
+  fragment GuideFields on GuideRecord @_unmask {
+    id title slug subtitle description price
+    gumroadProductId gumroadUrl googleMapsUrl
+  }
+`)
+
+const EditorialFieldsFragment = graphql(
+  `
+  fragment EditorialFields on EditorialRecord @_unmask {
     id title slug excerpt date
     image { id url alt width height }
     content { value blocks { __typename ...ImageBlockFields } }
   }
-`
+`,
+  [ImageBlockFragment],
+)
 
-export const HOME_PAGE_QUERY = `
+// ============ QUERIES ============
+
+const HomePageDataQuery = graphql(
+  `
   query HomePageData {
     homePage {
       id headline headlineEmphasis subtext
       bundleTitle bundleDescription bundlePrice bundleGumroadUrl
       authorBlurb
     }
-    ${ALL_GUIDES}
-    ${ALL_EDITORIALS}
+    allGuides(orderBy: [price_DESC]) {
+      ...GuideFields
+      ...GuideContent
+    }
+    allEditorials(orderBy: [date_DESC]) {
+      ...EditorialFields
+    }
   }
-`
+`,
+  [GuideFieldsFragment, GuideContentFragment, EditorialFieldsFragment],
+)
 
-export const GUIDE_PAGE_QUERY = `
+const GuidePageDataQuery = graphql(
+  `
   query GuidePageData($slug: String!) {
     guide(filter: { slug: { eq: $slug } }) {
-      ${GUIDE_FIELDS}
-      ${GUIDE_BLOCKS}
+      ...GuideFields
+      ...GuideContent
     }
-    ${ALL_GUIDES}
-    ${ALL_EDITORIALS}
+    allGuides(orderBy: [price_DESC]) {
+      ...GuideFields
+      ...GuideContent
+    }
+    allEditorials(orderBy: [date_DESC]) {
+      ...EditorialFields
+    }
   }
-`
+`,
+  [GuideFieldsFragment, GuideContentFragment, EditorialFieldsFragment],
+)
 
-export const BLOG_PAGE_QUERY = `
+const BlogPageDataQuery = graphql(
+  `
   query BlogPageData($slug: String!) {
     editorial(filter: { slug: { eq: $slug } }) {
-      id title slug excerpt date
-      image { id url alt width height }
-      content { value blocks { __typename ...ImageBlockFields } }
+      ...EditorialFields
     }
-    ${ALL_GUIDES}
-    ${ALL_EDITORIALS}
+    allGuides(orderBy: [price_DESC]) {
+      ...GuideFields
+      ...GuideContent
+    }
+    allEditorials(orderBy: [date_DESC]) {
+      ...EditorialFields
+    }
   }
-`
+`,
+  [GuideFieldsFragment, GuideContentFragment, EditorialFieldsFragment],
+)
 
-export const CHANGELOG_PAGE_QUERY = `
+const ChangelogPageDataQuery = graphql(`
   query ChangelogPageData {
     allChangelogEntries(orderBy: [date_DESC]) {
       id date title description changeType
       guide { id title slug }
     }
-    siteSettings {
-      id changelogSubtitle
-    }
+    siteSettings { id changelogSubtitle }
   }
-`
+`)
 
-export const ABOUT_PAGE_QUERY = `
+const AboutPageDataQuery = graphql(
+  `
   query AboutPageData {
     aboutPage { id title metaDescription bio { value } }
-    ${ALL_GUIDES}
+    allGuides(orderBy: [price_DESC]) {
+      ...GuideFields
+      ...GuideContent
+    }
   }
-`
+`,
+  [GuideFieldsFragment, GuideContentFragment],
+)
 
-const QUERY_PREFIX = `${VENUE_FRAGMENT}
+const AllEditorialsQuery = graphql(
+  `
+  query AllEditorials {
+    allEditorials(orderBy: [date_DESC]) {
+      ...EditorialFields
+    }
+  }
+`,
+  [EditorialFieldsFragment],
+)
 
-fragment ImageBlockFields on ImageBlockRecord @_unmask {
-  id
-  image { id url alt width height }
-  caption
-}
-`
+const GuidesAndEditorialsQuery = graphql(
+  `
+  query GuidesAndEditorials {
+    allGuides(orderBy: [price_DESC]) {
+      ...GuideFields
+      ...GuideContent
+    }
+    allEditorials(orderBy: [date_DESC]) {
+      ...EditorialFields
+    }
+  }
+`,
+  [GuideFieldsFragment, GuideContentFragment, EditorialFieldsFragment],
+)
 
-const withFragments = (q: string) => `${QUERY_PREFIX}\n${q}`
+// ============ TYPES ============
 
-// ============ TYPES (mirror the legacy map functions) ============
-
-/** DAST trees are opaque JSON — this keeps the server-fn payloads serializable. */
-export type Json = string | number | boolean | null | Json[] | { [key: string]: Json }
+type RawGuide = NonNullable<ResultOf<typeof GuidePageDataQuery>['allGuides']>[number]
+type RawEditorial = NonNullable<ResultOf<typeof AllEditorialsQuery>['allEditorials']>[number]
+export type RawVenue = FragmentOf<typeof VenueFragment>
+export type Editorial = RawEditorial
+export type ChangelogEntry = NonNullable<ResultOf<typeof ChangelogPageDataQuery>['allChangelogEntries']>[number]
+export type HomePageData = NonNullable<ResultOf<typeof HomePageDataQuery>['homePage']>
+export type AboutPageData = NonNullable<ResultOf<typeof AboutPageDataQuery>['aboutPage']>
+export type SiteSettingsData = NonNullable<ResultOf<typeof ChangelogPageDataQuery>['siteSettings']>
 
 export interface CmsImage {
   id: string
@@ -194,13 +255,7 @@ export interface Venue {
 }
 
 export type SectionBlock = { blockType: 'section'; id: string; title: string; venues: Venue[] }
-export type TextBlock = {
-  blockType: 'textBlock'
-  id: string
-  heading: string | null
-  content: Json
-  isFree: boolean
-}
+export type TextBlock = { blockType: 'textBlock'; id: string; heading: string | null; content: Json; isFree: boolean }
 export type ContentBlock = SectionBlock | TextBlock
 
 export interface Guide {
@@ -217,95 +272,67 @@ export interface Guide {
   content: ContentBlock[]
 }
 
-export interface Editorial {
-  id: string
-  title: string
-  slug: string
-  excerpt?: string | null
-  date?: string | null
-  image?: CmsImage | null
-  content?: Json
-}
-
-export interface ChangelogEntry {
-  id: string
-  date?: string | null
-  title: string
-  description?: string | null
-  changeType?: string | null
-  guide?: { id: string; title?: string | null; slug?: string | null } | null
-}
-
-export interface HomePageData {
-  id: string
-  headline?: string | null
-  headlineEmphasis?: string | null
-  subtext?: string | null
-  bundleTitle?: string | null
-  bundleDescription?: string | null
-  bundlePrice?: number | null
-  bundleGumroadUrl?: string | null
-  authorBlurb?: string | null
-}
-
 // ============ MAPPERS ============
 
-const mapVenue = (v: Record<string, unknown>): Venue => ({
-  blockType: 'venue',
-  id: String(v.id),
-  name: (v.name as string) ?? '',
-  address: (v.address as string) ?? '',
-  description: (v.description as string) ?? '',
-  note: (v.note as string) ?? undefined,
-  time: (v.time as string) ?? undefined,
-  isFree: Boolean(v.isFree),
-  latitude: (v.location as { latitude?: number } | null)?.latitude ?? undefined,
-  longitude: (v.location as { longitude?: number } | null)?.longitude ?? undefined,
-  openingHours: (v.openingHours as string) ?? undefined,
-  googleMapsUrl: (v.googleMapsUrl as string) ?? undefined,
-  website: (v.website as string) ?? undefined,
-  phone: (v.phone as string) ?? undefined,
-  bestOfAward: (v.bestOfAward as string) ?? undefined,
-  grapevineUrl: (v.grapevineUrl as string) ?? undefined,
-  image: v.image ? ({ ...(v.image as CmsImage), alt: (v.image as CmsImage).alt ?? undefined } as CmsImage) : undefined,
-})
+const mapVenue = (v: RawVenue): Venue => {
+  return {
+    blockType: 'venue',
+    id: v.id,
+    name: v.name ?? '',
+    address: v.address ?? '',
+    description: v.description ?? '',
+    note: v.note ?? undefined,
+    time: v.time ?? undefined,
+    isFree: v.isFree ?? false,
+    latitude: v.location?.latitude ?? undefined,
+    longitude: v.location?.longitude ?? undefined,
+    openingHours: v.openingHours ?? undefined,
+    googleMapsUrl: v.googleMapsUrl ?? undefined,
+    website: v.website ?? undefined,
+    phone: v.phone ?? undefined,
+    bestOfAward: v.bestOfAward ?? undefined,
+    grapevineUrl: v.grapevineUrl ?? undefined,
+    image: v.image ? { ...v.image, alt: v.image.alt ?? undefined } : undefined,
+  }
+}
 
-const mapGuide = (raw: Record<string, unknown>): Guide => ({
-  id: String(raw.id),
-  title: (raw.title as string) ?? '',
-  slug: (raw.slug as string) ?? '',
-  subtitle: (raw.subtitle as string) ?? '',
-  description: (raw.description as string) ?? '',
-  price: (raw.price as number) ?? 0,
-  gumroadProductId: (raw.gumroadProductId as string) ?? '',
-  gumroadUrl: (raw.gumroadUrl as string) ?? '',
-  googleMapsUrl: (raw.googleMapsUrl as string) ?? null,
-  intro: raw.intro as Json | undefined,
-  content: mapContentBlocks(raw.content as { blocks?: unknown[] } | null | undefined),
-})
+const mapGuide = (raw: RawGuide): Guide => {
+  return {
+    id: raw.id,
+    title: raw.title ?? '',
+    slug: raw.slug ?? '',
+    subtitle: raw.subtitle ?? '',
+    description: raw.description ?? '',
+    price: raw.price ?? 0,
+    gumroadProductId: raw.gumroadProductId ?? '',
+    gumroadUrl: raw.gumroadUrl ?? '',
+    googleMapsUrl: raw.googleMapsUrl ?? null,
+    intro: raw.intro?.value,
+    content: mapContentBlocks(raw.content),
+  }
+}
 
-function mapContentBlocks(content: { blocks?: unknown[] } | null | undefined): ContentBlock[] {
+function mapContentBlocks(content: RawGuide['content']): ContentBlock[] {
   if (!content?.blocks) return []
   return content.blocks
     .map((b): ContentBlock | null => {
-      const block = b as Record<string, unknown>
-      if (block.__typename === 'SectionRecord') {
+      if (b.__typename === 'SectionRecord') {
         return {
           blockType: 'section',
-          id: String(block.id),
-          title: (block.title as string) ?? '',
-          venues: ((block.venues as { blocks?: unknown[] })?.blocks ?? [])
-            .filter((v) => (v as Record<string, unknown>).__typename === 'VenueRecord')
-            .map((v) => mapVenue(v as Record<string, unknown>)),
+          id: b.id,
+          title: b.title ?? '',
+          venues: (b.venues?.blocks ?? [])
+            .filter((v) => v.__typename === 'VenueRecord')
+            .map((v) => mapVenue(v as RawVenue)),
         }
       }
-      if (block.__typename === 'TextBlockRecord') {
+      if (b.__typename === 'TextBlockRecord') {
         return {
           blockType: 'textBlock',
-          id: String(block.id),
-          heading: (block.heading as string | null) ?? null,
-          content: block.content as Json,
-          isFree: Boolean(block.isFree),
+          id: b.id,
+          heading: b.heading ?? null,
+          content: b.content?.value ?? null,
+          isFree: b.isFree ?? false,
         }
       }
       return null
@@ -315,56 +342,58 @@ function mapContentBlocks(content: { blocks?: unknown[] } | null | undefined): C
 
 // ============ PAGE FETCHERS ============
 
-export const getHomePageData = () =>
-  execute<{
-    homePage: HomePageData | null
-    allGuides: Record<string, unknown>[]
-    allEditorials: Editorial[]
-  }>(withFragments(HOME_PAGE_QUERY)).then((d) => ({
-    home: d.homePage!,
-    guides: d.allGuides.map(mapGuide),
-    editorials: d.allEditorials,
-  }))
+export const getHomePageData = async () => {
+  const data = await execute<ResultOf<typeof HomePageDataQuery>>(HomePageDataQuery)
+  return {
+    home: data.homePage!,
+    guides: data.allGuides.map(mapGuide),
+    editorials: data.allEditorials,
+  }
+}
 
-export const getGuidePageData = (slug: string) =>
-  execute<{
-    guide: Record<string, unknown> | null
-    allGuides: Record<string, unknown>[]
-    allEditorials: Editorial[]
-  }>(withFragments(GUIDE_PAGE_QUERY), { slug }).then((d) => ({
-    guide: d.guide ? mapGuide(d.guide) : null,
-    allGuides: d.allGuides.map(mapGuide),
-    editorials: d.allEditorials,
-  }))
+export const getGuidePageData = async (slug: string) => {
+  const data = await execute<ResultOf<typeof GuidePageDataQuery>>(GuidePageDataQuery, { slug })
+  return {
+    guide: data.guide ? mapGuide(data.guide) : null,
+    allGuides: data.allGuides.map(mapGuide),
+    editorials: data.allEditorials,
+  }
+}
 
-export const getBlogPageData = (slug: string) =>
-  execute<{
-    editorial: Editorial | null
-    allGuides: Record<string, unknown>[]
-    allEditorials: Editorial[]
-  }>(withFragments(BLOG_PAGE_QUERY), { slug }).then((d) => ({
-    post: d.editorial,
-    allGuides: d.allGuides.map(mapGuide),
-    allEditorials: d.allEditorials,
-  }))
+export const getBlogPageData = async (slug: string) => {
+  const data = await execute<ResultOf<typeof BlogPageDataQuery>>(BlogPageDataQuery, { slug })
+  return {
+    post: data.editorial ?? null,
+    allGuides: data.allGuides.map(mapGuide),
+    allEditorials: data.allEditorials,
+  }
+}
 
-export const getChangelogPageData = () =>
-  execute<{ allChangelogEntries: ChangelogEntry[]; siteSettings: { changelogSubtitle?: string | null } | null }>(
-    withFragments(CHANGELOG_PAGE_QUERY),
-  ).then((d) => ({
-    entries: d.allChangelogEntries,
-    changelogSubtitle: d.siteSettings?.changelogSubtitle ?? '',
-  }))
+export const getChangelogPageData = async () => {
+  const data = await execute<ResultOf<typeof ChangelogPageDataQuery>>(ChangelogPageDataQuery)
+  return {
+    entries: data.allChangelogEntries,
+    changelogSubtitle: data.siteSettings?.changelogSubtitle ?? '',
+  }
+}
 
-export const getAboutPageData = () =>
-  execute<{ aboutPage: { id: string; title?: string | null; metaDescription?: string | null; bio?: Json } | null; allGuides: Record<string, unknown>[] }>(
-    withFragments(ABOUT_PAGE_QUERY),
-  ).then((d) => ({
-    about: d.aboutPage!,
-    guides: d.allGuides.map(mapGuide),
-  }))
+export const getAboutPageData = async () => {
+  const data = await execute<ResultOf<typeof AboutPageDataQuery>>(AboutPageDataQuery)
+  return {
+    about: data.aboutPage!,
+    guides: data.allGuides.map(mapGuide),
+  }
+}
 
-export const getAllEditorials = () =>
-  execute<{ allEditorials: Editorial[] }>(withFragments(`query AllEditorials { ${ALL_EDITORIALS} }`)).then(
-    (d) => d.allEditorials,
-  )
+export const getAllEditorials = async () => {
+  const data = await execute<ResultOf<typeof AllEditorialsQuery>>(AllEditorialsQuery)
+  return data.allEditorials
+}
+
+export const getGuidesAndEditorials = async () => {
+  const data = await execute<ResultOf<typeof GuidesAndEditorialsQuery>>(GuidesAndEditorialsQuery)
+  return {
+    guides: data.allGuides.map(mapGuide),
+    editorials: data.allEditorials,
+  }
+}

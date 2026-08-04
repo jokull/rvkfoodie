@@ -31,6 +31,7 @@ import { Route as GSlugRouteImport } from './routes/g.$slug'
 import { Route as PublicBlogIndexRouteImport } from './routes/_public.blog.index'
 import { Route as PublicBlogSlugRouteImport } from './routes/_public.blog.$slug'
 import { Route as PublicGuidesSlugRouteImport } from './routes/_public.guides.$slug'
+import { Route as PublicPlacesSlugRouteImport } from './routes/_public.places.$slug'
 import { Route as ApiAuthSplatRouteImport } from './routes/api.auth.$'
 import { Route as AppCrmBusinessIdRouteImport } from './routes/app.crm_.$businessId'
 import { Route as AppGuidesGuideIdRouteImport } from './routes/app.guides_.$guideId'
@@ -145,6 +146,11 @@ const PublicGuidesSlugRoute = PublicGuidesSlugRouteImport.update({
   path: '/guides/$slug',
   getParentRoute: () => PublicRoute,
 } as any)
+const PublicPlacesSlugRoute = PublicPlacesSlugRouteImport.update({
+  id: '/places/$slug',
+  path: '/places/$slug',
+  getParentRoute: () => PublicRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -187,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AppIndexRoute
   '/blog/$slug': typeof PublicBlogSlugRoute
   '/guides/$slug': typeof PublicGuidesSlugRoute
+  '/places/$slug': typeof PublicPlacesSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/crm/$businessId': typeof AppCrmBusinessIdRoute
   '/app/guides/$guideId': typeof AppGuidesGuideIdRoute
@@ -213,6 +220,7 @@ export interface FileRoutesByTo {
   '/app': typeof AppIndexRoute
   '/blog/$slug': typeof PublicBlogSlugRoute
   '/guides/$slug': typeof PublicGuidesSlugRoute
+  '/places/$slug': typeof PublicPlacesSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/crm/$businessId': typeof AppCrmBusinessIdRoute
   '/app/guides/$guideId': typeof AppGuidesGuideIdRoute
@@ -242,6 +250,7 @@ export interface FileRoutesById {
   '/app/': typeof AppIndexRoute
   '/_public/blog/$slug': typeof PublicBlogSlugRoute
   '/_public/guides/$slug': typeof PublicGuidesSlugRoute
+  '/_public/places/$slug': typeof PublicPlacesSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/crm_/$businessId': typeof AppCrmBusinessIdRoute
   '/app/guides_/$guideId': typeof AppGuidesGuideIdRoute
@@ -271,6 +280,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/blog/$slug'
     | '/guides/$slug'
+    | '/places/$slug'
     | '/api/auth/$'
     | '/app/crm/$businessId'
     | '/app/guides/$guideId'
@@ -297,6 +307,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/blog/$slug'
     | '/guides/$slug'
+    | '/places/$slug'
     | '/api/auth/$'
     | '/app/crm/$businessId'
     | '/app/guides/$guideId'
@@ -325,6 +336,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/_public/blog/$slug'
     | '/_public/guides/$slug'
+    | '/_public/places/$slug'
     | '/api/auth/$'
     | '/app/crm_/$businessId'
     | '/app/guides_/$guideId'
@@ -503,6 +515,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PublicGuidesSlugRouteImport
       parentRoute: typeof PublicRoute
     }
+    '/_public/places/$slug': {
+      id: '/_public/places/$slug'
+      path: '/places/$slug'
+      fullPath: '/places/$slug'
+      preLoaderRoute: typeof PublicPlacesSlugRouteImport
+      parentRoute: typeof PublicRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -540,6 +559,7 @@ interface PublicRouteChildren {
   PublicIndexRoute: typeof PublicIndexRoute
   PublicBlogSlugRoute: typeof PublicBlogSlugRoute
   PublicGuidesSlugRoute: typeof PublicGuidesSlugRoute
+  PublicPlacesSlugRoute: typeof PublicPlacesSlugRoute
   PublicBlogIndexRoute: typeof PublicBlogIndexRoute
 }
 
@@ -549,6 +569,7 @@ const PublicRouteChildren: PublicRouteChildren = {
   PublicIndexRoute: PublicIndexRoute,
   PublicBlogSlugRoute: PublicBlogSlugRoute,
   PublicGuidesSlugRoute: PublicGuidesSlugRoute,
+  PublicPlacesSlugRoute: PublicPlacesSlugRoute,
   PublicBlogIndexRoute: PublicBlogIndexRoute,
 }
 

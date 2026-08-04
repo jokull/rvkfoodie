@@ -30,6 +30,8 @@
     "datocms-structured-text-to-html-string": "^5.1.16",
     "drizzle-orm": "1.0.0-rc.4",
     "fractional-indexing": "^4.0.0",
+    "gql.tada": "^1.11.3",
+    "graphql": "^17.0.2",
     "leaflet": "^1.9.4",
     "qrcode": "^1.5.4",
     "react": "~19.2.4",
@@ -38,6 +40,7 @@
     "valibot": "^1.4.2"
   },
   "devDependencies": {
+    "@0no-co/graphqlsp": "^1.17.3",
     "@cloudflare/vite-plugin": "^1.50.0",
     "@tailwindcss/vite": "^4.2.2",
     "@types/leaflet": "^1.9.21",

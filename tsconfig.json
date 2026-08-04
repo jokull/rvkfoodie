@@ -1,12 +1,19 @@
 {
-  "include": ["**/*.ts", "**/*.tsx"],
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ],
   "compilerOptions": {
     "strict": true,
     "esModuleInterop": true,
     "jsx": "react-jsx",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ES2022"
+    ],
     "isolatedModules": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
@@ -14,6 +21,16 @@
     "allowJs": true,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
-    "types": ["vite/client", "node"]
+    "types": [
+      "vite/client",
+      "node"
+    ],
+    "plugins": [
+      {
+        "name": "gql.tada/ts-plugin",
+        "schema": "./lib/graphql-schema.graphql",
+        "tadaOutputLocation": "./lib/graphql-env.d.ts"
+      }
+    ]
   }
 }

@@ -6,7 +6,7 @@
  * → 302 → this page re-renders with the session unlocked.
  */
 import { createFileRoute } from '@tanstack/react-router'
-import type { Guide } from '../cms.js'
+import type { Editorial, Guide } from '../cms.js'
 import { Paywall, VenueCard } from '../components/public.js'
 import { dastToHtml } from '../dast.js'
 import { prefetchPublicGuide } from '../ssr.js'
@@ -14,7 +14,7 @@ import { prefetchPublicGuide } from '../ssr.js'
 type GuidePagePayload = {
   guide: Guide | null
   allGuides: Guide[]
-  editorials: { id: string; title: string; slug: string; excerpt?: string | null }[]
+  editorials: Editorial[]
   unlockedProducts: string[]
   error?: string
   pending?: string
