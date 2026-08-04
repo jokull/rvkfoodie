@@ -5,6 +5,12 @@ import { createFileRoute } from '@tanstack/react-router'
 import { prefetchPublicChangelog } from '../ssr.js'
 
 export const Route = createFileRoute('/_public/changelog')({
+  head: () => ({
+    meta: [
+      { title: 'Changelog — Reykjavík Foodie' },
+      { property: 'og:type', content: 'website' },
+    ],
+  }),
   loader: () => prefetchPublicChangelog(),
   component: Changelog,
 })

@@ -3,11 +3,64 @@
  * image blocks, venues mentioned in the post, and other posts.
  */
 import { createFileRoute } from '@tanstack/react-router'
-import type { Guide } from '../cms.js'
+import type { Editorial, Guide } from '../cms.js'
 import { dastToHtml } from '../dast.js'
 import { prefetchPublicBlogPost } from '../ssr.js'
 
+type BlogPostPayload = {
+  post: Editorial | null
+  allGuides: Guide[]
+  allEditorials: Editorial[]
+}
+
 export const Route = createFileRoute('/_public/blog/$slug')({
+  head: ({ loaderData }) => {
+    const data = loaderData as BlogPostPayload | undefined
+    const post = data?.post
+    const title = post ? `${post.title} — Reykjavík Foodie` : 'Blog — Reykjavík Foodie'
+    const canonical = post?.slug ? `https://www.rvkfoodie.is/blog/${post.slug}` : undefined
+    const hero = post?.image?.url
+    return {
+      meta: [
+        { title },
+        ...(post?.excerpt ? [{ name: 'description', content: post.excerpt }] : []),
+        ...(canonical ? [{ rel: 'canonical', href: canonical }] : []),
+        ...(post?.title ? [{ property: 'og:title', content: post.title }] : []),
+        ...(post?.excerpt ? [{ property: 'og:description', content: post.excerpt }] : []),
+        { property: 'og:type', content: 'article' },
+        ...(hero ? [{ property: 'og:image', content: hero }] : []),
+      ],
+      ...(post
+        ? {
+            scripts: [
+              {
+                type: 'application/ld+json',
+                children: JSON.stringify({
+                  '@context': 'https://schema.org',
+                  '@type': 'Article',
+                  headline: post.title,
+                  description: post.excerpt,
+                  ...(post.date ? { datePublished: post.date } : {}),
+                  mainEntityOfPage: canonical,
+                  ...(hero ? { image: hero } : {}),
+                  author: {
+                    '@type': 'Person',
+                    name: 'Reykjavik Foodie',
+                    url: 'https://www.rvkfoodie.is/about',
+                  },
+                  publisher: {
+                    '@type': 'Organization',
+                    name: 'Reykjavik Foodie',
+                    url: 'https://www.rvkfoodie.is',
+                    logo: { '@type': 'ImageObject', url: 'https://www.rvkfoodie.is/logo.svg' },
+                  },
+                }),
+              },
+            ],
+          }
+        : {}),
+    }
+  },
   loader: ({ params }) => prefetchPublicBlogPost({ data: { slug: params.slug } }),
   component: BlogPost,
 })
@@ -64,7 +117,7 @@ function renderInlineNodes(nodes: ContentNode[]): React.ReactNode {
 }
 
 function BlogPost() {
-  const { post, allGuides } = Route.useLoaderData()
+  const { post, allGuides } = Route.useLoaderData() as BlogPostPayload
   if (!post) {
     return <p className="text-ink-light">This post is not available.</p>
   }

@@ -7,6 +7,21 @@ import { GuideCard } from '../components/public.js'
 import { prefetchPublicHome } from '../ssr.js'
 
 export const Route = createFileRoute('/_public/')({
+  head: () => ({
+    meta: [{ property: 'og:image', content: 'https://www.rvkfoodie.is/og-default.png' }],
+    scripts: [
+      {
+        type: 'application/ld+json',
+        children: JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'WebSite',
+          name: 'Reykjavík Foodie',
+          url: 'https://www.rvkfoodie.is',
+          description: 'Honest food guides for Reykjavík — written by a local, updated regularly.',
+        }),
+      },
+    ],
+  }),
   loader: () => prefetchPublicHome(),
   component: Home,
 })

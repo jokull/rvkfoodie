@@ -38,6 +38,9 @@ function PublicLayout() {
             Reykjavík Foodie
           </a>
           <div className="flex items-center gap-4 sm:gap-6 text-tiny">
+            <a href="/search" className="text-ink-light hover:text-blue transition-colors">
+              Search
+            </a>
             <a href="/about" className="text-ink-light hover:text-blue transition-colors">
               About
             </a>

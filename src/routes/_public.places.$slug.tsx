@@ -26,13 +26,51 @@ export const Route = createFileRoute('/_public/places/$slug')({
     const data = loaderData as PlacePayload | undefined
     const v = data?.venue
     if (!v) return { meta: [{ title: 'Reykjavík Foodie' }] }
+    const canonical = `https://www.rvkfoodie.is${venueUrl(v)}`
     return {
       meta: [
         { title: `${v.name} — Reykjavík Foodie` },
         ...(v.description ? [{ name: 'description', content: v.description.slice(0, 160) }] : []),
-        { rel: 'canonical', href: `https://www.rvkfoodie.is${venueUrl(v)}` },
+        { rel: 'canonical', href: canonical },
         { property: 'og:title', content: v.name },
+        { property: 'og:type', content: 'place' },
         ...(v.image?.url ? [{ property: 'og:image', content: v.image.url }] : []),
+      ],
+      scripts: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Restaurant',
+            name: v.name,
+            description: v.description,
+            url: canonical,
+            ...(v.image?.url ? { image: v.image.url } : {}),
+            ...(v.phone ? { telephone: v.phone } : {}),
+            ...(v.website ? { sameAs: v.website } : {}),
+            address: {
+              '@type': 'PostalAddress',
+              streetAddress: v.address,
+              addressLocality: 'Reykjavík',
+              addressCountry: 'IS',
+            },
+            ...(v.latitude && v.longitude
+              ? { geo: { '@type': 'GeoCoordinates', latitude: v.latitude, longitude: v.longitude } }
+              : {}),
+          }),
+        },
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.rvkfoodie.is/' },
+              { '@type': 'ListItem', position: 2, name: data?.venue?.guideTitle ?? v.name, item: data?.venue?.guideSlug ? `https://www.rvkfoodie.is/guides/${data.venue.guideSlug}` : canonical },
+              { '@type': 'ListItem', position: 3, name: v.name, item: canonical },
+            ],
+          }),
+        },
       ],
     }
   },

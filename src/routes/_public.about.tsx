@@ -6,6 +6,12 @@ import { dastToHtml } from '../dast.js'
 import { prefetchPublicAbout } from '../ssr.js'
 
 export const Route = createFileRoute('/_public/about')({
+  head: () => ({
+    meta: [
+      { title: 'About — Reykjavík Foodie' },
+      { property: 'og:type', content: 'website' },
+    ],
+  }),
   loader: () => prefetchPublicAbout(),
   component: About,
 })

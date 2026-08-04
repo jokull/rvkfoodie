@@ -6,3 +6,4 @@ dist/
 .dev.vars
 .DS_Store
 .tanstack
+PLAN.md

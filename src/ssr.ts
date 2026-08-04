@@ -173,14 +173,38 @@ export const prefetchPublicAbout = createServerFn({ method: 'GET' }).handler(asy
   return getAboutPageData()
 })
 
+/** /search — semantic + fallback substring search over guides/editorials/venues. */
+export const prefetchPublicSearch = createServerFn({ method: 'GET' })
+  .validator((data: { q: string }) => data)
+  .handler(async ({ data }) => {
+    const { searchContent } = await import('./cms.js')
+    return searchContent(data.q)
+  })
+
 /** /sitemap — guide + editorial URLs. */
 export const prefetchPublicSitemap = createServerFn({ method: 'GET' }).handler(async () => {
-  const { getChangelogPageData, getHomePageData } = await import('./cms.js')
-  const [home, changelog] = await Promise.all([getHomePageData(), getChangelogPageData()])
+  const [{ getChangelogPageData, getHomePageData, getGuidesAndEditorials }, { venueUrl }] = await Promise.all([
+    import('./cms.js'),
+    import('./venue-url.js'),
+  ])
+  const [home, changelog, { guides }] = await Promise.all([
+    getHomePageData(),
+    getChangelogPageData(),
+    getGuidesAndEditorials(),
+  ])
+  const placeUrls: string[] = []
+  for (const guide of guides) {
+    for (const block of guide.content) {
+      if (block.blockType === 'section') {
+        for (const venue of block.venues) placeUrls.push(venueUrl(venue))
+      }
+    }
+  }
   return {
     guides: home.guides.map((g) => g.slug),
     editorials: home.editorials.map((e) => e.slug),
     changelog: changelog.entries.map((e) => e.id),
+    places: [...new Set(placeUrls)],
   }
 })
 

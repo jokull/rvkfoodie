@@ -5,6 +5,13 @@ import { createFileRoute } from '@tanstack/react-router'
 import { prefetchPublicBlogList } from '../ssr.js'
 
 export const Route = createFileRoute('/_public/blog/')({
+  head: () => ({
+    meta: [
+      { title: 'Blog — Reykjavík Foodie' },
+      { name: 'description', content: 'Guides, round-ups and stories about eating well in Reykjavík.' },
+      { property: 'og:type', content: 'website' },
+    ],
+  }),
   loader: () => prefetchPublicBlogList(),
   component: BlogIndex,
 })

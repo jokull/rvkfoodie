@@ -15,6 +15,7 @@ import { Route as SitemapRouteImport } from './routes/sitemap'
 import { Route as PublicIndexRouteImport } from './routes/_public.index'
 import { Route as PublicAboutRouteImport } from './routes/_public.about'
 import { Route as PublicChangelogRouteImport } from './routes/_public.changelog'
+import { Route as PublicSearchRouteImport } from './routes/_public.search'
 import { Route as ApiCheckoutRouteImport } from './routes/api.checkout'
 import { Route as ApiClaimRouteImport } from './routes/api.claim'
 import { Route as ApiGumroadPingRouteImport } from './routes/api.gumroad-ping'
@@ -64,6 +65,11 @@ const PublicAboutRoute = PublicAboutRouteImport.update({
 const PublicChangelogRoute = PublicChangelogRouteImport.update({
   id: '/changelog',
   path: '/changelog',
+  getParentRoute: () => PublicRoute,
+} as any)
+const PublicSearchRoute = PublicSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
   getParentRoute: () => PublicRoute,
 } as any)
 const ApiCheckoutRoute = ApiCheckoutRouteImport.update({
@@ -178,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/sitemap': typeof SitemapRoute
   '/about': typeof PublicAboutRoute
   '/changelog': typeof PublicChangelogRoute
+  '/search': typeof PublicSearchRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/claim': typeof ApiClaimRoute
   '/api/gumroad-ping': typeof ApiGumroadPingRoute
@@ -204,6 +211,7 @@ export interface FileRoutesByTo {
   '/sitemap': typeof SitemapRoute
   '/about': typeof PublicAboutRoute
   '/changelog': typeof PublicChangelogRoute
+  '/search': typeof PublicSearchRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/claim': typeof ApiClaimRoute
   '/api/gumroad-ping': typeof ApiGumroadPingRoute
@@ -234,6 +242,7 @@ export interface FileRoutesById {
   '/sitemap': typeof SitemapRoute
   '/_public/about': typeof PublicAboutRoute
   '/_public/changelog': typeof PublicChangelogRoute
+  '/_public/search': typeof PublicSearchRoute
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/claim': typeof ApiClaimRoute
   '/api/gumroad-ping': typeof ApiGumroadPingRoute
@@ -265,6 +274,7 @@ export interface FileRouteTypes {
     | '/sitemap'
     | '/about'
     | '/changelog'
+    | '/search'
     | '/api/checkout'
     | '/api/claim'
     | '/api/gumroad-ping'
@@ -291,6 +301,7 @@ export interface FileRouteTypes {
     | '/sitemap'
     | '/about'
     | '/changelog'
+    | '/search'
     | '/api/checkout'
     | '/api/claim'
     | '/api/gumroad-ping'
@@ -320,6 +331,7 @@ export interface FileRouteTypes {
     | '/sitemap'
     | '/_public/about'
     | '/_public/changelog'
+    | '/_public/search'
     | '/api/checkout'
     | '/api/claim'
     | '/api/gumroad-ping'
@@ -401,6 +413,13 @@ declare module '@tanstack/react-router' {
       path: '/changelog'
       fullPath: '/changelog'
       preLoaderRoute: typeof PublicChangelogRouteImport
+      parentRoute: typeof PublicRoute
+    }
+    '/_public/search': {
+      id: '/_public/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof PublicSearchRouteImport
       parentRoute: typeof PublicRoute
     }
     '/api/checkout': {
@@ -556,6 +575,7 @@ declare module '@tanstack/react-router' {
 interface PublicRouteChildren {
   PublicAboutRoute: typeof PublicAboutRoute
   PublicChangelogRoute: typeof PublicChangelogRoute
+  PublicSearchRoute: typeof PublicSearchRoute
   PublicIndexRoute: typeof PublicIndexRoute
   PublicBlogSlugRoute: typeof PublicBlogSlugRoute
   PublicGuidesSlugRoute: typeof PublicGuidesSlugRoute
@@ -566,6 +586,7 @@ interface PublicRouteChildren {
 const PublicRouteChildren: PublicRouteChildren = {
   PublicAboutRoute: PublicAboutRoute,
   PublicChangelogRoute: PublicChangelogRoute,
+  PublicSearchRoute: PublicSearchRoute,
   PublicIndexRoute: PublicIndexRoute,
   PublicBlogSlugRoute: PublicBlogSlugRoute,
   PublicGuidesSlugRoute: PublicGuidesSlugRoute,

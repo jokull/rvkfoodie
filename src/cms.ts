@@ -12,6 +12,7 @@ import { print } from 'graphql'
 import type { Json } from './cms-types.js'
 import type { FragmentOf, ResultOf } from './graphql.js'
 import { graphql } from './graphql.js'
+import { venueUrl } from './venue-url.js'
 
 let cached: ReturnType<typeof createCMSHandler> | null = null
 
@@ -396,4 +397,104 @@ export const getGuidesAndEditorials = async () => {
     guides: data.allGuides.map(mapGuide),
     editorials: data.allEditorials,
   }
+}
+
+// ============ SEARCH ============
+
+/** One /search result row — a guide, a blog post, or a venue. */
+export type SearchResult = {
+  type: 'guide' | 'editorial' | 'venue'
+  title: string
+  subtitle: string
+  url: string
+  image?: string
+  badge?: string
+  score?: number
+}
+
+/** agent-cms semantic hits: the in-process /api/search response entry. */
+type SearchHit = { recordId: string; modelApiKey: string; rank: number; title: string | null; snippet: string }
+
+/**
+ * /search — semantic first (guides + editorials, via the in-process agent-cms
+ * Vectorize search), with a substring fallback when the index is unavailable
+ * (local dev), plus always-on substring venue matching (venues are not
+ * vector-indexed). Results dedupe by URL.
+ */
+export const searchContent = async (rawQuery: string): Promise<SearchResult[]> => {
+  const q = rawQuery.trim()
+  if (q.length < 2) return []
+  const lower = q.toLowerCase()
+
+  const { guides, editorials } = await getGuidesAndEditorials()
+  const guideById = new Map(guides.map((g) => [g.id, g]))
+  const editorialById = new Map(editorials.map((e) => [e.id, e]))
+  const venues: { venue: Venue; section: string; guide: Guide }[] = []
+  for (const guide of guides) {
+    for (const block of guide.content) {
+      if (block.blockType !== 'section') continue
+      for (const venue of block.venues) venues.push({ venue, section: block.title, guide })
+    }
+  }
+
+  const results: SearchResult[] = []
+
+  // 1. semantic search (guides + editorials) through agent-cms's own router
+  let semanticHits: SearchHit[] = []
+  try {
+    const res = await getCmsHandler().fetch(
+      new Request('http://internal/api/search', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ query: q, mode: 'semantic', first: 20 }),
+      }),
+    )
+    if (res.ok) {
+      const data = (await res.json()) as { results: SearchHit[] }
+      semanticHits = data.results ?? []
+    }
+  } catch {
+    // no vector index locally — fall through to substring matching
+  }
+
+  if (semanticHits.length > 0) {
+    for (const hit of semanticHits) {
+      if (hit.modelApiKey === 'guide') {
+        const g = guideById.get(hit.recordId)
+        if (g) results.push({ type: 'guide', title: g.title, subtitle: g.description, url: `/guides/${g.slug}`, score: hit.rank })
+      } else if (hit.modelApiKey === 'editorial') {
+        const e = editorialById.get(hit.recordId)
+        if (e) results.push({ type: 'editorial', title: e.title ?? '', subtitle: e.excerpt ?? '', url: `/blog/${e.slug}`, image: e.image?.url ?? undefined, score: hit.rank })
+      }
+    }
+  } else {
+    // fallback: substring match over editorials + guides
+    for (const e of editorials) {
+      const text = `${e.title ?? ''} ${e.excerpt ?? ''}`.toLowerCase()
+      if (text.includes(lower)) results.push({ type: 'editorial', title: e.title ?? '', subtitle: e.excerpt ?? '', url: `/blog/${e.slug}`, image: e.image?.url ?? undefined })
+    }
+    for (const g of guides) {
+      const text = `${g.title} ${g.subtitle} ${g.description}`.toLowerCase()
+      if (text.includes(lower)) results.push({ type: 'guide', title: g.title, subtitle: g.description, url: `/guides/${g.slug}` })
+    }
+  }
+
+  // 2. venues are never vector-indexed — substring match, always on
+  for (const { venue, section, guide } of venues) {
+    const text = `${venue.name} ${venue.address} ${venue.description} ${venue.bestOfAward ?? ''}`.toLowerCase()
+    if (text.includes(lower)) {
+      results.push({
+        type: 'venue',
+        title: venue.name,
+        subtitle: `${venue.address} · ${section} · ${guide.title}`,
+        url: venueUrl(venue),
+        image: venue.image?.url ?? undefined,
+        badge: venue.bestOfAward ?? undefined,
+      })
+    }
+  }
+
+  // 3. dedupe by URL (venues repeat across guides)
+  const seen = new Set<string>()
+  return results.filter((r) => (seen.has(r.url) ? false : (seen.add(r.url), true)))
 }

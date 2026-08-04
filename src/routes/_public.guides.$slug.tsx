@@ -33,16 +33,57 @@ export const Route = createFileRoute('/_public/guides/$slug')({
     const data = loaderData as GuidePagePayload | undefined
     const title = data?.guide ? `${data.guide.title} — Reykjavík Foodie` : 'Reykjavík Foodie'
     const description = data?.guide?.description
+    const g = data?.guide
+    const canonical = g?.slug ? `https://www.rvkfoodie.is/guides/${g.slug}` : undefined
+    const ogImage = g?.slug
+      ? `https://www.rvkfoodie.is/og-${g.slug}.jpg`
+      : undefined
+    const ogImageExists = ['bar-crawl', 'food-guide', 'golden-circle'].includes(g?.slug ?? '')
     return {
       meta: [
         { title },
         ...(description ? [{ name: 'description', content: description }] : []),
-        ...(data?.guide?.slug
-          ? [{ rel: 'canonical', href: `https://www.rvkfoodie.is/guides/${data.guide.slug}` }]
-          : []),
-        ...(data?.guide ? [{ property: 'og:title', content: data.guide.title }] : []),
+        ...(canonical ? [{ rel: 'canonical', href: canonical }] : []),
+        ...(g ? [{ property: 'og:title', content: g.title }] : []),
         ...(description ? [{ property: 'og:description', content: description }] : []),
+        { property: 'og:type', content: 'product' },
+        { property: 'og:image', content: ogImageExists ? ogImage : 'https://www.rvkfoodie.is/og-default.png' },
       ],
+      ...(g
+        ? {
+            scripts: [
+              {
+                type: 'application/ld+json',
+                children: JSON.stringify({
+                  '@context': 'https://schema.org',
+                  '@type': 'Product',
+                  name: g.title,
+                  description,
+                  url: canonical,
+                  ...(ogImageExists ? { image: ogImage } : {}),
+                  offers: {
+                    '@type': 'Offer',
+                    price: g.price,
+                    priceCurrency: 'ISK',
+                    availability: 'https://schema.org/InStock',
+                    url: g.gumroadUrl,
+                  },
+                }),
+              },
+              {
+                type: 'application/ld+json',
+                children: JSON.stringify({
+                  '@context': 'https://schema.org',
+                  '@type': 'BreadcrumbList',
+                  itemListElement: [
+                    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.rvkfoodie.is/' },
+                    { '@type': 'ListItem', position: 2, name: g.title, item: canonical },
+                  ],
+                }),
+              },
+            ],
+          }
+        : {}),
     }
   },
   loader: (ctx): Promise<GuidePagePayload> =>

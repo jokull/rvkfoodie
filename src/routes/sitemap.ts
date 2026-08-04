@@ -19,6 +19,7 @@ export const Route = createFileRoute('/sitemap')({
           `${ORIGIN}/about`,
           ...sitemap.guides.map((slug) => `${ORIGIN}/guides/${slug}`),
           ...sitemap.editorials.map((slug) => `${ORIGIN}/blog/${slug}`),
+          ...sitemap.places.map((path) => `${ORIGIN}${path}`),
         ]
         const unique = [...new Set(urls)]
         const xml = `<?xml version="1.0" encoding="UTF-8"?>
