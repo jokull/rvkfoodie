@@ -5,6 +5,22 @@
 import type { CmsImage, Guide, Venue } from '../cms.js'
 import { venueUrl } from '../venue-url.js'
 
+/**
+ * Cloudflare Image Resizing URLs for media.rvkfoodie.is (live R2 bucket).
+ * Non-bucket URLs pass through the src/srcSet helpers untouched.
+ */
+export const cdnImage = (url: string, width: number): string =>
+  url.replace(
+    /^(https?:\/\/media\.rvkfoodie\.is)\/?(.*)$/,
+    `$1/cdn-cgi/image/width=${width},fit=scale-down,format=webp/$2`,
+  )
+
+/** Responsive srcSet (webp via cdn-cgi) for a bucket URL; undefined otherwise. */
+export const imageSrcSet = (url: string, widths: number[]): string | undefined => {
+  if (!/^(https?:\/\/media\.rvkfoodie\.is)\//.test(url)) return undefined
+  return widths.map((w) => `${cdnImage(url, w)} ${w}w`).join(', ')
+}
+
 const ImageTag = ({ image, alt, sizes = '128px' }: { image?: CmsImage; alt: string; sizes?: string }) => {
   if (!image?.url) return null
   return (
