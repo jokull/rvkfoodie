@@ -371,3 +371,367 @@ export const guideEvents = sqliteTable(
     index('ge_event_idx').on(t.event),
   ],
 )
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Kysely storage types — snake_case, storage-faithful. The raw D1 column shape:
+// timestamps are integer milliseconds, JSON list columns are JSON text, and
+// booleans are 0/1 integers (the Drizzle schema above is the source of truth).
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type VenueTable = {
+  id: string
+  name: string
+  category: string
+  category_secondary: string | null
+  status: string
+  order_key: string
+  cuisine: string | null
+  price_level: number | null
+  tags: string
+  note: string | null
+  recommended_dishes: string
+  last_verified_at: number | null
+  confidence: number
+  source: string | null
+  address: string
+  lat: number | null
+  lon: number | null
+  google_places_id: string | null
+  dineout_id: string | null
+  website: string | null
+  phone: string | null
+  opening_hours: string | null
+  photos: string
+  created_at: number
+  updated_at: number
+}
+
+export type VenueAwardTable = {
+  id: string
+  venue_id: string
+  award_type: (typeof VENUE_AWARD_TYPES)[number]
+  title: string
+  url: string | null
+  created_at: number
+}
+
+export type VenueLifecycleEventTable = {
+  id: string
+  venue_id: string
+  type: string
+  started_at: number
+  ended_at: number | null
+  note: string | null
+  created_at: number
+}
+
+export type AuditLogTable = {
+  id: string
+  actor: string
+  action: string
+  entity_type: string
+  entity_id: string
+  before: string | null
+  after: string | null
+  at: number
+}
+
+export type BusinessTable = {
+  id: string
+  name: string
+  website: string | null
+  industry: string | null
+  notes: string | null
+  created_at: number
+  updated_at: number
+}
+
+export type HotelTable = {
+  id: string
+  business_id: string | null
+  name: string
+  address: string | null
+  lat: number | null
+  lon: number | null
+  room_count: number
+  website: string | null
+  notes: string | null
+  created_at: number
+  updated_at: number
+}
+
+export type ContactTable = {
+  id: string
+  business_id: string
+  hotel_id: string | null
+  first_name: string | null
+  last_name: string | null
+  email: string | null
+  phone: string | null
+  title: string | null
+  is_decision_maker: 0 | 1
+  notes: string | null
+  created_at: number
+  updated_at: number
+}
+
+export type DealTable = {
+  id: string
+  business_id: string
+  name: string
+  stage: string
+  price_per_room: number | null
+  annual_value: number | null
+  start_date: number | null
+  renewal_date: number | null
+  notes: string | null
+  created_at: number
+  updated_at: number
+}
+
+export type GuideTable = {
+  id: string
+  hotel_id: string
+  slug: string
+  status: string
+  radius_min: number
+  target_count: number
+  generated_at: number | null
+  last_digest_at: number | null
+  last_digest_venue_ids: string | null
+  created_at: number
+  updated_at: number
+}
+
+export type GuideVenueTable = {
+  id: string
+  guide_id: string
+  venue_id: string
+  status: string
+  order_key: string
+  override_text: string | null
+  pinned: 0 | 1
+  created_at: number
+  updated_at: number
+}
+
+export type GuideExcludeTable = {
+  id: string
+  guide_id: string
+  venue_id: string
+  created_at: number
+}
+
+export type GuideCaptureTable = {
+  id: string
+  guide_id: string
+  email: string
+  created_at: number
+}
+
+export type GuideEventTable = {
+  id: string
+  guide_id: string
+  event: string
+  venue_id: string | null
+  happened_at: number
+}
+
+// ─── Auth tables (better-auth kysely adapter) ───────────────────────────────
+// CamelCase keys: the adapter generates SQL from these type keys, and the
+// dedicated auth Kysely instance (db.ts) applies CamelCasePlugin to map them
+// to the snake_case D1 columns created by the Drizzle migrations.
+export type AuthUserTable = {
+  id: string
+  name: string
+  email: string
+  emailVerified: 0 | 1
+  image: string | null
+  createdAt: number
+  updatedAt: number
+}
+
+export type AuthSessionTable = {
+  id: string
+  expiresAt: number
+  token: string
+  createdAt: number
+  updatedAt: number
+  ipAddress: string | null
+  userAgent: string | null
+  userId: string
+}
+
+export type AuthAccountTable = {
+  id: string
+  accountId: string
+  providerId: string
+  userId: string
+  accessToken: string | null
+  refreshToken: string | null
+  idToken: string | null
+  accessTokenExpiresAt: number | null
+  refreshTokenExpiresAt: number | null
+  scope: string | null
+  password: string | null
+  createdAt: number
+  updatedAt: number
+}
+
+export type AuthVerificationTable = {
+  id: string
+  identifier: string
+  value: string
+  expiresAt: number
+  createdAt: number
+  updatedAt: number
+}
+
+/** The auth-facing database shape (camelCase; CamelCasePlugin on the instance). */
+export type AuthDB = {
+  user: AuthUserTable
+  session: AuthSessionTable
+  account: AuthAccountTable
+  verification: AuthVerificationTable
+}
+
+export type DB = {
+  venues: VenueTable
+  venue_awards: VenueAwardTable
+  venue_lifecycle_events: VenueLifecycleEventTable
+  audit_log: AuditLogTable
+  businesses: BusinessTable
+  hotels: HotelTable
+  contacts: ContactTable
+  deals: DealTable
+  guides: GuideTable
+  guide_venues: GuideVenueTable
+  guide_excludes: GuideExcludeTable
+  guide_captures: GuideCaptureTable
+  guide_events: GuideEventTable
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Stored (decoded) shapes — the camelCase, model-facing shapes `decodeX` in
+// db.ts produces. Timestamps are Date, JSON columns are arrays, 0/1 booleans
+// are boolean. These are what models.ts `$satisfies` checks against.
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type StoredVenue = {
+  id: string
+  name: string
+  category: string
+  categorySecondary: string | null
+  status: string
+  orderKey: string
+  cuisine: string | null
+  priceLevel: number | null
+  tags: string[]
+  note: string | null
+  recommendedDishes: string[]
+  lastVerifiedAt: Date | null
+  confidence: number
+  source: string | null
+  address: string
+  lat: number | null
+  lon: number | null
+  googlePlacesId: string | null
+  dineoutId: string | null
+  website: string | null
+  phone: string | null
+  openingHours: string | null
+  photos: string[]
+  createdAt: Date
+}
+
+export type StoredVenueAward = {
+  id: string
+  venueId: string
+  awardType: (typeof VENUE_AWARD_TYPES)[number]
+  title: string
+  url: string | null
+  createdAt: Date
+}
+
+export type StoredLifecycleEvent = {
+  id: string
+  venueId: string
+  type: string
+  startedAt: Date
+  endedAt: Date | null
+  note: string | null
+}
+
+export type StoredAuditEntry = {
+  id: string
+  actor: string
+  action: string
+  entityType: string
+  entityId: string
+  before: string | null
+  after: string | null
+  at: Date
+}
+
+export type StoredBusiness = {
+  id: string
+  name: string
+  website: string | null
+  industry: string | null
+  notes: string | null
+}
+
+export type StoredHotel = {
+  id: string
+  businessId: string | null
+  name: string
+  address: string | null
+  lat: number | null
+  lon: number | null
+  roomCount: number
+  website: string | null
+}
+
+export type StoredContact = {
+  id: string
+  businessId: string
+  hotelId: string | null
+  firstName: string | null
+  lastName: string | null
+  email: string | null
+  phone: string | null
+  title: string | null
+  isDecisionMaker: boolean
+}
+
+export type StoredDeal = {
+  id: string
+  businessId: string
+  name: string
+  stage: string
+  pricePerRoom: number | null
+  annualValue: number | null
+  startDate: Date | null
+  renewalDate: Date | null
+  notes: string | null
+}
+
+export type StoredGuide = {
+  id: string
+  hotelId: string
+  slug: string
+  status: string
+  radiusMin: number
+  targetCount: number
+  generatedAt: Date | null
+}
+
+export type StoredGuideVenue = {
+  id: string
+  guideId: string
+  venueId: string
+  status: string
+  orderKey: string
+  overrideText: string | null
+  pinned: boolean
+}

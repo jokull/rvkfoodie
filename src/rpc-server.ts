@@ -1,17 +1,41 @@
 /**
  * SERVER-ONLY: context shape, handlers, router, and the fetch-handler mount.
- * Closes over the Drizzle driver. Nothing in the browser graph may reach it —
- * the only importers are the `/api/rpc` server route and the createServerFn
- * prefetchers in ssr.ts, both of which Start strips from the client build.
+ * Closes over the Kysely driver (wrapped with db-result's kyselyTryDb so every
+ * query resolves a Result instead of throwing). Nothing in the browser graph
+ * may reach it — the only importers are the `/api/rpc` server route and the
+ * createServerFn prefetchers in ssr.ts, both of which Start strips from the
+ * client build.
+ *
+ * The three-outcome model (per blog): handlers fold the db constraint tags
+ * they know into declared errors, return happy paths, and let everything else
+ * fall through as a thrown DbError that the framework sanitizes to
+ * `server/internal`.
  */
 import { createId } from '@paralleldrive/cuid2'
 import { env } from 'cloudflare:workers'
 import { EmailMessage } from 'cloudflare:email'
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, ne, or, sum } from 'drizzle-orm'
 import { generateKeyBetween } from 'fractional-indexing'
-import { err, matchError, ok, pickErrors } from 'result-rpc'
-import { tryDb } from 'result-rpc/db'
+import { err, ok, pickErrors } from 'result-rpc'
+import { UniqueViolation, ForeignKeyViolation } from 'db-result'
+import { tryDb } from 'db-result/d1'
 import { createFetchHandler, serverRpc } from 'result-rpc/server'
+import {
+  db,
+  decodeAuditEntry,
+  decodeBusiness,
+  decodeContact,
+  decodeDeal,
+  decodeGuide,
+  decodeGuideVenue,
+  decodeHotel,
+  decodeLifecycleEvent,
+  decodeVenue,
+  decodeVenueAward,
+  epochMs,
+  type Db,
+} from './db.js'
+import type { StoredVenue } from './schema.js'
+import { VENUE_AWARD_TYPES } from './schema.js'
 import {
   addBusinessContract,
   addContactContract,
@@ -56,27 +80,12 @@ import {
   guideBuilderContract,
   digestContract,
 } from './contract.js'
-import {
-  auditLog,
-  businesses,
-  contacts,
-  db,
-  deals,
-  guideCaptures,
-  guideEvents,
-  guideExcludes,
-  guideVenues,
-  guides,
-  hotels,
-  venueAwards,
-  venueLifecycleEvents,
-  venues,
-  type Db,
-} from './db.js'
 import { draftItinerary } from './guide-gen.js'
-import { VENUE_AWARD_TYPES } from './schema.js'
 import { auth } from './auth.js'
-import { authErrors, guideVenueErrors } from './errors.js'
+import { authErrors } from './errors.js'
+
+const toJson = (v: unknown): string => JSON.stringify(v)
+const toBit = (b: boolean): 0 | 1 => (b ? 1 : 0)
 
 export interface AppContext {
   db: Db
@@ -91,146 +100,36 @@ const requireStaff = server
   .middleware()
   .errors({ ...pickErrors(authErrors, 'unauthorized') })
   .use(async ({ context, errors, next }) => {
-    if (!context.session) return err(errors.unauthorized({}))
-    return next({ context: {} })
+    if (context.session) return next({ context })
+    return err(errors.unauthorized())
   })
 
 const PAGE_SIZE = 50
-
-/** Model rows carry extra columns (timestamps) — map to the exact model
- * shape so the wire encoder only ever sees declared fields. */
-const toVenue = (row: typeof venues.$inferSelect) => ({
-  id: row.id,
-  name: row.name,
-  category: row.category,
-  categorySecondary: row.categorySecondary,
-  status: row.status,
-  orderKey: row.orderKey,
-  cuisine: row.cuisine,
-  priceLevel: row.priceLevel,
-  tags: row.tags,
-  note: row.note,
-  recommendedDishes: row.recommendedDishes,
-  lastVerifiedAt: row.lastVerifiedAt,
-  confidence: row.confidence,
-  source: row.source,
-  address: row.address,
-  lat: row.lat,
-  lon: row.lon,
-  googlePlacesId: row.googlePlacesId,
-  dineoutId: row.dineoutId,
-  website: row.website,
-  phone: row.phone,
-  openingHours: row.openingHours,
-  photos: row.photos,
-  createdAt: row.createdAt,
-})
-
-/** Exactly the fields the public guide view exposes (Venue.pick). */
-const toVenuePublic = (row: typeof venues.$inferSelect) => ({
-  id: row.id,
-  name: row.name,
-  category: row.category,
-  categorySecondary: row.categorySecondary,
-  address: row.address,
-  openingHours: row.openingHours,
-  note: row.note,
-  recommendedDishes: row.recommendedDishes,
-  dineoutId: row.dineoutId,
-  website: row.website,
-  phone: row.phone,
-  lat: row.lat,
-  lon: row.lon,
-  confidence: row.confidence,
-  photos: row.photos,
-})
-
-const toHotel = (row: typeof hotels.$inferSelect) => ({
-  id: row.id,
-  businessId: row.businessId,
-  name: row.name,
-  address: row.address,
-  lat: row.lat,
-  lon: row.lon,
-  roomCount: row.roomCount,
-  website: row.website,
-})
-
-const toBusiness = (row: typeof businesses.$inferSelect) => ({
-  id: row.id,
-  name: row.name,
-  website: row.website,
-  industry: row.industry,
-  notes: row.notes,
-})
-
-const toContact = (row: typeof contacts.$inferSelect) => ({
-  id: row.id,
-  businessId: row.businessId,
-  hotelId: row.hotelId,
-  firstName: row.firstName,
-  lastName: row.lastName,
-  email: row.email,
-  phone: row.phone,
-  title: row.title,
-  isDecisionMaker: row.isDecisionMaker,
-})
-
-const toDeal = (row: typeof deals.$inferSelect) => ({
-  id: row.id,
-  businessId: row.businessId,
-  name: row.name,
-  stage: row.stage,
-  pricePerRoom: row.pricePerRoom,
-  annualValue: row.annualValue,
-  startDate: row.startDate,
-  renewalDate: row.renewalDate,
-  notes: row.notes,
-})
-
-const toGuide = (row: typeof guides.$inferSelect) => ({
-  id: row.id,
-  hotelId: row.hotelId,
-  slug: row.slug,
-  status: row.status,
-  radiusMin: row.radiusMin,
-  targetCount: row.targetCount,
-  generatedAt: row.generatedAt,
-})
-
-const toGuideVenue = (row: typeof guideVenues.$inferSelect) => ({
-  id: row.id,
-  guideId: row.guideId,
-  venueId: row.venueId,
-  status: row.status,
-  orderKey: row.orderKey,
-  overrideText: row.overrideText,
-  pinned: row.pinned,
-})
-
-const toLifecycle = (row: typeof venueLifecycleEvents.$inferSelect) => ({
-  id: row.id,
-  venueId: row.venueId,
-  type: row.type,
-  startedAt: row.startedAt,
-  endedAt: row.endedAt,
-  note: row.note,
-})
-
-const toAward = (row: typeof venueAwards.$inferSelect) => ({
-  id: row.id,
-  venueId: row.venueId,
-  awardType: row.awardType,
-  title: row.title,
-  url: row.url,
-  createdAt: row.createdAt,
-})
 
 const slugFromName = (name: string) =>
   name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
+
+/** The public guide-view venue projection (Venue.pick fields, exactly). */
+const venuePublic = (v: StoredVenue) => ({
+  id: v.id,
+  name: v.name,
+  category: v.category,
+  categorySecondary: v.categorySecondary,
+  address: v.address,
+  openingHours: v.openingHours,
+  note: v.note,
+  recommendedDishes: v.recommendedDishes,
+  dineoutId: v.dineoutId,
+  website: v.website,
+  phone: v.phone,
+  lat: v.lat,
+  lon: v.lon,
+  confidence: v.confidence,
+  photos: v.photos,
+})
 
 /** Fire-and-forget audit write — a failing audit entry never fails the
  * mutation that triggered it. */
@@ -246,175 +145,160 @@ const audit = async (
   },
 ) => {
   try {
-    await db.insert(auditLog).values({
-      id: createId(),
-      actor: entry.actor,
-      action: entry.action,
-      entityType: entry.entityType,
-      entityId: entry.entityId,
-      before: entry.before === undefined ? null : JSON.stringify(entry.before),
-      after: entry.after === undefined ? null : JSON.stringify(entry.after),
-    })
+    await db
+      .insertInto('audit_log')
+      .values({
+        id: createId(),
+        actor: entry.actor,
+        action: entry.action,
+        entity_type: entry.entityType,
+        entity_id: entry.entityId,
+        before: entry.before === undefined ? null : JSON.stringify(entry.before),
+        after: entry.after === undefined ? null : JSON.stringify(entry.after),
+        at: Date.now(),
+      })
+      .execute()
   } catch {
     // audit is best-effort
   }
 }
 
 const venueFeed = server.implement(venueFeedContract).handler(async ({ input, context }) => {
-  // input is `{ list: {}, cursor: string | null }` — the paginate split.
   // The feed is curated order: fractional-index orderKey, not id.
-  const rows = await context.db
-    .select()
-    .from(venues)
-    .where(input.cursor === null ? undefined : gt(venues.orderKey, input.cursor))
-    .orderBy(asc(venues.orderKey))
+  let q = context.db
+    .selectFrom('venues')
+    .selectAll()
+    .orderBy('order_key', 'asc')
     .limit(PAGE_SIZE + 1)
+  if (input.cursor !== null) q = q.where('order_key', '>', input.cursor)
+  const rows = (await tryDb(() => q.execute())).unwrap()
   const page = rows.slice(0, PAGE_SIZE)
   return ok({
-    items: page.map(toVenue),
-    nextCursor: rows.length > PAGE_SIZE ? (page[page.length - 1]?.orderKey ?? null) : null,
+    items: page.map(decodeVenue),
+    nextCursor: rows.length > PAGE_SIZE ? (page[page.length - 1]?.order_key ?? null) : null,
   })
 })
 
 const venueById = server.implement(venueByIdContract).handler(async ({ input, errors, context }) => {
-  const row = (await context.db.select().from(venues).where(eq(venues.id, input.id)).limit(1))[0]
+  const row = await context.db.selectFrom('venues').selectAll().where('id', '=', input.id).executeTakeFirst()
   if (!row) return err(errors.notFound({ venueId: input.id }))
-  return ok(toVenue(row))
+  return ok(decodeVenue(row))
 })
 
 const addVenue = server.implement(addVenueContract).use(requireStaff).handler(async ({ input, errors, context }) => {
-  const now = new Date()
-  const last = (
-    await context.db
-      .select({ orderKey: venues.orderKey })
-      .from(venues)
-      .orderBy(desc(venues.orderKey))
-      .limit(1)
-  )[0]
+  const last = await context.db
+    .selectFrom('venues')
+    .select(['order_key'])
+    .orderBy('order_key', 'desc')
+    .limit(1)
+    .executeTakeFirst()
   const row = {
     id: createId(),
     name: input.name,
     category: input.category,
-    categorySecondary: input.categorySecondary ?? null,
+    category_secondary: input.categorySecondary ?? null,
     status: 'draft',
-    orderKey: generateKeyBetween(last?.orderKey ?? null, null),
+    order_key: generateKeyBetween(last?.order_key ?? null, null),
     cuisine: input.cuisine ?? null,
-    priceLevel: input.priceLevel ?? null,
-    tags: [],
+    price_level: input.priceLevel ?? null,
+    tags: '[]',
     note: input.note ?? null,
-    recommendedDishes: [],
-    lastVerifiedAt: null,
+    recommended_dishes: '[]',
+    last_verified_at: null,
     confidence: 0,
     source: 'editorial',
     address: input.address,
     lat: input.lat ?? null,
     lon: input.lon ?? null,
-    googlePlacesId: input.googlePlacesId ?? null,
-    dineoutId: input.dineoutId ?? null,
+    google_places_id: input.googlePlacesId ?? null,
+    dineout_id: input.dineoutId ?? null,
     website: input.website ?? null,
     phone: input.phone ?? null,
-    openingHours: input.openingHours ?? null,
-    photos: [],
-    createdAt: now,
-    updatedAt: now,
+    opening_hours: input.openingHours ?? null,
+    photos: '[]',
+    created_at: Date.now(),
+    updated_at: Date.now(),
   }
-  const inserted = await tryDb(context.db.insert(venues).values(row).returning())
-  if (inserted.status !== 'ok') {
-    return matchError(inserted.error, {
-      'db/unique-violation': () => err(errors.nameTaken({ name: input.name })),
-      'db/foreign-key-violation': (e) => {
-        throw e
-      },
-      'db/not-null-violation': (e) => {
-        throw e
-      },
-      'db/check-violation': (e) => {
-        throw e
-      },
-      'db/query-failure': (e) => {
-        throw e
-      },
-    })
+  const inserted = await tryDb(() =>
+    context.db.insertInto('venues').values(row).returningAll().executeTakeFirstOrThrow(),
+  )
+  if (inserted.isErr()) {
+    if (UniqueViolation.is(inserted.error)) return err(errors.nameTaken({ name: input.name }))
+    throw inserted.error
   }
   await audit(context.db, {
     actor: 'system',
     action: 'create',
     entityType: 'venue',
-    entityId: inserted.value[0]!.id,
+    entityId: inserted.value.id,
     after: row,
   })
-  return ok(toVenue(inserted.value[0]!))
+  return ok(decodeVenue(inserted.value))
 })
 
 const updateVenue = server.implement(updateVenueContract).use(requireStaff).handler(async ({ input, errors, context }) => {
-  const before = (await context.db.select().from(venues).where(eq(venues.id, input.id)).limit(1))[0]
+  const before = await context.db.selectFrom('venues').selectAll().where('id', '=', input.id).executeTakeFirst()
   if (!before) return err(errors.notFound({ venueId: input.id }))
   const set = {
     ...(input.name !== undefined ? { name: input.name } : {}),
     ...(input.category !== undefined ? { category: input.category } : {}),
     ...(input.address !== undefined ? { address: input.address } : {}),
-    ...(input.categorySecondary !== undefined ? { categorySecondary: input.categorySecondary } : {}),
+    ...(input.categorySecondary !== undefined ? { category_secondary: input.categorySecondary } : {}),
     ...(input.cuisine !== undefined ? { cuisine: input.cuisine } : {}),
-    ...(input.priceLevel !== undefined ? { priceLevel: input.priceLevel } : {}),
+    ...(input.priceLevel !== undefined ? { price_level: input.priceLevel } : {}),
     ...(input.note !== undefined ? { note: input.note } : {}),
-    ...(input.openingHours !== undefined ? { openingHours: input.openingHours } : {}),
-    ...(input.dineoutId !== undefined ? { dineoutId: input.dineoutId } : {}),
-    ...(input.googlePlacesId !== undefined ? { googlePlacesId: input.googlePlacesId } : {}),
+    ...(input.openingHours !== undefined ? { opening_hours: input.openingHours } : {}),
+    ...(input.dineoutId !== undefined ? { dineout_id: input.dineoutId } : {}),
+    ...(input.googlePlacesId !== undefined ? { google_places_id: input.googlePlacesId } : {}),
     ...(input.website !== undefined ? { website: input.website } : {}),
     ...(input.phone !== undefined ? { phone: input.phone } : {}),
     ...(input.confidence !== undefined ? { confidence: input.confidence } : {}),
-    ...(input.lastVerifiedAt !== undefined ? { lastVerifiedAt: input.lastVerifiedAt } : {}),
+    ...(input.lastVerifiedAt !== undefined ? { last_verified_at: epochMs(input.lastVerifiedAt) } : {}),
     ...(input.lat !== undefined ? { lat: input.lat } : {}),
     ...(input.lon !== undefined ? { lon: input.lon } : {}),
-    ...(input.tags !== undefined ? { tags: [...input.tags] } : {}),
-    ...(input.recommendedDishes !== undefined ? { recommendedDishes: [...input.recommendedDishes] } : {}),
-    ...(input.photos !== undefined ? { photos: [...input.photos] } : {}),
-    updatedAt: new Date(),
+    ...(input.tags !== undefined ? { tags: toJson(input.tags) } : {}),
+    ...(input.recommendedDishes !== undefined ? { recommended_dishes: toJson(input.recommendedDishes) } : {}),
+    ...(input.photos !== undefined ? { photos: toJson(input.photos) } : {}),
+    updated_at: Date.now(),
   }
-  const updated = await tryDb(
-    context.db.update(venues).set(set).where(eq(venues.id, input.id)).returning(),
+  const updated = await tryDb(() =>
+    context.db
+      .updateTable('venues')
+      .set(set)
+      .where('id', '=', input.id)
+      .returningAll()
+      .executeTakeFirstOrThrow(),
   )
-  if (updated.status !== 'ok') {
-    return matchError(updated.error, {
-      'db/unique-violation': () => err(errors.nameTaken({ name: input.name ?? before.name })),
-      'db/foreign-key-violation': (e) => {
-        throw e
-      },
-      'db/not-null-violation': (e) => {
-        throw e
-      },
-      'db/check-violation': (e) => {
-        throw e
-      },
-      'db/query-failure': (e) => {
-        throw e
-      },
-    })
+  if (updated.isErr()) {
+    if (UniqueViolation.is(updated.error)) return err(errors.nameTaken({ name: input.name ?? before.name }))
+    throw updated.error
   }
-  const afterRow = updated.value[0]!
+  const afterRow = updated.value
   await audit(context.db, {
     actor: 'system',
     action: 'update',
     entityType: 'venue',
     entityId: afterRow.id,
-    before: before,
+    before,
     after: afterRow,
   })
-  return ok(toVenue(afterRow))
+  return ok(decodeVenue(afterRow))
 })
 
 const setVenueStatus = server
   .implement(setVenueStatusContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
-    const before = (await context.db.select().from(venues).where(eq(venues.id, input.id)).limit(1))[0]
+    const before = await context.db.selectFrom('venues').selectAll().where('id', '=', input.id).executeTakeFirst()
     if (!before) return err(errors.notFound({ venueId: input.id }))
-    const updated = (
-      await context.db
-        .update(venues)
-        .set({ status: input.status, updatedAt: new Date() })
-        .where(eq(venues.id, input.id))
-        .returning()
-    )[0]
+    const updated = await tryDb(() =>
+      context.db
+        .updateTable('venues')
+        .set({ status: input.status, updated_at: Date.now() })
+        .where('id', '=', input.id)
+        .returningAll()
+        .executeTakeFirstOrThrow(),
+    )
+    if (updated.isErr()) throw updated.error
     await audit(context.db, {
       actor: 'system',
       action: 'status-change',
@@ -423,41 +307,48 @@ const setVenueStatus = server
       before: { status: before.status },
       after: { status: input.status },
     })
-    return ok(toVenue(updated!))
+    return ok(decodeVenue(updated.value))
   })
 
 const addLifecycleEvent = server
   .implement(addLifecycleEventContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
-    const venue = (
-      await context.db.select().from(venues).where(eq(venues.id, input.venueId)).limit(1)
-    )[0]
+    const venue = await context.db.selectFrom('venues').selectAll().where('id', '=', input.venueId).executeTakeFirst()
     if (!venue) return err(errors.notFound({ venueId: input.venueId }))
 
     // The lifecycle event mechanically drives venue status + confidence:
     // closure → status closed, confidence 0; reopened → status live.
-    if (input.type === 'closed' || input.type === 'temporarily-closed') {
-      await context.db
-        .update(venues)
-        .set({ status: 'closed', confidence: 0, updatedAt: new Date() })
-        .where(eq(venues.id, input.venueId))
-    } else {
-      await context.db
-        .update(venues)
-        .set({ status: 'live', updatedAt: new Date() })
-        .where(eq(venues.id, input.venueId))
-    }
+    const nextStatus = input.type === 'closed' || input.type === 'temporarily-closed' ? 'closed' : 'live'
+    const venueUpdate = await tryDb(() =>
+      context.db
+        .updateTable('venues')
+        .set(
+          nextStatus === 'closed'
+            ? { status: 'closed', confidence: 0, updated_at: Date.now() }
+            : { status: 'live', updated_at: Date.now() },
+        )
+        .where('id', '=', input.venueId)
+        .executeTakeFirstOrThrow(),
+    )
+    if (venueUpdate.isErr()) throw venueUpdate.error
 
     const row = {
       id: createId(),
-      venueId: input.venueId,
+      venue_id: input.venueId,
       type: input.type,
-      startedAt: input.startedAt,
-      endedAt: null,
+      started_at: epochMs(input.startedAt),
+      ended_at: null,
       note: input.note ?? null,
-      createdAt: new Date(),
+      created_at: Date.now(),
     }
-    await context.db.insert(venueLifecycleEvents).values(row)
+    const inserted = await tryDb(() =>
+      context.db
+        .insertInto('venue_lifecycle_events')
+        .values(row)
+        .returningAll()
+        .executeTakeFirstOrThrow(),
+    )
+    if (inserted.isErr()) throw inserted.error
     await audit(context.db, {
       actor: 'system',
       action: 'lifecycle',
@@ -465,61 +356,51 @@ const addLifecycleEvent = server
       entityId: input.venueId,
       after: { type: input.type, startedAt: input.startedAt },
     })
-    return ok(toLifecycle(row))
+    return ok(decodeLifecycleEvent(inserted.value))
   })
 
 const listLifecycle = server.implement(listLifecycleContract).handler(async ({ input, context }) => {
   const rows = await context.db
-    .select()
-    .from(venueLifecycleEvents)
-    .where(eq(venueLifecycleEvents.venueId, input.venueId))
-    .orderBy(desc(venueLifecycleEvents.startedAt))
-  return ok(rows.map(toLifecycle))
+    .selectFrom('venue_lifecycle_events')
+    .selectAll()
+    .where('venue_id', '=', input.venueId)
+    .orderBy('started_at', 'desc')
+    .execute()
+  return ok(rows.map(decodeLifecycleEvent))
 })
 
 const listAwards = server.implement(venueAwardListContract).handler(async ({ input, errors, context }) => {
-  const venue = (await context.db.select().from(venues).where(eq(venues.id, input.venueId)).limit(1))[0]
+  const venue = await context.db.selectFrom('venues').selectAll().where('id', '=', input.venueId).executeTakeFirst()
   if (!venue) return err(errors.notFound({ venueId: input.venueId }))
   const rows = await context.db
-    .select()
-    .from(venueAwards)
-    .where(eq(venueAwards.venueId, input.venueId))
-    .orderBy(desc(venueAwards.createdAt))
-  return ok(rows.map(toAward))
+    .selectFrom('venue_awards')
+    .selectAll()
+    .where('venue_id', '=', input.venueId)
+    .orderBy('created_at', 'desc')
+    .execute()
+  return ok(rows.map(decodeVenueAward))
 })
 
 const addAward = server.implement(venueAwardAddContract).use(requireStaff).handler(async ({ input, errors, context }) => {
-  const venue = (await context.db.select().from(venues).where(eq(venues.id, input.venueId)).limit(1))[0]
+  const venue = await context.db.selectFrom('venues').selectAll().where('id', '=', input.venueId).executeTakeFirst()
   if (!venue) return err(errors.notFound({ venueId: input.venueId }))
-  const inserted = await tryDb(
+  const inserted = await tryDb(() =>
     context.db
-      .insert(venueAwards)
+      .insertInto('venue_awards')
       .values({
         id: createId(),
-        venueId: input.venueId,
-        awardType: input.awardType as (typeof VENUE_AWARD_TYPES)[number],
+        venue_id: input.venueId,
+        award_type: input.awardType as (typeof VENUE_AWARD_TYPES)[number],
         title: input.title,
         url: input.url ?? null,
-        createdAt: new Date(),
+        created_at: Date.now(),
       })
-      .returning(),
+      .returningAll()
+      .executeTakeFirstOrThrow(),
   )
-  if (inserted.status !== 'ok') {
-    return matchError(inserted.error, {
-      'db/unique-violation': () => err(errors.exists({ venueId: input.venueId })),
-      'db/foreign-key-violation': (e) => {
-        throw e
-      },
-      'db/query-failure': (e) => {
-        throw e
-      },
-      'db/not-null-violation': (e) => {
-        throw e
-      },
-      'db/check-violation': (e) => {
-        throw e
-      },
-    })
+  if (inserted.isErr()) {
+    if (UniqueViolation.is(inserted.error)) return err(errors.exists({ venueId: input.venueId }))
+    throw inserted.error
   }
   await audit(context.db, {
     actor: 'staff',
@@ -528,127 +409,117 @@ const addAward = server.implement(venueAwardAddContract).use(requireStaff).handl
     entityId: input.venueId,
     after: { awardType: input.awardType, title: input.title, url: input.url ?? null },
   })
-  return ok(toAward(inserted.value[0]!))
+  return ok(decodeVenueAward(inserted.value))
 })
 
 const removeAward = server.implement(venueAwardRemoveContract).use(requireStaff).handler(async ({ input, errors, context }) => {
-  const deleted = await context.db.delete(venueAwards).where(eq(venueAwards.id, input.id)).returning()
-  const row = deleted[0]
+  const row = await context.db.deleteFrom('venue_awards').where('id', '=', input.id).returningAll().executeTakeFirst()
   if (!row) return err(errors.notFound({ awardId: input.id }))
   await audit(context.db, {
     actor: 'staff',
     action: 'venue.award.remove',
     entityType: 'venue',
-    entityId: row.venueId,
-    before: { awardType: row.awardType, title: row.title },
+    entityId: row.venue_id,
+    before: { awardType: row.award_type, title: row.title },
   })
   return ok({ removed: true })
 })
 
 const auditList = server.implement(auditListContract).handler(async ({ input, context }) => {
   const rows = await context.db
-    .select()
-    .from(auditLog)
-    .where(
-      and(eq(auditLog.entityType, input.entityType), eq(auditLog.entityId, input.entityId)),
-    )
-    .orderBy(desc(auditLog.at))
+    .selectFrom('audit_log')
+    .selectAll()
+    .where('entity_type', '=', input.entityType)
+    .where('entity_id', '=', input.entityId)
+    .orderBy('at', 'desc')
     .limit(50)
-  return ok(rows)
+    .execute()
+  return ok(rows.map(decodeAuditEntry))
 })
 
 const hotelsList = server.implement(hotelsListContract).handler(async ({ context }) => {
-  const rows = await context.db.select().from(hotels).orderBy(asc(hotels.name))
-  return ok(rows.map(toHotel))
+  const rows = await context.db.selectFrom('hotels').selectAll().orderBy('name', 'asc').execute()
+  return ok(rows.map(decodeHotel))
 })
 
 const hotelsByBusiness = server
   .implement(hotelsByBusinessContract)
   .handler(async ({ input, context }) => {
     const rows = await context.db
-      .select()
-      .from(hotels)
-      .where(eq(hotels.businessId, input.businessId))
-      .orderBy(asc(hotels.name))
-    return ok(rows.map(toHotel))
+      .selectFrom('hotels')
+      .selectAll()
+      .where('business_id', '=', input.businessId)
+      .orderBy('name', 'asc')
+      .execute()
+    return ok(rows.map(decodeHotel))
   })
 
 const addHotel = server
   .implement(addHotelContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
-  const now = new Date()
   const row = {
     id: createId(),
-    businessId: input.businessId ?? null,
+    business_id: input.businessId ?? null,
     name: input.name,
     address: input.address ?? null,
     lat: input.lat ?? null,
     lon: input.lon ?? null,
-    roomCount: input.roomCount ?? 0,
+    room_count: input.roomCount ?? 0,
     website: input.website ?? null,
     notes: input.notes ?? null,
-    createdAt: now,
-    updatedAt: now,
+    created_at: Date.now(),
+    updated_at: Date.now(),
   }
-  const inserted = await tryDb(context.db.insert(hotels).values(row).returning())
-  if (inserted.status !== 'ok') {
-    return matchError(inserted.error, {
-      'db/unique-violation': () => err(errors.notFound({ hotelId: input.name })),
-      'db/foreign-key-violation': () => err(errors.notFound({ hotelId: input.businessId ?? '' })),
-      'db/not-null-violation': (e) => {
-        throw e
-      },
-      'db/check-violation': (e) => {
-        throw e
-      },
-      'db/query-failure': (e) => {
-        throw e
-      },
-    })
+  const inserted = await tryDb(() =>
+    context.db
+      .insertInto('hotels')
+      .values(row)
+      .returningAll()
+      .executeTakeFirstOrThrow(),
+  )
+  if (inserted.isErr()) {
+    if (UniqueViolation.is(inserted.error)) return err(errors.notFound({ hotelId: input.name }))
+    if (ForeignKeyViolation.is(inserted.error)) return err(errors.notFound({ hotelId: input.businessId ?? '' }))
+    throw inserted.error
   }
   await audit(context.db, {
     actor: 'system',
     action: 'create',
     entityType: 'hotel',
-    entityId: inserted.value[0]!.id,
+    entityId: inserted.value.id,
     after: row,
   })
-  return ok(toHotel(inserted.value[0]!))
+  return ok(decodeHotel(inserted.value))
 })
 
 const updateHotel = server.implement(updateHotelContract).use(requireStaff).handler(async ({ input, errors, context }) => {
-  const before = (await context.db.select().from(hotels).where(eq(hotels.id, input.id)).limit(1))[0]
+  const before = await context.db.selectFrom('hotels').selectAll().where('id', '=', input.id).executeTakeFirst()
   if (!before) return err(errors.notFound({ hotelId: input.id }))
   const set = {
-    ...(input.businessId !== undefined ? { businessId: input.businessId } : {}),
+    ...(input.businessId !== undefined ? { business_id: input.businessId } : {}),
     ...(input.name !== undefined ? { name: input.name } : {}),
     ...(input.address !== undefined ? { address: input.address } : {}),
     ...(input.lat !== undefined ? { lat: input.lat } : {}),
     ...(input.lon !== undefined ? { lon: input.lon } : {}),
-    ...(input.roomCount !== undefined ? { roomCount: input.roomCount } : {}),
+    ...(input.roomCount !== undefined ? { room_count: input.roomCount } : {}),
     ...(input.website !== undefined ? { website: input.website } : {}),
     ...(input.notes !== undefined ? { notes: input.notes } : {}),
-    updatedAt: new Date(),
+    updated_at: Date.now(),
   }
-  const updated = await tryDb(
-    context.db.update(hotels).set(set).where(eq(hotels.id, input.id)).returning(),
+  const updated = await tryDb(() =>
+    context.db
+      .updateTable('hotels')
+      .set(set)
+      .where('id', '=', input.id)
+      .returningAll()
+      .executeTakeFirstOrThrow(),
   )
-  if (updated.status !== 'ok') {
-    return matchError(updated.error, {
-      'db/unique-violation': () => err(errors.notFound({ hotelId: input.name ?? before.name })),
-      'db/foreign-key-violation': () => err(errors.notFound({ hotelId: input.businessId ?? '' })),
-      'db/not-null-violation': (e) => {
-        throw e
-      },
-      'db/check-violation': (e) => {
-        throw e
-      },
-      'db/query-failure': (e) => {
-        throw e
-      },
-    })
+  if (updated.isErr()) {
+    if (UniqueViolation.is(updated.error)) return err(errors.notFound({ hotelId: input.name ?? before.name }))
+    if (ForeignKeyViolation.is(updated.error)) return err(errors.notFound({ hotelId: input.businessId ?? '' }))
+    throw updated.error
   }
-  const afterRow = updated.value[0]!
+  const afterRow = updated.value
   await audit(context.db, {
     actor: 'system',
     action: 'update',
@@ -657,102 +528,82 @@ const updateHotel = server.implement(updateHotelContract).use(requireStaff).hand
     before,
     after: afterRow,
   })
-  return ok(toHotel(afterRow))
+  return ok(decodeHotel(afterRow))
 })
 
 // --- CRM handlers ---------------------------------------------------------
 
 const businessList = server.implement(businessListContract).handler(async ({ context }) => {
-  const rows = await context.db.select().from(businesses).orderBy(asc(businesses.name))
-  return ok(rows.map(toBusiness))
+  const rows = await context.db.selectFrom('businesses').selectAll().orderBy('name', 'asc').execute()
+  return ok(rows.map(decodeBusiness))
 })
 
 const businessById = server
   .implement(businessByIdContract)
   .handler(async ({ input, errors, context }) => {
-    const row = (
-      await context.db.select().from(businesses).where(eq(businesses.id, input.id)).limit(1)
-    )[0]
+    const row = await context.db.selectFrom('businesses').selectAll().where('id', '=', input.id).executeTakeFirst()
     if (!row) return err(errors.notFound({ businessId: input.id }))
-    return ok(toBusiness(row))
+    return ok(decodeBusiness(row))
   })
 
 const addBusiness = server
   .implement(addBusinessContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
-    const now = new Date()
     const row = {
       id: createId(),
       name: input.name,
       website: input.website ?? null,
       industry: input.industry ?? null,
       notes: input.notes ?? null,
-      createdAt: now,
-      updatedAt: now,
+      created_at: Date.now(),
+      updated_at: Date.now(),
     }
-    const inserted = await tryDb(context.db.insert(businesses).values(row).returning())
-    if (inserted.status !== 'ok') {
-      return matchError(inserted.error, {
-        'db/unique-violation': () => err(errors.nameTaken({ name: input.name })),
-        'db/foreign-key-violation': (e) => {
-          throw e
-        },
-        'db/not-null-violation': (e) => {
-          throw e
-        },
-        'db/check-violation': (e) => {
-          throw e
-        },
-        'db/query-failure': (e) => {
-          throw e
-        },
-      })
+    const inserted = await tryDb(() =>
+      context.db
+        .insertInto('businesses')
+        .values(row)
+        .returningAll()
+        .executeTakeFirstOrThrow(),
+    )
+    if (inserted.isErr()) {
+      if (UniqueViolation.is(inserted.error)) return err(errors.nameTaken({ name: input.name }))
+      throw inserted.error
     }
     await audit(context.db, {
       actor: 'system',
       action: 'create',
       entityType: 'business',
-      entityId: inserted.value[0]!.id,
+      entityId: inserted.value.id,
       after: row,
     })
-    return ok(toBusiness(inserted.value[0]!))
+    return ok(decodeBusiness(inserted.value))
   })
 
 const updateBusiness = server
   .implement(updateBusinessContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
-    const before = (
-      await context.db.select().from(businesses).where(eq(businesses.id, input.id)).limit(1)
-    )[0]
+    const before = await context.db.selectFrom('businesses').selectAll().where('id', '=', input.id).executeTakeFirst()
     if (!before) return err(errors.notFound({ businessId: input.id }))
     const set = {
       ...(input.name !== undefined ? { name: input.name } : {}),
       ...(input.website !== undefined ? { website: input.website } : {}),
       ...(input.industry !== undefined ? { industry: input.industry } : {}),
       ...(input.notes !== undefined ? { notes: input.notes } : {}),
-      updatedAt: new Date(),
+      updated_at: Date.now(),
     }
-    const updated = await tryDb(
-      context.db.update(businesses).set(set).where(eq(businesses.id, input.id)).returning(),
+    const updated = await tryDb(() =>
+      context.db
+        .updateTable('businesses')
+        .set(set)
+        .where('id', '=', input.id)
+        .returningAll()
+        .executeTakeFirstOrThrow(),
     )
-    if (updated.status !== 'ok') {
-      return matchError(updated.error, {
-        'db/unique-violation': () => err(errors.nameTaken({ name: input.name ?? before.name })),
-        'db/foreign-key-violation': (e) => {
-          throw e
-        },
-        'db/not-null-violation': (e) => {
-          throw e
-        },
-        'db/check-violation': (e) => {
-          throw e
-        },
-        'db/query-failure': (e) => {
-          throw e
-        },
-      })
+    if (updated.isErr()) {
+      if (UniqueViolation.is(updated.error)) return err(errors.nameTaken({ name: input.name ?? before.name }))
+      throw updated.error
     }
-    const afterRow = updated.value[0]!
+    const afterRow = updated.value
     await audit(context.db, {
       actor: 'system',
       action: 'update',
@@ -761,124 +612,118 @@ const updateBusiness = server
       before,
       after: afterRow,
     })
-    return ok(toBusiness(afterRow))
+    return ok(decodeBusiness(afterRow))
   })
 
 const contactsByBusiness = server
   .implement(contactsByBusinessContract)
   .handler(async ({ input, context }) => {
     const rows = await context.db
-      .select()
-      .from(contacts)
-      .where(eq(contacts.businessId, input.businessId))
-      .orderBy(asc(contacts.lastName), asc(contacts.firstName))
-    return ok(rows.map(toContact))
+      .selectFrom('contacts')
+      .selectAll()
+      .where('business_id', '=', input.businessId)
+      .orderBy('last_name', 'asc')
+      .orderBy('first_name', 'asc')
+      .execute()
+    return ok(rows.map(decodeContact))
   })
 
 const addContact = server
   .implement(addContactContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
-  const now = new Date()
   const row = {
     id: createId(),
-    businessId: input.businessId,
-    hotelId: input.hotelId ?? null,
-    firstName: input.firstName ?? null,
-    lastName: input.lastName ?? null,
+    business_id: input.businessId,
+    hotel_id: input.hotelId ?? null,
+    first_name: input.firstName ?? null,
+    last_name: input.lastName ?? null,
     email: input.email ?? null,
     phone: input.phone ?? null,
     title: input.title ?? null,
-    isDecisionMaker: input.isDecisionMaker ?? false,
+    is_decision_maker: toBit(input.isDecisionMaker ?? false),
     notes: input.notes ?? null,
-    createdAt: now,
-    updatedAt: now,
+    created_at: Date.now(),
+    updated_at: Date.now(),
   }
-  const inserted = await tryDb(context.db.insert(contacts).values(row).returning())
-  if (inserted.status !== 'ok') {
-    return matchError(inserted.error, {
-      'db/foreign-key-violation': (e) => {
-        throw e
-      },
-      'db/not-null-violation': (e) => {
-        throw e
-      },
-      'db/check-violation': (e) => {
-        throw e
-      },
-      'db/query-failure': (e) => {
-        throw e
-      },
-      'db/unique-violation': (e) => {
-        throw e
-      },
-    })
-  }
+  const inserted = await tryDb(() =>
+    context.db
+      .insertInto('contacts')
+      .values(row)
+      .returningAll()
+      .executeTakeFirstOrThrow(),
+  )
+  if (inserted.isErr()) throw inserted.error
   await audit(context.db, {
     actor: 'system',
     action: 'create',
     entityType: 'contact',
-    entityId: inserted.value[0]!.id,
+    entityId: inserted.value.id,
     after: row,
   })
-  return ok(toContact(inserted.value[0]!))
+  return ok(decodeContact(inserted.value))
 })
 
 const updateContact = server
   .implement(updateContactContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
-    const before = (await context.db.select().from(contacts).where(eq(contacts.id, input.id)).limit(1))[0]
+    const before = await context.db.selectFrom('contacts').selectAll().where('id', '=', input.id).executeTakeFirst()
     if (!before) return err(errors.notFound({ contactId: input.id }))
     const set = {
-      ...(input.hotelId !== undefined ? { hotelId: input.hotelId } : {}),
-      ...(input.firstName !== undefined ? { firstName: input.firstName } : {}),
-      ...(input.lastName !== undefined ? { lastName: input.lastName } : {}),
+      ...(input.hotelId !== undefined ? { hotel_id: input.hotelId } : {}),
+      ...(input.firstName !== undefined ? { first_name: input.firstName } : {}),
+      ...(input.lastName !== undefined ? { last_name: input.lastName } : {}),
       ...(input.email !== undefined ? { email: input.email } : {}),
       ...(input.phone !== undefined ? { phone: input.phone } : {}),
       ...(input.title !== undefined ? { title: input.title } : {}),
-      ...(input.isDecisionMaker !== undefined ? { isDecisionMaker: input.isDecisionMaker } : {}),
+      ...(input.isDecisionMaker !== undefined ? { is_decision_maker: toBit(input.isDecisionMaker) } : {}),
       ...(input.notes !== undefined ? { notes: input.notes } : {}),
-      updatedAt: new Date(),
+      updated_at: Date.now(),
     }
-    const updated = (
-      await context.db.update(contacts).set(set).where(eq(contacts.id, input.id)).returning()
-    )[0]
+    const updated = await tryDb(() =>
+      context.db
+        .updateTable('contacts')
+        .set(set)
+        .where('id', '=', input.id)
+        .returningAll()
+        .executeTakeFirstOrThrow(),
+    )
+    if (updated.isErr()) throw updated.error
     await audit(context.db, {
       actor: 'system',
       action: 'update',
       entityType: 'contact',
       entityId: input.id,
       before,
-      after: updated,
+      after: updated.value,
     })
-    return ok(toContact(updated!))
+    return ok(decodeContact(updated.value))
   })
 
 const dealsByBusiness = server
   .implement(dealsByBusinessContract)
   .handler(async ({ input, context }) => {
     const rows = await context.db
-      .select()
-      .from(deals)
-      .where(eq(deals.businessId, input.businessId))
-      .orderBy(desc(deals.updatedAt))
-    return ok(rows.map(toDeal))
+      .selectFrom('deals')
+      .selectAll()
+      .where('business_id', '=', input.businessId)
+      .orderBy('updated_at', 'desc')
+      .execute()
+    return ok(rows.map(decodeDeal))
   })
 
 /** annualValue = pricePerRoom × total rooms across the business's hotels. */
 const computedAnnualValue = async (db: Db, businessId: string, pricePerRoom: number) => {
-  const total = (
-    await db
-      .select({ n: sum(hotels.roomCount) })
-      .from(hotels)
-      .where(eq(hotels.businessId, businessId))
-  )[0]!.n
-  return pricePerRoom * Number(total ?? 0)
+  const total = await db
+    .selectFrom('hotels')
+    .select((eb) => eb.fn.sum('room_count').as('n'))
+    .where('business_id', '=', businessId)
+    .executeTakeFirst()
+  return pricePerRoom * Number(total?.n ?? 0)
 }
 
 const addDeal = server
   .implement(addDealContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
-  const now = new Date()
   const annualValue =
     input.annualValue ??
     (input.pricePerRoom !== undefined
@@ -886,85 +731,87 @@ const addDeal = server
       : undefined)
   const row = {
     id: createId(),
-    businessId: input.businessId,
+    business_id: input.businessId,
     name: input.name,
     stage: input.stage ?? 'prospect',
-    pricePerRoom: input.pricePerRoom ?? null,
-    annualValue: annualValue ?? null,
-    startDate: input.startDate ?? null,
-    renewalDate: input.renewalDate ?? null,
+    price_per_room: input.pricePerRoom ?? null,
+    annual_value: annualValue ?? null,
+    start_date: input.startDate ? epochMs(input.startDate) : null,
+    renewal_date: input.renewalDate ? epochMs(input.renewalDate) : null,
     notes: input.notes ?? null,
-    createdAt: now,
-    updatedAt: now,
+    created_at: Date.now(),
+    updated_at: Date.now(),
   }
-  const inserted = await tryDb(context.db.insert(deals).values(row).returning())
-  if (inserted.status !== 'ok') {
-    return matchError(inserted.error, {
-      'db/foreign-key-violation': (e) => {
-        throw e
-      },
-      'db/not-null-violation': (e) => {
-        throw e
-      },
-      'db/check-violation': (e) => {
-        throw e
-      },
-      'db/query-failure': (e) => {
-        throw e
-      },
-      'db/unique-violation': (e) => {
-        throw e
-      },
-    })
-  }
+  const inserted = await tryDb(() =>
+    context.db
+      .insertInto('deals')
+      .values(row)
+      .returningAll()
+      .executeTakeFirstOrThrow(),
+  )
+  if (inserted.isErr()) throw inserted.error
   await audit(context.db, {
     actor: 'system',
     action: 'create',
     entityType: 'deal',
-    entityId: inserted.value[0]!.id,
+    entityId: inserted.value.id,
     after: row,
   })
-  return ok(toDeal(inserted.value[0]!))
+  return ok(decodeDeal(inserted.value))
 })
 
 const updateDeal = server.implement(updateDealContract).use(requireStaff).handler(async ({ input, errors, context }) => {
-  const before = (await context.db.select().from(deals).where(eq(deals.id, input.id)).limit(1))[0]
+  const before = await context.db.selectFrom('deals').selectAll().where('id', '=', input.id).executeTakeFirst()
   if (!before) return err(errors.notFound({ dealId: input.id }))
   const annualValue =
     input.annualValue ??
     (input.pricePerRoom !== undefined
-      ? await computedAnnualValue(context.db, before.businessId, input.pricePerRoom)
+      ? await computedAnnualValue(context.db, before.business_id, input.pricePerRoom)
       : undefined)
   const set = {
     ...(input.name !== undefined ? { name: input.name } : {}),
     ...(input.stage !== undefined ? { stage: input.stage } : {}),
-    ...(input.pricePerRoom !== undefined ? { pricePerRoom: input.pricePerRoom } : {}),
-    ...(annualValue !== undefined ? { annualValue } : {}),
-    ...(input.startDate !== undefined ? { startDate: input.startDate } : {}),
-    ...(input.renewalDate !== undefined ? { renewalDate: input.renewalDate } : {}),
+    ...(input.pricePerRoom !== undefined ? { price_per_room: input.pricePerRoom } : {}),
+    ...(annualValue !== undefined ? { annual_value: annualValue } : {}),
+    ...(input.startDate !== undefined ? { start_date: epochMs(input.startDate) } : {}),
+    ...(input.renewalDate !== undefined ? { renewal_date: epochMs(input.renewalDate) } : {}),
     ...(input.notes !== undefined ? { notes: input.notes } : {}),
-    updatedAt: new Date(),
+    updated_at: Date.now(),
   }
-  const updated = (
-    await context.db.update(deals).set(set).where(eq(deals.id, input.id)).returning()
-  )[0]
+  const updated = await tryDb(() =>
+    context.db
+      .updateTable('deals')
+      .set(set)
+      .where('id', '=', input.id)
+      .returningAll()
+      .executeTakeFirstOrThrow(),
+  )
+  if (updated.isErr()) throw updated.error
   await audit(context.db, {
     actor: 'system',
     action: 'update',
     entityType: 'deal',
     entityId: input.id,
     before,
-    after: updated,
+    after: updated.value,
   })
-  return ok(toDeal(updated!))
+  return ok(decodeDeal(updated.value))
 })
 
 const overview = server.implement(overviewContract).handler(async ({ context }) => {
-  const venueCount = (await context.db.select({ n: count() }).from(venues))[0]!.n
+  const venueCount = (
+    await context.db.selectFrom('venues').select((eb) => eb.fn.countAll<number>().as('n')).executeTakeFirst()
+  )?.n ?? 0
   const liveVenueCount = (
-    await context.db.select({ n: count() }).from(venues).where(eq(venues.status, 'live'))
-  )[0]!.n
-  const hotelCount = (await context.db.select({ n: count() }).from(hotels))[0]!.n
+    await context.db
+      .selectFrom('venues')
+      .select((eb) => eb.fn.countAll<number>().as('n'))
+      .where('status', '=', 'live')
+      .executeTakeFirst()
+  )?.n ?? 0
+  const hotelCount = (
+    await context.db.selectFrom('hotels').select((eb) => eb.fn.countAll<number>().as('n')).executeTakeFirst()
+  )?.n ?? 0
   return ok({ venueCount, liveVenueCount, hotelCount })
 })
 
@@ -972,89 +819,99 @@ const overview = server.implement(overviewContract).handler(async ({ context }) 
 const recordGuideEvent = server
   .implement(recordGuideEventContract)
   .handler(async ({ input, context }) => {
-    const guide = (
-      await context.db.select().from(guides).where(eq(guides.slug, input.slug)).limit(1)
-    )[0]
+    const guide = await context.db.selectFrom('guides').selectAll().where('slug', '=', input.slug).executeTakeFirst()
     if (!guide) return ok({})
-    await context.db.insert(guideEvents).values({
-      id: createId(),
-      guideId: guide.id,
-      event: input.event,
-      venueId: input.venueId ?? null,
-      happenedAt: new Date(),
-    })
+    await context.db
+      .insertInto('guide_events')
+      .values({
+        id: createId(),
+        guide_id: guide.id,
+        event: input.event,
+        venue_id: input.venueId ?? null,
+        happened_at: Date.now(),
+      })
+      .execute()
     return ok({})
   })
 
 // --- Guide handlers -------------------------------------------------------
 
 const guideList = server.implement(guideListContract).handler(async ({ context }) => {
-  const rows = await context.db.select().from(guides).orderBy(asc(guides.slug))
-  return ok(rows.map(toGuide))
+  const rows = await context.db.selectFrom('guides').selectAll().orderBy('slug', 'asc').execute()
+  return ok(rows.map(decodeGuide))
 })
 
 const guideById = server.implement(guideByIdContract).handler(async ({ input, errors, context }) => {
-  const row = (await context.db.select().from(guides).where(eq(guides.id, input.id)).limit(1))[0]
+  const row = await context.db.selectFrom('guides').selectAll().where('id', '=', input.id).executeTakeFirst()
   if (!row) return err(errors.notFound({ guideId: input.id }))
-  return ok(toGuide(row))
+  return ok(decodeGuide(row))
 })
 
 const createGuide = server.implement(createGuideContract).use(requireStaff).handler(async ({ input, errors, context }) => {
-  const hotel = (await context.db.select().from(hotels).where(eq(hotels.id, input.hotelId)).limit(1))[0]
+  const hotel = await context.db.selectFrom('hotels').selectAll().where('id', '=', input.hotelId).executeTakeFirst()
   if (!hotel) return err(errors.notFound({ guideId: input.hotelId }))
-  const existing = (
-    await context.db.select().from(guides).where(eq(guides.hotelId, input.hotelId)).limit(1)
-  )[0]
-  if (existing) return ok(toGuide(existing))
+  const existing = await context.db.selectFrom('guides').selectAll().where('hotel_id', '=', input.hotelId).executeTakeFirst()
+  if (existing) return ok(decodeGuide(existing))
   const row = {
     id: createId(),
-    hotelId: input.hotelId,
+    hotel_id: input.hotelId,
     slug: slugFromName(hotel.name),
     status: 'draft',
-    radiusMin: input.radiusMin ?? 20,
-    targetCount: input.targetCount ?? 24,
-    generatedAt: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    radius_min: input.radiusMin ?? 20,
+    target_count: input.targetCount ?? 24,
+    generated_at: null,
+    last_digest_at: null,
+    last_digest_venue_ids: null,
+    created_at: Date.now(),
+    updated_at: Date.now(),
   }
-  const inserted = await context.db.insert(guides).values(row).returning()
+  const inserted = await tryDb(() =>
+    context.db
+      .insertInto('guides')
+      .values(row)
+      .returningAll()
+      .executeTakeFirstOrThrow(),
+  )
+  if (inserted.isErr()) throw inserted.error
   await audit(context.db, {
     actor: 'system',
     action: 'create',
     entityType: 'guide',
-    entityId: inserted[0]!.id,
+    entityId: inserted.value.id,
     after: row,
   })
-  return ok(toGuide(inserted[0]!))
+  return ok(decodeGuide(inserted.value))
 })
 
 const draftGuide = server.implement(draftGuideContract).use(requireStaff).handler(async ({ input, errors, context }) => {
-  const guide = (await context.db.select().from(guides).where(eq(guides.id, input.id)).limit(1))[0]
+  const guide = await context.db.selectFrom('guides').selectAll().where('id', '=', input.id).executeTakeFirst()
   if (!guide) return err(errors.notFound({ guideId: input.id }))
-  const hotel = (await context.db.select().from(hotels).where(eq(hotels.id, guide.hotelId)).limit(1))[0]
+  const hotel = await context.db.selectFrom('hotels').selectAll().where('id', '=', guide.hotel_id).executeTakeFirst()
   if (!hotel || hotel.lat === null || hotel.lon === null) {
     return err(errors.noPool({ guideId: input.id }))
   }
 
-  const excluded = (
-    await context.db
-      .select({ venueId: guideExcludes.venueId })
-      .from(guideExcludes)
-      .where(eq(guideExcludes.guideId, input.id))
-  ).map((r) => r.venueId)
-  const excludedIds = new Set(excluded)
+  const excluded = await context.db
+    .selectFrom('guide_excludes')
+    .select(['venue_id'])
+    .where('guide_id', '=', input.id)
+    .execute()
+  const excludedIds = new Set(excluded.map((r) => r.venue_id))
 
   const existingRows = await context.db
-    .select()
-    .from(guideVenues)
-    .where(and(eq(guideVenues.guideId, input.id), ne(guideVenues.status, 'removed')))
-  const existingIds = existingRows.map((r) => r.venueId)
+    .selectFrom('guide_venues')
+    .selectAll()
+    .where('guide_id', '=', input.id)
+    .where('status', '!=', 'removed')
+    .execute()
+  const existingIds = existingRows.map((r) => r.venue_id)
   const venueStatus = new Map<string, string>()
   if (existingIds.length > 0) {
     const vs = await context.db
-      .select({ id: venues.id, status: venues.status })
-      .from(venues)
-      .where(inArray(venues.id, existingIds))
+      .selectFrom('venues')
+      .select(['id', 'status'])
+      .where('id', 'in', existingIds)
+      .execute()
     for (const v of vs) venueStatus.set(v.id, v.status)
   }
 
@@ -1063,59 +920,59 @@ const draftGuide = server.implement(draftGuideContract).use(requireStaff).handle
   const kept: string[] = []
   const dropped: string[] = []
   let lastOrderKey: string | null = null
-  const now = new Date()
+  const now = Date.now()
   for (const row of existingRows) {
-    if (venueStatus.get(row.venueId) === 'live') {
-      kept.push(row.venueId)
-      if (lastOrderKey === null || row.orderKey > lastOrderKey) lastOrderKey = row.orderKey
+    if (venueStatus.get(row.venue_id) === 'live') {
+      kept.push(row.venue_id)
+      if (lastOrderKey === null || row.order_key > lastOrderKey) lastOrderKey = row.order_key
     } else {
-      dropped.push(row.venueId)
+      dropped.push(row.venue_id)
       await context.db
-        .update(guideVenues)
-        .set({ status: 'removed', updatedAt: now })
-        .where(eq(guideVenues.id, row.id))
+        .updateTable('guide_venues')
+        .set({ status: 'removed', updated_at: now })
+        .where('id', '=', row.id)
+        .execute()
     }
   }
 
   // Pool: live venues, not already in the guide, not excluded, with coords.
   const poolRows = await context.db
-    .select({
-      id: venues.id,
-      category: venues.category,
-      lat: venues.lat,
-      lon: venues.lon,
-      confidence: venues.confidence,
-    })
-    .from(venues)
-    .where(eq(venues.status, 'live'))
+    .selectFrom('venues')
+    .select(['id', 'category', 'lat', 'lon', 'confidence'])
+    .where('status', '=', 'live')
+    .execute()
   const pool = poolRows.filter(
     (v) => !excludedIds.has(v.id) && !new Set([...kept, ...dropped]).has(v.id),
   )
 
   const picks = draftItinerary({
     hotel: { lat: hotel.lat, lon: hotel.lon },
-    radiusMin: guide.radiusMin,
-    targetCount: guide.targetCount,
+    radiusMin: guide.radius_min,
+    targetCount: guide.target_count,
     pool,
     lastOrderKey,
   })
   for (const pick of picks) {
-    await context.db.insert(guideVenues).values({
-      id: createId(),
-      guideId: input.id,
-      venueId: pick.venueId,
-      status: 'pending',
-      orderKey: pick.orderKey,
-      overrideText: null,
-      pinned: false,
-      createdAt: now,
-      updatedAt: now,
-    })
+    await context.db
+      .insertInto('guide_venues')
+      .values({
+        id: createId(),
+        guide_id: input.id,
+        venue_id: pick.venueId,
+        status: 'pending',
+        order_key: pick.orderKey,
+        override_text: null,
+        pinned: 0,
+        created_at: now,
+        updated_at: now,
+      })
+      .execute()
   }
   await context.db
-    .update(guides)
-    .set({ generatedAt: now, updatedAt: now })
-    .where(eq(guides.id, input.id))
+    .updateTable('guides')
+    .set({ generated_at: now, updated_at: now })
+    .where('id', '=', input.id)
+    .execute()
   await audit(context.db, {
     actor: 'system',
     action: 'draft',
@@ -1129,26 +986,22 @@ const draftGuide = server.implement(draftGuideContract).use(requireStaff).handle
 const approveGuideCandidates = server
   .implement(approveGuideCandidatesContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
-    const guide = (
-      await context.db.select().from(guides).where(eq(guides.id, input.guideId)).limit(1)
-    )[0]
+    const guide = await context.db.selectFrom('guides').selectAll().where('id', '=', input.guideId).executeTakeFirst()
     if (!guide) return err(errors.notFound({ guideId: input.guideId }))
     const rows = await context.db
-      .select()
-      .from(guideVenues)
-      .where(
-        and(
-          eq(guideVenues.guideId, input.guideId),
-          eq(guideVenues.status, 'pending'),
-          inArray(guideVenues.venueId, input.venueIds),
-        ),
-      )
-    const now = new Date()
+      .selectFrom('guide_venues')
+      .selectAll()
+      .where('guide_id', '=', input.guideId)
+      .where('status', '=', 'pending')
+      .where('venue_id', 'in', input.venueIds)
+      .execute()
+    const now = Date.now()
     for (const row of rows) {
       await context.db
-        .update(guideVenues)
-        .set({ status: 'live', updatedAt: now })
-        .where(eq(guideVenues.id, row.id))
+        .updateTable('guide_venues')
+        .set({ status: 'live', updated_at: now })
+        .where('id', '=', row.id)
+        .execute()
     }
     await audit(context.db, {
       actor: 'system',
@@ -1157,48 +1010,50 @@ const approveGuideCandidates = server
       entityId: input.guideId,
       after: { venueIds: input.venueIds },
     })
-    return ok(rows.map(toGuideVenue))
+    return ok(rows.map(decodeGuideVenue))
   })
 
 const setGuideConfig = server
   .implement(setGuideConfigContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
-    const guide = (
-      await context.db.select().from(guides).where(eq(guides.id, input.guideId)).limit(1)
-    )[0]
+    const guide = await context.db.selectFrom('guides').selectAll().where('id', '=', input.guideId).executeTakeFirst()
     if (!guide) return err(errors.notFound({ guideId: input.guideId }))
-    const updated = (
-      await context.db
-        .update(guides)
+    const updated = await tryDb(() =>
+      context.db
+        .updateTable('guides')
         .set({
-          ...(input.radiusMin !== undefined ? { radiusMin: input.radiusMin } : {}),
-          ...(input.targetCount !== undefined ? { targetCount: input.targetCount } : {}),
-          updatedAt: new Date(),
+          ...(input.radiusMin !== undefined ? { radius_min: input.radiusMin } : {}),
+          ...(input.targetCount !== undefined ? { target_count: input.targetCount } : {}),
+          updated_at: Date.now(),
         })
-        .where(eq(guides.id, input.guideId))
-        .returning()
-    )[0]
+        .where('id', '=', input.guideId)
+        .returningAll()
+        .executeTakeFirstOrThrow(),
+    )
+    if (updated.isErr()) throw updated.error
     await audit(context.db, {
       actor: 'system',
       action: 'config-change',
       entityType: 'guide',
       entityId: input.guideId,
-      before: { radiusMin: guide.radiusMin, targetCount: guide.targetCount },
-      after: { radiusMin: updated!.radiusMin, targetCount: updated!.targetCount },
+      before: { radiusMin: guide.radius_min, targetCount: guide.target_count },
+      after: { radiusMin: updated.value.radius_min, targetCount: updated.value.target_count },
     })
-    return ok(toGuide(updated!))
+    return ok(decodeGuide(updated.value))
   })
 
 const publishGuide = server.implement(publishGuideContract).use(requireStaff).handler(async ({ input, errors, context }) => {
-  const guide = (await context.db.select().from(guides).where(eq(guides.id, input.id)).limit(1))[0]
+  const guide = await context.db.selectFrom('guides').selectAll().where('id', '=', input.id).executeTakeFirst()
   if (!guide) return err(errors.notFound({ guideId: input.id }))
-  const updated = (
-    await context.db
-      .update(guides)
-      .set({ status: 'live', updatedAt: new Date() })
-      .where(eq(guides.id, input.id))
-      .returning()
-  )[0]
+  const updated = await tryDb(() =>
+    context.db
+      .updateTable('guides')
+      .set({ status: 'live', updated_at: Date.now() })
+      .where('id', '=', input.id)
+      .returningAll()
+      .executeTakeFirstOrThrow(),
+  )
+  if (updated.isErr()) throw updated.error
   await audit(context.db, {
     actor: 'system',
     action: 'publish',
@@ -1207,39 +1062,36 @@ const publishGuide = server.implement(publishGuideContract).use(requireStaff).ha
     before: { status: guide.status },
     after: { status: 'live' },
   })
-  return ok(toGuide(updated!))
+  return ok(decodeGuide(updated.value))
 })
 
 const addGuideExclude = server
   .implement(addGuideExcludeContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
-    const guide = (
-      await context.db.select().from(guides).where(eq(guides.id, input.guideId)).limit(1)
-    )[0]
+    const guide = await context.db.selectFrom('guides').selectAll().where('id', '=', input.guideId).executeTakeFirst()
     if (!guide) return err(errors.notFound({ guideId: input.guideId }))
     await context.db
-      .insert(guideExcludes)
-      .values({ id: createId(), guideId: input.guideId, venueId: input.venueId })
-      .onConflictDoNothing()
+      .insertInto('guide_excludes')
+      .values({ id: createId(), guide_id: input.guideId, venue_id: input.venueId, created_at: Date.now() })
+      .onConflict((oc) => oc.doNothing())
+      .execute()
     return ok({})
   })
 
 const removeGuideExclude = server
   .implement(removeGuideExcludeContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
-    const guide = (
-      await context.db.select().from(guides).where(eq(guides.id, input.guideId)).limit(1)
-    )[0]
+    const guide = await context.db.selectFrom('guides').selectAll().where('id', '=', input.guideId).executeTakeFirst()
     if (!guide) return err(errors.notFound({ guideId: input.guideId }))
     await context.db
-      .delete(guideExcludes)
-      .where(
-        and(eq(guideExcludes.guideId, input.guideId), eq(guideExcludes.venueId, input.venueId)),
-      )
+      .deleteFrom('guide_excludes')
+      .where('guide_id', '=', input.guideId)
+      .where('venue_id', '=', input.venueId)
+      .execute()
     return ok({})
   })
 
-/** Mobile-friendly HTML snapshot of the guide — the offline “keeping” artifact. */
+/** Mobile-friendly HTML snapshot of the guide — the offline "keeping" artifact. */
 const buildGuideEmailHtml = (view: NonNullable<Awaited<ReturnType<typeof loadGuideView>>>) => {
   const grouped = new Map<string, typeof view.venueRows>()
   for (const row of view.venueRows) {
@@ -1284,21 +1136,22 @@ const buildGuideEmailHtml = (view: NonNullable<Awaited<ReturnType<typeof loadGui
 const requestGuideCapture = server
   .implement(requestGuideCaptureContract)
   .handler(async ({ input, errors, context }) => {
-    const guide = (
-      await context.db.select().from(guides).where(eq(guides.slug, input.slug)).limit(1)
-    )[0]
+    const guide = await context.db.selectFrom('guides').selectAll().where('slug', '=', input.slug).executeTakeFirst()
     if (!guide) return err(errors.notFound({ guideId: input.slug }))
     const view = await loadGuideView(context.db, guide.id)
     if (!view) return err(errors.notFound({ guideId: input.slug }))
 
     // Bot protection (Turnstile) is punted — tracked in GitHub issue; the
     // capture endpoint is currently open. Revisit when spam is real.
-    await context.db.insert(guideCaptures).values({
-      id: createId(),
-      guideId: guide.id,
-      email: input.email,
-      createdAt: new Date(),
-    })
+    await context.db
+      .insertInto('guide_captures')
+      .values({
+        id: createId(),
+        guide_id: guide.id,
+        email: input.email,
+        created_at: Date.now(),
+      })
+      .execute()
 
     // beta ops (verified from-address, rate limit) land in ticket 07; local
     // emulation sends without them.
@@ -1323,30 +1176,32 @@ const requestGuideCapture = server
   })
 
 const loadGuideView = async (db: Db, guideId: string) => {
-  const guide = (await db.select().from(guides).where(eq(guides.id, guideId)).limit(1))[0]
+  const guide = await db.selectFrom('guides').selectAll().where('id', '=', guideId).executeTakeFirst()
   if (!guide) return null
   const rows = await db
-    .select()
-    .from(guideVenues)
-    .where(and(eq(guideVenues.guideId, guideId), eq(guideVenues.status, 'live')))
-    .orderBy(asc(guideVenues.orderKey))
-  const venueIds = rows.map((r) => r.venueId)
+    .selectFrom('guide_venues')
+    .selectAll()
+    .where('guide_id', '=', guideId)
+    .where('status', '=', 'live')
+    .orderBy('order_key', 'asc')
+    .execute()
+  const venueIds = rows.map((r) => r.venue_id)
   const venueRows = venueIds.length
-    ? await db.select().from(venues).where(inArray(venues.id, venueIds))
+    ? await db.selectFrom('venues').selectAll().where('id', 'in', venueIds).execute()
     : []
   const venueById = new Map(venueRows.map((v) => [v.id, v]))
   const venueRowsOut = rows.map((r) => {
-    const venue = venueById.get(r.venueId)!
+    const venue = venueById.get(r.venue_id)!
     return {
       id: r.id,
-      venueId: r.venueId,
-      orderKey: r.orderKey,
-      overrideText: r.overrideText,
-      pinned: r.pinned,
-      venue: toVenuePublic(venue),
+      venueId: r.venue_id,
+      orderKey: r.order_key,
+      overrideText: r.override_text,
+      pinned: r.pinned === 1,
+      venue: venuePublic(decodeVenue(venue)),
     }
   })
-  return { guide: toGuide(guide), venueRows: venueRowsOut }
+  return { guide: decodeGuide(guide), venueRows: venueRowsOut }
 }
 
 const guideView = server.implement(guideViewContract).handler(async ({ input, errors, context }) => {
@@ -1358,9 +1213,7 @@ const guideView = server.implement(guideViewContract).handler(async ({ input, er
 const guideViewBySlug = server
   .implement(guideViewBySlugContract)
   .handler(async ({ input, errors, context }) => {
-    const guide = (
-      await context.db.select().from(guides).where(eq(guides.slug, input.slug)).limit(1)
-    )[0]
+    const guide = await context.db.selectFrom('guides').selectAll().where('slug', '=', input.slug).executeTakeFirst()
     if (!guide) return err(errors.notFound({ guideId: input.slug }))
     const view = await loadGuideView(context.db, guide.id)
     return ok(view!)
@@ -1369,38 +1222,39 @@ const guideViewBySlug = server
 const guideBuilder = server
   .implement(guideBuilderContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
-    const guide = (
-      await context.db.select().from(guides).where(eq(guides.id, input.guideId)).limit(1)
-    )[0]
+    const guide = await context.db.selectFrom('guides').selectAll().where('id', '=', input.guideId).executeTakeFirst()
     if (!guide) return err(errors.notFound({ guideId: input.guideId }))
     const rows = await context.db
-      .select()
-      .from(guideVenues)
-      .where(and(eq(guideVenues.guideId, input.guideId), ne(guideVenues.status, 'removed')))
-      .orderBy(asc(guideVenues.orderKey))
-    const venueIds = rows.map((r) => r.venueId)
+      .selectFrom('guide_venues')
+      .selectAll()
+      .where('guide_id', '=', input.guideId)
+      .where('status', '!=', 'removed')
+      .orderBy('order_key', 'asc')
+      .execute()
+    const venueIds = rows.map((r) => r.venue_id)
     const venueRows = venueIds.length
-      ? await context.db.select().from(venues).where(inArray(venues.id, venueIds))
+      ? await context.db.selectFrom('venues').selectAll().where('id', 'in', venueIds).execute()
       : []
     const venueById = new Map(venueRows.map((v) => [v.id, v]))
     const excludes = await context.db
-      .select({ venueId: guideExcludes.venueId, name: venues.name })
-      .from(guideExcludes)
-      .leftJoin(venues, eq(venues.id, guideExcludes.venueId))
-      .where(eq(guideExcludes.guideId, input.guideId))
+      .selectFrom('guide_excludes')
+      .leftJoin('venues', 'venues.id', 'guide_excludes.venue_id')
+      .select(['guide_excludes.venue_id', 'venues.name'])
+      .where('guide_excludes.guide_id', '=', input.guideId)
+      .execute()
     return ok({
-      guide: toGuide(guide),
+      guide: decodeGuide(guide),
       rows: rows
         .map((r) => {
-          const venue = venueById.get(r.venueId)
+          const venue = venueById.get(r.venue_id)
           if (!venue) return null
           return {
             id: r.id,
-            venueId: r.venueId,
+            venueId: r.venue_id,
             status: r.status,
-            orderKey: r.orderKey,
-            overrideText: r.overrideText,
-            pinned: r.pinned,
+            orderKey: r.order_key,
+            overrideText: r.override_text,
+            pinned: r.pinned === 1,
             // Exactly the picked fields — pick() rejects unknown properties.
             venue: {
               id: venue.id,
@@ -1408,12 +1262,12 @@ const guideBuilder = server
               category: venue.category,
               address: venue.address,
               confidence: venue.confidence,
-              photos: venue.photos,
+              photos: JSON.parse(venue.photos),
             },
           }
         })
         .filter((x): x is NonNullable<typeof x> => x !== null),
-      excludes: excludes.map((e) => ({ venueId: e.venueId, name: e.name ?? '' })),
+      excludes: excludes.map((e) => ({ venueId: e.venue_id, name: e.name ?? '' })),
     })
   })
 
@@ -1443,29 +1297,33 @@ const digestGuides = server
   .handler(async ({ input, errors, context }) => {
     const db = context.db
     const all = input.guideId
-      ? await db.select().from(guides).where(eq(guides.id, input.guideId)).limit(1)
-      : await db.select().from(guides).where(eq(guides.status, 'live'))
+      ? await db.selectFrom('guides').selectAll().where('id', '=', input.guideId).execute()
+      : await db.selectFrom('guides').selectAll().where('status', '=', 'live').execute()
     if (input.guideId && all.length === 0) return err(errors.notFound({ guideId: input.guideId }))
 
     const results = []
     for (const guide of all) {
       const rows = await db
-        .select()
-        .from(guideVenues)
-        .where(and(eq(guideVenues.guideId, guide.id), eq(guideVenues.status, 'live')))
-        .orderBy(asc(guideVenues.orderKey))
+        .selectFrom('guide_venues')
+        .selectAll()
+        .where('guide_id', '=', guide.id)
+        .where('status', '=', 'live')
+        .orderBy('order_key', 'asc')
+        .execute()
       const venueRows = rows.length
-        ? await db.select().from(venues).where(inArray(venues.id, rows.map((r) => r.venueId)))
+        ? await db.selectFrom('venues').selectAll().where('id', 'in', rows.map((r) => r.venue_id)).execute()
         : []
       const venueById = new Map(venueRows.map((v) => [v.id, v]))
 
       const currentLive = rows
-        .filter((r) => venueById.get(r.venueId)?.status === 'live')
-        .map((r) => r.venueId)
+        .filter((r) => venueById.get(r.venue_id)?.status === 'live')
+        .map((r) => r.venue_id)
       const closures = rows
-        .filter((r) => venueById.get(r.venueId)?.status !== 'live')
-        .map((r) => r.venueId)
-      const baseline: string[] | null = guide.lastDigestVenueIds ?? null
+        .filter((r) => venueById.get(r.venue_id)?.status !== 'live')
+        .map((r) => r.venue_id)
+      const baseline: string[] | null = guide.last_digest_venue_ids
+        ? JSON.parse(guide.last_digest_venue_ids)
+        : null
 
       let added: string[] = []
       let removed: string[] = []
@@ -1481,22 +1339,21 @@ const digestGuides = server
       const nameOf = (id: string) => venueById.get(id)?.name ?? id
       let emailed: string[] = []
       if (!skipped && (added.length > 0 || removed.length > 0)) {
-        const hotel = (
-          await db.select().from(hotels).where(eq(hotels.id, guide.hotelId)).limit(1)
-        )[0]
+        const hotel = await db.selectFrom('hotels').selectAll().where('id', '=', guide.hotel_id).executeTakeFirst()
         if (hotel) {
           const recipients = await db
-            .select({ email: contacts.email })
-            .from(contacts)
-            .where(
-              and(
-                or(
-                  eq(contacts.hotelId, hotel.id),
-                  hotel.businessId !== null ? eq(contacts.businessId, hotel.businessId) : undefined,
-                ),
-                isNotNull(contacts.email),
-              ),
+            .selectFrom('contacts')
+            .select(['email'])
+            .where((eb) =>
+              eb.and([
+                eb.or([
+                  eb('hotel_id', '=', hotel.id),
+                  ...(hotel.business_id !== null ? [eb('business_id', '=', hotel.business_id)] : []),
+                ]),
+                eb('email', 'is not', null),
+              ]),
             )
+            .execute()
           const tos = recipients.map((r) => r.email).filter((e): e is string => e !== null)
           if (tos.length > 0) {
             const lines = [
@@ -1524,13 +1381,14 @@ const digestGuides = server
       }
 
       await db
-        .update(guides)
+        .updateTable('guides')
         .set({
-          lastDigestAt: new Date(),
-          lastDigestVenueIds: currentLive,
-          updatedAt: new Date(),
+          last_digest_at: Date.now(),
+          last_digest_venue_ids: toJson(currentLive),
+          updated_at: Date.now(),
         })
-        .where(eq(guides.id, guide.id))
+        .where('id', '=', guide.id)
+        .execute()
       await audit(db, {
         actor: context.session?.user.email ?? 'system',
         action: 'digest',
@@ -1549,37 +1407,38 @@ const digestGuides = server
     }
     return ok(results)
   })
+
 const updateGuideVenue = server
   .implement(updateGuideVenueContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
-    const row = (
-      await context.db.select().from(guideVenues).where(eq(guideVenues.id, input.id)).limit(1)
-    )[0]
+    const row = await context.db.selectFrom('guide_venues').selectAll().where('id', '=', input.id).executeTakeFirst()
     if (!row) return err(errors.notFound({ id: input.id }))
-    const updated = (
-      await context.db
-        .update(guideVenues)
+    const updated = await tryDb(() =>
+      context.db
+        .updateTable('guide_venues')
         .set({
-          ...(input.orderKey !== undefined ? { orderKey: input.orderKey } : {}),
-          ...(input.pinned !== undefined ? { pinned: input.pinned } : {}),
-          ...(input.overrideText !== undefined ? { overrideText: input.overrideText } : {}),
-          updatedAt: new Date(),
+          ...(input.orderKey !== undefined ? { order_key: input.orderKey } : {}),
+          ...(input.pinned !== undefined ? { pinned: toBit(input.pinned) } : {}),
+          ...(input.overrideText !== undefined ? { override_text: input.overrideText } : {}),
+          updated_at: Date.now(),
         })
-        .where(eq(guideVenues.id, input.id))
-        .returning()
-    )[0]
+        .where('id', '=', input.id)
+        .returningAll()
+        .executeTakeFirstOrThrow(),
+    )
+    if (updated.isErr()) throw updated.error
     await audit(context.db, {
       actor: 'staff',
       action: 'guide-venue.update',
       entityType: 'guide',
-      entityId: row.guideId,
+      entityId: row.guide_id,
       after: {
         ...(input.orderKey !== undefined ? { orderKey: input.orderKey } : {}),
         ...(input.pinned !== undefined ? { pinned: input.pinned } : {}),
         ...(input.overrideText !== undefined ? { overrideText: input.overrideText } : {}),
       },
     })
-    return ok(toGuideVenue(updated!))
+    return ok(decodeGuideVenue(updated.value))
   })
 
 export const router = server.router({

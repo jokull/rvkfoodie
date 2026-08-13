@@ -207,7 +207,7 @@ assert(ev.status === 'ok', 'events.record ok')
 const evClick = await client.events.record({ slug: 'hotel-borg', event: 'venue-click', venueId: 'venue_01' })
 assert(evClick.status === 'ok', 'events.record venue-click ok')
 
-// --- Auth (ticket 10) — better-auth adapter on drizzle 1.0-rc.4 + D1 ---
+// --- Auth (ticket 10) — better-auth kysely adapter (CamelCasePlugin) + D1 ---
 const AUTH = 'http://localhost:3000'
 const unauth = await fetch(`${AUTH}/api/auth/get-session`)
 assert(unauth.status === 200, 'get-session ok when signed out')

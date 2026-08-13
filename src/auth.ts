@@ -21,12 +21,11 @@
  * typed whoami procedure — the wire would then document the session shape.
  */
 import { betterAuth } from 'better-auth'
-import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+import { kyselyAdapter } from '@better-auth/kysely-adapter'
 import { emailOTP } from 'better-auth/plugins'
 import { env } from 'cloudflare:workers'
 import { EmailMessage } from 'cloudflare:email'
-import * as authSchema from './auth-schema.js'
-import { db } from './db.js'
+import { authRawDb } from './db.js'
 
 const sendEmail = async (to: string, subject: string, text: string) => {
   const raw = [
@@ -46,7 +45,7 @@ const sendEmail = async (to: string, subject: string, text: string) => {
 export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
   secret: env.BETTER_AUTH_SECRET,
-  database: drizzleAdapter(db, { provider: 'sqlite', schema: authSchema }),
+  database: kyselyAdapter(authRawDb, { type: 'sqlite' }),
   emailAndPassword: {
     enabled: true,
   },

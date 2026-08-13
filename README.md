@@ -7,7 +7,9 @@ curation, maintenance, and delivery of trusted local recommendations.
 ## Stack
 
 - **TanStack Start** (Vite) on Cloudflare Workers via `@cloudflare/vite-plugin`
-- **Drizzle ORM** `1.0.0-rc.4` + **D1** (`drizzle-orm/d1`)
+- **Kysely** (`kysely` + `kysely-d1`) + **D1** — queries wrapped per-call with
+  `db-result` `tryDb`; Drizzle `1.0.0-rc.4` kept only as the drizzle-kit
+  migration source
 - **result-rpc** — typed RPC: one closed failure union per procedure, entity
   cache, SSR hydration. Contract in `src/contract.ts` is the only result-rpc
   surface client code imports; handlers live in `src/rpc-server.ts`.

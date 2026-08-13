@@ -6,16 +6,15 @@
  */
 import { defineModel, wire, type InputOf, type ModelValue } from 'result-rpc'
 import type {
-  auditLog,
-  businesses,
-  contacts,
-  deals,
-  guideVenues,
-  guides,
-  hotels,
-  venueAwards,
-  venueLifecycleEvents,
-  venues,
+  StoredAuditEntry,
+  StoredBusiness,
+  StoredContact,
+  StoredDeal,
+  StoredGuide,
+  StoredGuideVenue,
+  StoredHotel,
+  StoredLifecycleEvent,
+  StoredVenue,
 } from './schema.js'
 import { VENUE_AWARD_TYPES } from './schema.js'
 
@@ -50,7 +49,7 @@ export const Venue = defineModel('venue', {
     photos: wire.array(wire.string),
     createdAt: wire.date,
   },
-}).$satisfies<typeof venues.$inferSelect>()
+}).$satisfies<StoredVenue>()
 export type VenueRow = ModelValue<typeof Venue>
 
 export const LifecycleEvent = defineModel('lifecycle-event', {
@@ -63,7 +62,7 @@ export const LifecycleEvent = defineModel('lifecycle-event', {
     endedAt: wire.nullable(wire.date),
     note: wire.nullable(wire.string),
   },
-}).$satisfies<typeof venueLifecycleEvents.$inferSelect>()
+}).$satisfies<StoredLifecycleEvent>()
 export type LifecycleEventRow = ModelValue<typeof LifecycleEvent>
 
 export const VenueAward = defineModel('venue-award', {
@@ -91,7 +90,7 @@ export const AuditEntry = defineModel('audit-entry', {
     after: wire.nullable(wire.string),
     at: wire.date,
   },
-}).$satisfies<typeof auditLog.$inferSelect>()
+}).$satisfies<StoredAuditEntry>()
 export type AuditEntryRow = ModelValue<typeof AuditEntry>
 
 export const Hotel = defineModel('hotel', {
@@ -106,7 +105,7 @@ export const Hotel = defineModel('hotel', {
     roomCount: wire.number,
     website: wire.nullable(wire.string),
   },
-}).$satisfies<typeof hotels.$inferSelect>()
+}).$satisfies<StoredHotel>()
 export type HotelRow = ModelValue<typeof Hotel>
 
 export const Business = defineModel('business', {
@@ -118,7 +117,7 @@ export const Business = defineModel('business', {
     industry: wire.nullable(wire.string),
     notes: wire.nullable(wire.string),
   },
-}).$satisfies<typeof businesses.$inferSelect>()
+}).$satisfies<StoredBusiness>()
 export type BusinessRow = ModelValue<typeof Business>
 
 export const Contact = defineModel('contact', {
@@ -134,7 +133,7 @@ export const Contact = defineModel('contact', {
     title: wire.nullable(wire.string),
     isDecisionMaker: wire.boolean,
   },
-}).$satisfies<typeof contacts.$inferSelect>()
+}).$satisfies<StoredContact>()
 export type ContactRow = ModelValue<typeof Contact>
 
 export const Deal = defineModel('deal', {
@@ -150,7 +149,7 @@ export const Deal = defineModel('deal', {
     renewalDate: wire.nullable(wire.date),
     notes: wire.nullable(wire.string),
   },
-}).$satisfies<typeof deals.$inferSelect>()
+}).$satisfies<StoredDeal>()
 export type DealRow = ModelValue<typeof Deal>
 
 /** One per hotel (V1). */
@@ -165,7 +164,7 @@ export const Guide = defineModel('guide', {
     targetCount: wire.integer(),
     generatedAt: wire.nullable(wire.date),
   },
-}).$satisfies<typeof guides.$inferSelect>()
+}).$satisfies<StoredGuide>()
 export type GuideRow = ModelValue<typeof Guide>
 
 /** A snapshot row: pending (generated, unapproved), live, or removed. */
@@ -180,7 +179,7 @@ export const GuideVenue = defineModel('guide-venue', {
     overrideText: wire.nullable(wire.string),
     pinned: wire.boolean,
   },
-}).$satisfies<typeof guideVenues.$inferSelect>()
+}).$satisfies<StoredGuideVenue>()
 export type GuideVenueRow = ModelValue<typeof GuideVenue>
 
 /** The public guide view — guide + live venue rows with overrides. */

@@ -20,6 +20,7 @@
   "dependencies": {
     "@cloudflare/kumo": "^2.9.0",
     "@formisch/react": "1.0.0-rc.0",
+    "@better-auth/kysely-adapter": "^1.6.25",
     "@paralleldrive/cuid2": "^3.3.0",
     "@phosphor-icons/react": "^2.1.10",
     "@tanstack/react-router": "^1.170.18",
@@ -28,15 +29,18 @@
     "better-auth": "^1.6.25",
     "better-result": "^3.0.0",
     "datocms-structured-text-to-html-string": "^5.1.16",
+    "db-result": "^0.3.0",
     "drizzle-orm": "1.0.0-rc.4",
     "fractional-indexing": "^4.0.0",
     "gql.tada": "^1.11.3",
     "graphql": "^17.0.2",
+    "kysely": "^0.29.4",
+    "kysely-d1": "^0.4.0",
     "leaflet": "^1.9.4",
     "qrcode": "^1.5.4",
     "react": "~19.2.4",
     "react-dom": "~19.2.4",
-    "result-rpc": "^0.3.0",
+    "result-rpc": "^0.5.0",
     "valibot": "^1.4.2"
   },
   "devDependencies": {
