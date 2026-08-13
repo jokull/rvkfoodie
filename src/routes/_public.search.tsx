@@ -29,9 +29,9 @@ export const Route = createFileRoute('/_public/search')({
       { name: 'robots', content: 'noindex, follow' },
     ],
   }),
-  loader: async (ctx) => {
-    const search = ctx.location.search as SearchParams
-    const q = search.q?.trim() ?? ''
+  loaderDeps: ({ search }) => ({ q: search.q }),
+  loader: async ({ deps }) => {
+    const q = deps.q?.trim() ?? ''
     if (q.length < 2) return []
     return prefetchPublicSearch({ data: { q } })
   },
