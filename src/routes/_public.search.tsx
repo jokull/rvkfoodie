@@ -6,10 +6,9 @@
  */
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
+import * as v from 'valibot'
 import type { SearchResult } from '../cms.js'
 import { prefetchPublicSearch } from '../ssr.js'
-
-type SearchParams = { q?: string }
 
 const EXAMPLES = ['dinner reservations', 'best bakery', 'cocktail bars', 'golden circle stops', 'tapas wine']
 
@@ -19,10 +18,14 @@ const TYPE_LABEL: Record<SearchResult['type'], string> = {
   venue: 'Venue',
 }
 
+/** ?q= — absent or non-string q coerces to undefined/'' instead of erroring. */
+const searchSchema = v.object({
+  q: v.optional(v.fallback(v.string(), '')),
+})
+
 export const Route = createFileRoute('/_public/search')({
-  validateSearch: (search: Record<string, unknown>): SearchParams => ({
-    q: typeof search.q === 'string' ? search.q : undefined,
-  }),
+  // valibot implements Standard Schema — pass the schema straight through
+  validateSearch: searchSchema,
   head: () => ({
     meta: [
       { title: 'Search — Reykjavík Foodie' },
