@@ -23,6 +23,9 @@ function About() {
   return (
     <>
       <h1 className="font-display text-huge leading-huge mb-6">{about.title ?? 'About'}</h1>
+      <div className="mb-10">
+        <img src="/about.jpg" alt="Reykjavík Foodie" className="w-48 rounded-2xl object-cover shadow-2xl shadow-ink/20" />
+      </div>
       {bioHtml && <div className="mb-12 prose-about prose-intro" dangerouslySetInnerHTML={{ __html: bioHtml }} />}
       {guides.length > 0 && (
         <section>

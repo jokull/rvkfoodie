@@ -154,8 +154,16 @@ function Home() {
       )}
 
       {home.authorBlurb && (
-        <section className="text-tiny text-ink-light prose-intro whitespace-pre-line">
-          {home.authorBlurb}
+        <section className="border-t border-ink/10 pt-8">
+          <div className="flex items-center gap-4">
+            <img src="/about.jpg" alt="Reykjavík Foodie" className="w-14 h-18 rounded-lg object-cover" loading="lazy" />
+            <p className="text-ink-light">
+              {home.authorBlurb}{' '}
+              <a href="/about" className="text-blue hover:opacity-80 transition-opacity">
+                Read more →
+              </a>
+            </p>
+          </div>
         </section>
       )}
     </>

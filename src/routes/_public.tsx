@@ -24,6 +24,7 @@ export const Route = createFileRoute('/_public')({
         rel: 'stylesheet',
         href: 'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500&display=swap',
       },
+      { rel: 'preload', href: '/logo.svg', as: 'image' },
     ],
   }),
   component: PublicLayout,
@@ -34,12 +35,24 @@ function PublicLayout() {
     <div className="public-shell">
       <header className="max-w-2xl mx-auto px-6 pt-8 sm:pt-12 pb-6 sm:pb-8">
         <nav className="flex flex-col sm:flex-row items-center sm:justify-between gap-4">
-          <a href="/" className="font-display text-3xl sm:text-4xl tracking-tight">
-            Reykjavík Foodie
+          <a href="/" className="inline-block">
+            <img src="/logo.svg" alt="Reykjavík Foodie" className="h-16 sm:h-30" />
           </a>
           <div className="flex items-center gap-4 sm:gap-6 text-tiny">
-            <a href="/search" className="text-ink-light hover:text-blue transition-colors">
-              Search
+            <a href="/search" className="text-ink-light hover:text-blue transition-colors" aria-label="Search">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-4 h-4"
+              >
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.3-4.3"></path>
+              </svg>
             </a>
             <a href="/about" className="text-ink-light hover:text-blue transition-colors">
               About
