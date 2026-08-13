@@ -3,16 +3,10 @@
  * email signs in. The two founders' emails are the de facto allowlist.
  */
 import { useState } from 'react'
-import { createAuthClient } from 'better-auth/client'
-import { emailOTPClient } from 'better-auth/client/plugins'
 import { Button } from '@cloudflare/kumo/components/button'
 import { Input } from '@cloudflare/kumo/components/input'
 import { Text } from '@cloudflare/kumo/components/text'
-
-const authClient = createAuthClient({
-  baseURL: typeof window !== 'undefined' ? window.location.origin : undefined,
-  plugins: [emailOTPClient()],
-})
+import { authClient } from '../auth-client.js'
 
 export function LoginForm() {
   const [email, setEmail] = useState('')
