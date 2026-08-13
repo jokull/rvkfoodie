@@ -22,7 +22,9 @@ build tickets as the frontier resolves.
   `d1/tables/*.sql` dumps (block_venue has coords, opening-hours text, image
   refs), `data/venue-data.json`.
 - Stack is LOCKED (scaffold committed): TanStack Start (Vite 8) on Cloudflare
-  Workers via `@cloudflare/vite-plugin`; Drizzle `1.0.0-rc.4` + D1
+  Workers via `@cloudflare/vite-plugin`; Kysely (`kysely` + `kysely-d1`) +
+  D1 with per-call `db-result` `tryDb` (Drizzle `1.0.0-rc.4` retained only as
+  the drizzle-kit migration source)
   (`rvkfoodie-cms-v4b`, shared with legacy schema — legacy tables untouched
   until ticket 04 lands, then dropped); result-rpc typed RPC (contract in
   `src/contract.ts`, handlers in `src/rpc-server.ts`, createServerFn
