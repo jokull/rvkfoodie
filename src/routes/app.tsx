@@ -82,7 +82,7 @@ function Shell({ pathname, pageTitle, email }: { pathname: string; pageTitle: st
 
   return (
     <>
-      <Sidebar>
+      <Sidebar className="md:sticky md:top-0 md:h-svh">
         <Sidebar.Header>
           <ForkKnife className="size-5 shrink-0" />
           <span className={`flex min-w-0 flex-col ${collapsed ? 'hidden' : ''}`}>
