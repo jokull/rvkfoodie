@@ -4,6 +4,13 @@
  */
 import { useState } from 'react'
 import { useResultMutation, useResultQuery } from 'result-rpc/react'
+import { Badge } from '@cloudflare/kumo/components/badge'
+import { Button } from '@cloudflare/kumo/components/button'
+import { Empty } from '@cloudflare/kumo/components/empty'
+import { Input } from '@cloudflare/kumo/components/input'
+import { Loader } from '@cloudflare/kumo/components/loader'
+import { Surface } from '@cloudflare/kumo/components/surface'
+import { Text } from '@cloudflare/kumo/components/text'
 import { client } from '../rpc-client.js'
 
 export function VenueAwards({ venueId }: { venueId: string }) {
@@ -27,48 +34,65 @@ export function VenueAwards({ venueId }: { venueId: string }) {
   }
 
   return (
-    <section className="panel">
-      <h2 className="panel-title">Awards</h2>
-      <form className="lifecycle-form" onSubmit={submit}>
-        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Best Bakery 2025" aria-label="Award title" />
-        <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://… (optional)" aria-label="Award URL" />
-        <button type="submit" disabled={add.state === 'pending'}>
-          {add.state === 'pending' ? '…' : 'Add'}
-        </button>
+    <Surface render={<section />} className="mb-6 p-4">
+      <Text variant="heading3" as="h2" DANGEROUS_className="mb-2">
+        Awards
+      </Text>
+      <form className="mb-3 flex flex-wrap gap-2" onSubmit={submit}>
+        <Input
+          size="sm"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="e.g. Best Bakery 2025"
+          aria-label="Award title"
+        />
+        <Input
+          size="sm"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://… (optional)"
+          aria-label="Award URL"
+        />
+        <Button type="submit" variant="primary" loading={add.state === 'pending'}>
+          Add
+        </Button>
         {add.state === 'failure' && (
-          <span className="error">
+          <Text variant="error" as="span">
             {add.error._tag === 'venue-award/exists' ? 'Already awarded this type' : `Failed: ${add.error._tag}`}
-          </span>
+          </Text>
         )}
       </form>
       {awards.state === 'failure' ? (
-        <p className="error">Failed: {awards.error._tag}</p>
+        <Text variant="error">Failed: {awards.error._tag}</Text>
       ) : awards.state === 'pending' ? (
-        <p className="muted small">…</p>
+        <Loader size="sm" />
       ) : awards.value.length === 0 ? (
-        <p className="muted small">No awards yet.</p>
+        <Empty size="sm" title="No awards yet." />
       ) : (
-        <ul className="event-list">
+        <ul className="flex flex-col gap-1">
           {awards.value.map((a) => (
-            <li key={a.id}>
-              <span className="badge badge-pick">grapevine-best-of</span>
+            <li key={a.id} className="flex items-center gap-2">
+              <Badge variant="warning">grapevine-best-of</Badge>
               <strong>{a.title}</strong>
               {a.url && (
-                <a href={a.url} target="_blank" rel="noreferrer" className="muted small">
+                <a href={a.url} target="_blank" rel="noreferrer" className="text-sm text-kumo-subtle">
                   source
                 </a>
               )}
-              <button
-                className="link-button"
-                onClick={() => remove.mutate({ id: a.id })}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="ml-auto"
                 disabled={remove.state === 'pending'}
+                onClick={() => remove.mutate({ id: a.id })}
               >
                 remove
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
       )}
-    </section>
+    </Surface>
   )
 }

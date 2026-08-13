@@ -3,7 +3,11 @@
  * On success the new venue (status draft) is patched into the feed cache
  * and the user is taken to its detail.
  */
-import { Dialog } from '@cloudflare/kumo'
+import { Button } from '@cloudflare/kumo/components/button'
+import { Dialog } from '@cloudflare/kumo/components/dialog'
+import { Field } from '@cloudflare/kumo/components/field'
+import { Input } from '@cloudflare/kumo/components/input'
+import { Select } from '@cloudflare/kumo/components/select'
 import { useRouter } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useResultMutation } from 'result-rpc/react'
@@ -40,38 +44,34 @@ export function AddVenueDialog({ open, onClose }: { open: boolean; onClose: () =
     <Dialog.Root open={open} onOpenChange={(o) => (o ? undefined : onClose())}>
       <Dialog>
         <Dialog.Title>Add venue</Dialog.Title>
-        <form className="add-dialog" onSubmit={submit}>
-        <label className="form-field">
-          <span>Name</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-        </label>
-        <label className="form-field">
-          <span>Category</span>
-          <select value={category} onChange={(e) => setCategory(e.target.value)}>
+        <form className="flex flex-col gap-3 p-4" onSubmit={submit}>
+          <Field label="Name">
+            <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+          </Field>
+          <Select label="Category" value={category} onValueChange={(v) => v !== null && setCategory(v)}>
             {VENUE_CATEGORIES.map((c) => (
-              <option key={c}>{c}</option>
+              <Select.Option key={c} value={c}>
+                {c}
+              </Select.Option>
             ))}
-          </select>
-        </label>
-        <label className="form-field">
-          <span>Address</span>
-          <input value={address} onChange={(e) => setAddress(e.target.value)} />
-        </label>
-        <label className="form-field">
-          <span>Website (optional)</span>
-          <input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://…" />
-        </label>
-        {add.state === 'failure' && (
-          <p className="error">
-            {add.error._tag === 'venue/name-taken' ? 'Name already taken' : `Failed: ${add.error._tag}`}
-          </p>
-        )}
-        <div className="form-actions">
-          <button type="submit" disabled={add.state === 'pending'}>
-            {add.state === 'pending' ? 'Adding…' : 'Add venue'}
-          </button>
-          <Dialog.Close render={(props) => <button type="button" className="ghost" {...props}>Cancel</button>} />
-        </div>
+          </Select>
+          <Field label="Address">
+            <Input value={address} onChange={(e) => setAddress(e.target.value)} />
+          </Field>
+          <Field label="Website (optional)">
+            <Input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://…" />
+          </Field>
+          {add.state === 'failure' && (
+            <p className="text-sm text-rose-600">
+              {add.error._tag === 'venue/name-taken' ? 'Name already taken' : `Failed: ${add.error._tag}`}
+            </p>
+          )}
+          <div className="mt-4 flex items-center gap-3">
+            <Button type="submit" variant="primary" loading={add.state === 'pending'}>
+              Add venue
+            </Button>
+            <Dialog.Close render={(props) => <Button {...props} type="button" variant="secondary">Cancel</Button>} />
+          </div>
         </form>
       </Dialog>
     </Dialog.Root>

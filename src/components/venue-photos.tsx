@@ -6,6 +6,10 @@
  */
 import { useRef, useState } from 'react'
 import { useResultMutation } from 'result-rpc/react'
+import { Button } from '@cloudflare/kumo/components/button'
+import { Loader } from '@cloudflare/kumo/components/loader'
+import { Surface } from '@cloudflare/kumo/components/surface'
+import { Text } from '@cloudflare/kumo/components/text'
 import { client } from '../rpc-client.js'
 
 const thumb = (url: string) =>
@@ -46,25 +50,29 @@ export function VenuePhotos({ venueId, photos }: { venueId: string; photos: read
   }
 
   return (
-    <section className="panel">
-      <h2 className="panel-title">Photos</h2>
-      <div className="photo-strip">
+    <Surface render={<section />} className="mb-6 p-4">
+      <Text variant="heading3" as="h2" DANGEROUS_className="mb-2">
+        Photos
+      </Text>
+      <div className="flex flex-wrap gap-2">
         {photos.map((url) => (
-          <div key={url} className="photo-cell">
-            <img src={thumb(url)} alt="" loading="lazy" />
-            <button
-              className="link-button"
+          <div key={url} className="flex flex-col items-center gap-1">
+            <img src={thumb(url)} alt="" loading="lazy" className="h-20 w-20 rounded-md object-cover" />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
               disabled={update.state === 'pending'}
               onClick={() =>
                 void update.mutateAsync({ id: venueId, photos: photos.filter((p) => p !== url) })
               }
             >
               remove
-            </button>
+            </Button>
           </div>
         ))}
       </div>
-      <div className="photo-upload">
+      <div className="mt-3 flex items-center gap-3">
         <input
           ref={input}
           type="file"
@@ -74,9 +82,20 @@ export function VenuePhotos({ venueId, photos }: { venueId: string; photos: read
             if (f) void upload(f)
           }}
         />
-        {busy && <span className="muted small">Uploading…</span>}
-        {error && <span className="error">{error}</span>}
+        {busy && (
+          <>
+            <Loader size="sm" />
+            <Text variant="secondary" size="sm" as="span">
+              Uploading…
+            </Text>
+          </>
+        )}
+        {error && (
+          <Text variant="error" as="span">
+            {error}
+          </Text>
+        )}
       </div>
-    </section>
+    </Surface>
   )
 }

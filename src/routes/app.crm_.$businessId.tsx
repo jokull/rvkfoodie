@@ -4,6 +4,13 @@
  * entities, so list rows patch in place.
  */
 import { Link, createFileRoute } from '@tanstack/react-router'
+import { Button } from '@cloudflare/kumo/components/button'
+import { Input } from '@cloudflare/kumo/components/input'
+import { Select } from '@cloudflare/kumo/components/select'
+import { Badge } from '@cloudflare/kumo/components/badge'
+import { Loader } from '@cloudflare/kumo/components/loader'
+import { Empty } from '@cloudflare/kumo/components/empty'
+import { Table } from '@cloudflare/kumo/components/table'
 import { Field, Form, reset, useForm } from '@formisch/react'
 import { useState } from 'react'
 import * as v from 'valibot'
@@ -29,26 +36,32 @@ function BusinessDetail() {
 function BusinessDetailInner() {
   const { businessId } = Route.useParams()
   const business = useResultQuery(client.businesses.byId, { id: businessId }, { staleTime: 60_000 })
-  if (business.state === 'pending') return <p className="muted">Loading…</p>
+  if (business.state === 'pending')
+    return (
+      <div className="flex items-center gap-2">
+        <Loader size="sm" />
+        <span className="text-sm text-slate-500">Loading…</span>
+      </div>
+    )
   if (business.state === 'failure')
-    return <p className="error">{business.error._tag === 'business/not-found' ? 'Business not found.' : `Failed: ${business.error._tag}`}</p>
+    return <p className="text-sm text-rose-600">{business.error._tag === 'business/not-found' ? 'Business not found.' : `Failed: ${business.error._tag}`}</p>
 
   const b = business.value
   return (
     <div>
-      <p className="muted small">
+      <p className="text-sm text-slate-500">
         <Link to="/app/crm">← all businesses</Link>
       </p>
-      <div className="page-head">
-        <h1 className="page-title">{b.name}</h1>
+      <div className="mb-4 flex items-baseline gap-3">
+        <h1 className="text-xl font-semibold">{b.name}</h1>
         {b.website && (
-          <a href={b.website} target="_blank" rel="noreferrer" className="muted small">
+          <a href={b.website} target="_blank" rel="noreferrer" className="text-sm text-slate-500">
             {b.website.replace(/^https?:\/\//, '')}
           </a>
         )}
-        {b.industry && <span className="badge">{b.industry}</span>}
+        {b.industry && <Badge variant="secondary">{b.industry}</Badge>}
       </div>
-      {b.notes && <p className="muted small">{b.notes}</p>}
+      {b.notes && <p className="text-sm text-slate-500">{b.notes}</p>}
       <Hotels businessId={businessId} />
       <Contacts businessId={businessId} />
       <Deals businessId={businessId} />
@@ -86,54 +99,68 @@ function Hotels({ businessId }: { businessId: string }) {
   }
 
   return (
-    <section className="panel">
-      <div className="panel-head">
-        <h2 className="panel-title">Hotels</h2>
-        <button className="link-button" onClick={() => setOpen((o) => !o)}>
+    <section className="mb-6 rounded-lg border border-slate-200 p-4">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="mb-2 text-sm font-semibold text-slate-700">Hotels</h2>
+        <Button variant="ghost" size="sm" onClick={() => setOpen((o) => !o)}>
           {open ? 'cancel' : '+ add'}
-        </button>
+        </Button>
       </div>
       {open && (
-        <Form of={form} onSubmit={submit} className="lifecycle-form">
+        <Form of={form} onSubmit={submit} className="mb-3 flex flex-wrap gap-2">
           <Field of={form} path={['name']}>
-            {(s) => <input {...s.props} placeholder="Hotel name" aria-label="Hotel name" />}
+            {(s) => <Input value={s.input} {...s.props} placeholder="Hotel name" aria-label="Hotel name" />}
           </Field>
           <Field of={form} path={['address']}>
-            {(s) => <input {...s.props} placeholder="Address" aria-label="Address" />}
+            {(s) => <Input value={s.input} {...s.props} placeholder="Address" aria-label="Address" />}
           </Field>
           <Field of={form} path={['roomCount']}>
-            {(s) => <input {...s.props} type="number" min={1} placeholder="Rooms" aria-label="Rooms" />}
+            {(s) => <Input value={s.input} {...s.props} type="number" min={1} placeholder="Rooms" aria-label="Rooms" />}
           </Field>
           <Field of={form} path={['website']}>
-            {(s) => <input {...s.props} placeholder="https://…" aria-label="Website" />}
+            {(s) => <Input value={s.input} {...s.props} placeholder="https://…" aria-label="Website" />}
           </Field>
-          <button type="submit" disabled={add.state === 'pending'}>
-            {add.state === 'pending' ? '…' : 'Add'}
-          </button>
-          {add.state === 'failure' && <span className="error">Failed: {add.error._tag}</span>}
+          <Button type="submit" variant="secondary" size="sm" loading={add.state === 'pending'}>
+            Add
+          </Button>
+          {add.state === 'failure' && <span className="text-sm text-rose-600">Failed: {add.error._tag}</span>}
         </Form>
       )}
       {hotels.state === 'pending' ? (
-        <p className="muted small">…</p>
+        <Loader size="sm" />
       ) : hotels.state === 'failure' ? (
-        <p className="error">Failed: {hotels.error._tag}</p>
+        <p className="text-sm text-rose-600">Failed: {hotels.error._tag}</p>
       ) : hotels.value.length === 0 ? (
-        <p className="muted small">No hotels yet.</p>
+        <Empty size="sm" title="No hotels yet." />
       ) : (
-        <ul className="event-list">
-          {hotels.value.map((h) => (
-            <li key={h.id}>
-              <strong>{h.name}</strong>
-              <span className="muted small">{h.roomCount} rooms</span>
-              {h.address && <span className="muted small">{h.address}</span>}
-              {h.website && (
-                <a href={h.website} target="_blank" rel="noreferrer" className="muted small">
-                  site
-                </a>
-              )}
-            </li>
-          ))}
-        </ul>
+        <Table>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>Hotel</Table.Head>
+              <Table.Head>Rooms</Table.Head>
+              <Table.Head>Address</Table.Head>
+              <Table.Head>Website</Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {hotels.value.map((h) => (
+              <Table.Row key={h.id}>
+                <Table.Cell className="font-medium">{h.name}</Table.Cell>
+                <Table.Cell>
+                  <span className="text-sm text-slate-500">{h.roomCount} rooms</span>
+                </Table.Cell>
+                <Table.Cell>{h.address && <span className="text-sm text-slate-500">{h.address}</span>}</Table.Cell>
+                <Table.Cell>
+                  {h.website && (
+                    <a href={h.website} target="_blank" rel="noreferrer" className="text-sm text-slate-500">
+                      site
+                    </a>
+                  )}
+                </Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table>
       )}
     </section>
   )
@@ -173,62 +200,74 @@ function Contacts({ businessId }: { businessId: string }) {
   }
 
   return (
-    <section className="panel">
-      <div className="panel-head">
-        <h2 className="panel-title">Contacts</h2>
-        <button className="link-button" onClick={() => setOpen((o) => !o)}>
+    <section className="mb-6 rounded-lg border border-slate-200 p-4">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="mb-2 text-sm font-semibold text-slate-700">Contacts</h2>
+        <Button variant="ghost" size="sm" onClick={() => setOpen((o) => !o)}>
           {open ? 'cancel' : '+ add'}
-        </button>
+        </Button>
       </div>
       {open && (
-        <Form of={form} onSubmit={submit} className="lifecycle-form">
+        <Form of={form} onSubmit={submit} className="mb-3 flex flex-wrap gap-2">
           <Field of={form} path={['firstName']}>
-            {(s) => <input {...s.props} placeholder="First name" aria-label="First name" />}
+            {(s) => <Input value={s.input} {...s.props} placeholder="First name" aria-label="First name" />}
           </Field>
           <Field of={form} path={['lastName']}>
-            {(s) => <input {...s.props} placeholder="Last name" aria-label="Last name" />}
+            {(s) => <Input value={s.input} {...s.props} placeholder="Last name" aria-label="Last name" />}
           </Field>
           <Field of={form} path={['title']}>
-            {(s) => <input {...s.props} placeholder="Title" aria-label="Title" />}
+            {(s) => <Input value={s.input} {...s.props} placeholder="Title" aria-label="Title" />}
           </Field>
           <Field of={form} path={['email']}>
-            {(s) => <input {...s.props} type="email" placeholder="email" aria-label="Email" />}
+            {(s) => <Input value={s.input} {...s.props} type="email" placeholder="email" aria-label="Email" />}
           </Field>
           <Field of={form} path={['phone']}>
-            {(s) => <input {...s.props} placeholder="phone" aria-label="Phone" />}
+            {(s) => <Input value={s.input} {...s.props} placeholder="phone" aria-label="Phone" />}
           </Field>
           <Field of={form} path={['isDecisionMaker']}>
             {(s) => (
-              <label className="checkbox-label">
+              <label className="flex items-center gap-1.5 text-sm">
                 <input {...s.props} type="checkbox" />
                 <span>decision maker</span>
               </label>
             )}
           </Field>
-          <button type="submit" disabled={add.state === 'pending'}>
-            {add.state === 'pending' ? '…' : 'Add'}
-          </button>
-          {add.state === 'failure' && <span className="error">Failed: {add.error._tag}</span>}
+          <Button type="submit" variant="secondary" size="sm" loading={add.state === 'pending'}>
+            Add
+          </Button>
+          {add.state === 'failure' && <span className="text-sm text-rose-600">Failed: {add.error._tag}</span>}
         </Form>
       )}
       {contacts.state === 'pending' ? (
-        <p className="muted small">…</p>
+        <Loader size="sm" />
       ) : contacts.state === 'failure' ? (
-        <p className="error">Failed: {contacts.error._tag}</p>
+        <p className="text-sm text-rose-600">Failed: {contacts.error._tag}</p>
       ) : contacts.value.length === 0 ? (
-        <p className="muted small">No contacts yet.</p>
+        <Empty size="sm" title="No contacts yet." />
       ) : (
-        <ul className="event-list">
-          {contacts.value.map((c) => (
-            <li key={c.id}>
-              <strong>{[c.firstName, c.lastName].filter(Boolean).join(' ') || '—'}</strong>
-              {c.title && <span className="muted small">{c.title}</span>}
-              {c.isDecisionMaker && <span className="badge badge-pick">decision maker</span>}
-              {c.email && <span className="muted small">{c.email}</span>}
-              {c.phone && <span className="muted small">{c.phone}</span>}
-            </li>
-          ))}
-        </ul>
+        <Table>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>Contact</Table.Head>
+              <Table.Head>Title</Table.Head>
+              <Table.Head>Email</Table.Head>
+              <Table.Head>Phone</Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {contacts.value.map((c) => (
+              <Table.Row key={c.id}>
+                <Table.Cell>
+                  <span className="font-medium">{[c.firstName, c.lastName].filter(Boolean).join(' ') || '—'}</span>{' '}
+                  {c.isDecisionMaker && <Badge variant="warning">decision maker</Badge>}
+                </Table.Cell>
+                <Table.Cell>{c.title && <span className="text-sm text-slate-500">{c.title}</span>}</Table.Cell>
+                <Table.Cell>{c.email && <span className="text-sm text-slate-500">{c.email}</span>}</Table.Cell>
+                <Table.Cell>{c.phone && <span className="text-sm text-slate-500">{c.phone}</span>}</Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table>
       )}
     </section>
   )
@@ -244,6 +283,10 @@ const dealSchema = v.object({
   renewalDate: v.optional(v.string()),
   notes: v.optional(v.string()),
 })
+
+const STAGE_ITEMS: Record<(typeof PIPELINE_STAGES)[number], string> = Object.fromEntries(
+  PIPELINE_STAGES.map((st) => [st, st]),
+) as Record<(typeof PIPELINE_STAGES)[number], string>
 
 function Deals({ businessId }: { businessId: string }) {
   const deals = useResultQuery(client.deals.listByBusiness, { businessId }, { staleTime: 60_000 })
@@ -271,79 +314,93 @@ function Deals({ businessId }: { businessId: string }) {
   const fmt = (d: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : '—')
 
   return (
-    <section className="panel">
-      <div className="panel-head">
-        <h2 className="panel-title">Deals</h2>
-        <button className="link-button" onClick={() => setOpen((o) => !o)}>
+    <section className="mb-6 rounded-lg border border-slate-200 p-4">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="mb-2 text-sm font-semibold text-slate-700">Deals</h2>
+        <Button variant="ghost" size="sm" onClick={() => setOpen((o) => !o)}>
           {open ? 'cancel' : '+ add'}
-        </button>
+        </Button>
       </div>
       {open && (
-        <Form of={form} onSubmit={submit} className="lifecycle-form">
+        <Form of={form} onSubmit={submit} className="mb-3 flex flex-wrap gap-2">
           <Field of={form} path={['name']}>
-            {(s) => <input {...s.props} placeholder="Deal name" aria-label="Deal name" />}
+            {(s) => <Input value={s.input} {...s.props} placeholder="Deal name" aria-label="Deal name" />}
           </Field>
           <Field of={form} path={['stage']}>
             {(s) => (
-              <select {...s.props} aria-label="Stage">
-                {PIPELINE_STAGES.map((st) => (
-                  <option key={st} value={st}>
-                    {st}
-                  </option>
-                ))}
-              </select>
+              <Select
+                size="sm"
+                aria-label="Stage"
+                value={s.input ?? PIPELINE_STAGES[0]}
+                onValueChange={(stage) => s.onChange(stage ?? PIPELINE_STAGES[0])}
+                items={STAGE_ITEMS}
+              />
             )}
           </Field>
           <Field of={form} path={['pricePerRoom']}>
-            {(s) => <input {...s.props} type="number" min={0} placeholder="Price/room" aria-label="Price per room" />}
+            {(s) => <Input value={s.input} {...s.props} type="number" min={0} placeholder="Price/room" aria-label="Price per room" />}
           </Field>
           <Field of={form} path={['startDate']}>
-            {(s) => <input {...s.props} type="date" aria-label="Start date" />}
+            {(s) => <Input value={s.input} {...s.props} type="date" aria-label="Start date" />}
           </Field>
           <Field of={form} path={['renewalDate']}>
-            {(s) => <input {...s.props} type="date" aria-label="Renewal date" />}
+            {(s) => <Input value={s.input} {...s.props} type="date" aria-label="Renewal date" />}
           </Field>
           <Field of={form} path={['notes']}>
-            {(s) => <input {...s.props} placeholder="Notes" aria-label="Notes" />}
+            {(s) => <Input value={s.input} {...s.props} placeholder="Notes" aria-label="Notes" />}
           </Field>
-          <button type="submit" disabled={add.state === 'pending'}>
-            {add.state === 'pending' ? '…' : 'Add'}
-          </button>
-          {add.state === 'failure' && <span className="error">Failed: {add.error._tag}</span>}
+          <Button type="submit" variant="secondary" size="sm" loading={add.state === 'pending'}>
+            Add
+          </Button>
+          {add.state === 'failure' && <span className="text-sm text-rose-600">Failed: {add.error._tag}</span>}
         </Form>
       )}
       {deals.state === 'pending' ? (
-        <p className="muted small">…</p>
+        <Loader size="sm" />
       ) : deals.state === 'failure' ? (
-        <p className="error">Failed: {deals.error._tag}</p>
+        <p className="text-sm text-rose-600">Failed: {deals.error._tag}</p>
       ) : deals.value.length === 0 ? (
-        <p className="muted small">No deals yet.</p>
+        <Empty size="sm" title="No deals yet." />
       ) : (
-        <ul className="event-list">
-          {deals.value.map((d: DealRow) => (
-            <li key={d.id} className="deal-row">
-              <strong>{d.name}</strong>
-              <select
-                value={d.stage}
-                onChange={(e) => void update.mutate({ id: d.id, stage: e.target.value as (typeof PIPELINE_STAGES)[number] })}
-                aria-label={`${d.name} stage`}
-              >
-                {PIPELINE_STAGES.map((st) => (
-                  <option key={st} value={st}>
-                    {st}
-                  </option>
-                ))}
-              </select>
-              <span className="muted small">
-                {d.pricePerRoom !== null ? `${d.pricePerRoom} kr/room` : ''}
-                {d.annualValue !== null ? ` · ${d.annualValue.toLocaleString()} kr/yr` : ''}
-              </span>
-              <span className="muted small">
-                {fmt(d.startDate)} → {fmt(d.renewalDate)}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <Table>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>Deal</Table.Head>
+              <Table.Head>Stage</Table.Head>
+              <Table.Head>Value</Table.Head>
+              <Table.Head>Dates</Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {deals.value.map((d: DealRow) => (
+              <Table.Row key={d.id}>
+                <Table.Cell className="font-medium">{d.name}</Table.Cell>
+                <Table.Cell>
+                  <Select
+                    size="sm"
+                    value={d.stage as (typeof PIPELINE_STAGES)[number]}
+                    onValueChange={(stage) => {
+                      if (stage) void update.mutate({ id: d.id, stage })
+                    }}
+                    aria-label={`${d.name} stage`}
+                    items={STAGE_ITEMS}
+                  />
+                </Table.Cell>
+                <Table.Cell>
+                  <span className="text-sm text-slate-500">
+                    {d.pricePerRoom !== null ? `${d.pricePerRoom} kr/room` : ''}
+                    {d.annualValue !== null ? ` · ${d.annualValue.toLocaleString()} kr/yr` : ''}
+                  </span>
+                </Table.Cell>
+                <Table.Cell>
+                  <span className="text-sm text-slate-500">
+                    {fmt(d.startDate)} → {fmt(d.renewalDate)}
+                  </span>
+                </Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table>
       )}
     </section>
   )

@@ -7,6 +7,11 @@ import { Field, Form, useForm } from '@formisch/react'
 import { useMemo } from 'react'
 import { useResultMutation } from 'result-rpc/react'
 import * as v from 'valibot'
+import { Button } from '@cloudflare/kumo/components/button'
+import { Field as KumoField, normalizeFieldError } from '@cloudflare/kumo/components/field'
+import { Input, InputArea } from '@cloudflare/kumo/components/input'
+import { Select } from '@cloudflare/kumo/components/select'
+import { Text } from '@cloudflare/kumo/components/text'
 import type { VenueRow } from '../models.js'
 import { client } from '../rpc-client.js'
 import { VENUE_CATEGORIES } from '../schema.js'
@@ -97,31 +102,27 @@ export function VenueEditForm({ venue }: { venue: VenueRow }) {
   const FieldText = ({ path, label, ...rest }: { path: readonly string[]; label: string; [k: string]: any }) => (
     <Field of={form} path={path as any}>
       {(s) => (
-        <label className="form-field">
-          <span>{label}</span>
-          <input {...s.props} {...rest} />
-          {s.errors && <em className="form-error">{s.errors[0]}</em>}
-        </label>
+        <KumoField label={label} error={normalizeFieldError(s.errors?.[0])}>
+          <Input {...s.props} value={s.input as string} {...rest} className="w-full" />
+        </KumoField>
       )}
     </Field>
   )
 
   return (
-    <Form of={form} onSubmit={submit} className="venue-form">
-      <div className="form-grid">
+    <Form of={form} onSubmit={submit} className="mb-6">
+      <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
         <FieldText path={['name']} label="Name" />
         <Field of={form} path={['category']}>
           {(s) => (
-            <label className="form-field">
-              <span>Category</span>
-              <select {...s.props}>
-                {VENUE_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <Select
+              label="Category"
+              error={s.errors?.[0]}
+              value={s.input}
+              onValueChange={(v) => v !== null && s.onChange(v)}
+              items={VENUE_CATEGORIES.map((c) => ({ label: c, value: c }))}
+              className="w-full"
+            />
           )}
         </Field>
         <FieldText path={['categorySecondary']} label="Secondary category" placeholder="optional" />
@@ -133,30 +134,35 @@ export function VenueEditForm({ venue }: { venue: VenueRow }) {
         <FieldText path={['priceLevel']} label="Price level (1–4)" type="number" min={1} max={4} placeholder="—" />
         <FieldText path={['confidence']} label="Confidence (0–1)" type="number" min={0} max={1} step={0.1} placeholder="0" />
         <FieldText path={['lastVerifiedAt']} label="Last verified" type="date" />
-        <div className="form-grid form-grid-two">
+        <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
           <FieldText path={['lat']} label="Latitude" placeholder="64.14…" />
           <FieldText path={['lon']} label="Longitude" placeholder="-21.93…" />
         </div>
         <FieldText path={['tags']} label="Tags" placeholder="free, family-friendly" />
         <FieldText path={['recommendedDishes']} label="Recommended dishes" placeholder="comma separated" />
-        <Field of={form} path={['note']}>
-          {(s) => (
-            <label className="form-field form-field-wide">
-              <span>Note</span>
-              <textarea {...s.props} rows={4} />
-            </label>
-          )}
-        </Field>
+        <div className="md:col-span-2">
+          <Field of={form} path={['note']}>
+            {(s) => (
+              <KumoField label="Note" error={normalizeFieldError(s.errors?.[0])}>
+                <InputArea {...s.props} value={s.input} rows={4} className="w-full resize-y" />
+              </KumoField>
+            )}
+          </Field>
+        </div>
       </div>
-      <div className="form-actions">
-        <button type="submit" disabled={update.state === 'pending'}>
-          {update.state === 'pending' ? 'Saving…' : 'Save changes'}
-        </button>
-        {update.state === 'success' && <span className="saved">Saved ✓</span>}
+      <div className="mt-4 flex items-center gap-3">
+        <Button type="submit" variant="primary" loading={update.state === 'pending'}>
+          Save changes
+        </Button>
+        {update.state === 'success' && (
+          <Text variant="success" as="span">
+            Saved ✓
+          </Text>
+        )}
         {update.state === 'failure' && (
-          <span className="error">
+          <Text variant="error" as="span">
             {update.error._tag === 'venue/name-taken' ? 'Name already taken' : `Failed: ${update.error._tag}`}
-          </span>
+          </Text>
         )}
       </div>
     </Form>

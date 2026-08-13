@@ -6,6 +6,12 @@
  */
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { ResultRpcHydrationBoundary, useResultMutation, useResultQuery, useResultRuntime } from 'result-rpc/react'
+import { Badge } from '@cloudflare/kumo/components/badge'
+import { Button } from '@cloudflare/kumo/components/button'
+import { Empty } from '@cloudflare/kumo/components/empty'
+import { Loader } from '@cloudflare/kumo/components/loader'
+import { Surface } from '@cloudflare/kumo/components/surface'
+import { Text } from '@cloudflare/kumo/components/text'
 import { client } from '../rpc-client.js'
 import { VenueAwards } from '../components/venue-awards.js'
 import { VenueEditForm } from '../components/venue-edit-form.js'
@@ -26,17 +32,25 @@ const photoUrl = (photos: readonly string[]): string | null => {
 
 function AuditTrail({ venueId }: { venueId: string }) {
   const audit = useResultQuery(client.audit.list, { entityType: 'venue', entityId: venueId }, { staleTime: 30_000 })
-  if (audit.state === 'failure') return <p className="error">Audit failed: {audit.error._tag}</p>
-  if (audit.state === 'pending') return <p className="muted small">…</p>
-  if (audit.value.length === 0) return <p className="muted small">No audit entries.</p>
+  if (audit.state === 'failure') return <Text variant="error">Audit failed: {audit.error._tag}</Text>
+  if (audit.state === 'pending') return <Loader size="sm" />
+  if (audit.value.length === 0) return <Empty size="sm" title="No audit entries." />
   return (
-    <ul className="audit-list">
+    <ul className="flex flex-col gap-1">
       {audit.value.map((entry) => (
-        <li key={entry.id}>
-          <span className="muted small">{new Date(entry.at).toISOString().slice(0, 16).replace('T', ' ')}</span>
-          <code>{entry.actor}</code>
-          <span>{entry.action}</span>
-          {entry.after && <span className="muted small">{entry.after.slice(0, 140)}</span>}
+        <li key={entry.id} className="flex flex-wrap items-baseline gap-2 text-sm">
+          <Text variant="secondary" size="sm" as="span">
+            {new Date(entry.at).toISOString().slice(0, 16).replace('T', ' ')}
+          </Text>
+          <Text variant="mono" as="code" DANGEROUS_className="rounded bg-slate-100 px-1 text-xs">
+            {entry.actor}
+          </Text>
+          <Text as="span">{entry.action}</Text>
+          {entry.after && (
+            <Text variant="secondary" size="sm" as="span">
+              {entry.after.slice(0, 140)}
+            </Text>
+          )}
         </li>
       ))}
     </ul>
@@ -60,12 +74,12 @@ function VenueDetailInner() {
       void runtime.cache.invalidate(client.audit.list, { entityType: 'venue', entityId: venueId }),
   })
 
-  if (venue.state === 'pending') return <p className="muted">Loading venue…</p>
+  if (venue.state === 'pending') return <Loader size="lg" />
   if (venue.state === 'failure')
     return (
-      <p className="error">
+      <Text variant="error">
         {venue.error._tag === 'venue/not-found' ? 'Venue not found.' : `Failed: ${venue.error._tag}`}
-      </p>
+      </Text>
     )
 
   const v = venue.value
@@ -73,45 +87,48 @@ function VenueDetailInner() {
   const next = v.status === 'live' ? 'closed' : 'live'
   return (
     <div>
-      <p className="muted small">
+      <Text variant="secondary" size="sm" as="p">
         <Link to="/app/venues">← all venues</Link>
-      </p>
-      <div className="venue-hero">
-        {img && <img className="venue-hero-photo" src={img} alt={v.name} />}
+      </Text>
+      <div className="mb-6 flex gap-4">
+        {img && <img className="h-24 w-24 shrink-0 rounded-lg object-cover" src={img} alt={v.name} />}
         <div>
-          <h1 className="page-title">{v.name}</h1>
-          <div className="venue-badges">
-            <span className={`badge status-${v.status}`}>{v.status}</span>
-            <span className="badge">{v.category}</span>
-            {v.categorySecondary && <span className="badge">{v.categorySecondary}</span>}
-            {v.cuisine && <span className="badge">{v.cuisine}</span>}
-            <span className="venue-confidence" title="Editorial confidence">
-              {Math.round(v.confidence * 100)}%
+          <h1 className="text-xl font-semibold">{v.name}</h1>
+          <div className="mb-1 flex flex-wrap gap-1.5">
+            <Badge variant={v.status === 'live' ? 'green' : v.status === 'closed' ? 'red' : 'neutral'}>{v.status}</Badge>
+            <Badge variant="secondary">{v.category}</Badge>
+            {v.categorySecondary && <Badge variant="secondary">{v.categorySecondary}</Badge>}
+            {v.cuisine && <Badge variant="secondary">{v.cuisine}</Badge>}
+            <span title="Editorial confidence">
+              <Badge variant="secondary">{Math.round(v.confidence * 100)}%</Badge>
             </span>
           </div>
-          <p className="muted small">
+          <Text variant="secondary" size="sm" as="p">
             {v.address}
             {v.openingHours ? ` · ${v.openingHours}` : ''}
             {v.website ? ` · ${v.website}` : ''}
             {v.phone ? ` · ${v.phone}` : ''}
-          </p>
-          <button
-            className="toggle"
-            disabled={setStatus.state === 'pending'}
+          </Text>
+          <Button
+            type="button"
+            variant={next === 'live' ? 'secondary' : 'secondary-destructive'}
+            loading={setStatus.state === 'pending'}
             onClick={() => setStatus.mutate({ id: v.id, status: next })}
           >
-            {setStatus.state === 'pending' ? '…' : next === 'live' ? 'Mark live' : 'Mark closed'}
-          </button>
+            {next === 'live' ? 'Mark live' : 'Mark closed'}
+          </Button>
         </div>
       </div>
       <VenueEditForm venue={v} />
       <VenuePhotos venueId={v.id} photos={v.photos} />
       <VenueLifecycle venueId={v.id} />
       <VenueAwards venueId={v.id} />
-      <section className="panel">
-        <h2 className="panel-title">Audit trail</h2>
+      <Surface render={<section />} className="mb-6 p-4">
+        <Text variant="heading3" as="h2" DANGEROUS_className="mb-2">
+          Audit trail
+        </Text>
         <AuditTrail venueId={v.id} />
-      </section>
+      </Surface>
     </div>
   )
 }

@@ -4,6 +4,14 @@
  */
 import { useState } from 'react'
 import { useResultMutation, useResultQuery } from 'result-rpc/react'
+import { Badge } from '@cloudflare/kumo/components/badge'
+import { Button } from '@cloudflare/kumo/components/button'
+import { Empty } from '@cloudflare/kumo/components/empty'
+import { Input } from '@cloudflare/kumo/components/input'
+import { Loader } from '@cloudflare/kumo/components/loader'
+import { Select } from '@cloudflare/kumo/components/select'
+import { Surface } from '@cloudflare/kumo/components/surface'
+import { Text } from '@cloudflare/kumo/components/text'
 import { client } from '../rpc-client.js'
 import { LIFECYCLE_TYPES } from '../schema.js'
 
@@ -33,41 +41,59 @@ export function VenueLifecycle({ venueId }: { venueId: string }) {
   }
 
   return (
-    <section className="panel">
-      <h2 className="panel-title">Lifecycle</h2>
-      <form className="lifecycle-form" onSubmit={submit}>
-        <select value={type} onChange={(e) => setType(e.target.value)} aria-label="Event type">
-          {LIFECYCLE_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-        <input type="date" value={startedAt} onChange={(e) => setStartedAt(e.target.value)} aria-label="Start date" />
-        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" aria-label="Note" />
-        <button type="submit" disabled={add.state === 'pending'}>
-          {add.state === 'pending' ? '…' : 'Record'}
-        </button>
-        {add.state === 'failure' && <span className="error">Failed: {add.error._tag}</span>}
+    <Surface render={<section />} className="mb-6 p-4">
+      <Text variant="heading3" as="h2" DANGEROUS_className="mb-2">
+        Lifecycle
+      </Text>
+      <form className="mb-3 flex flex-wrap gap-2" onSubmit={submit}>
+        <Select
+          size="sm"
+          aria-label="Event type"
+          value={type}
+          onValueChange={(v) => v !== null && setType(v)}
+          items={LIFECYCLE_TYPES.map((t) => ({ label: t, value: t as string }))}
+        />
+        <Input size="sm" type="date" value={startedAt} onChange={(e) => setStartedAt(e.target.value)} aria-label="Start date" />
+        <Input size="sm" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" aria-label="Note" />
+        <Button type="submit" variant="secondary" loading={add.state === 'pending'}>
+          Record
+        </Button>
+        {add.state === 'failure' && (
+          <Text variant="error" as="span">
+            Failed: {add.error._tag}
+          </Text>
+        )}
       </form>
       {events.state === 'failure' ? (
-        <p className="error">Failed: {events.error._tag}</p>
+        <Text variant="error">Failed: {events.error._tag}</Text>
       ) : events.state === 'pending' ? (
-        <p className="muted small">…</p>
+        <Loader size="sm" />
       ) : events.value.length === 0 ? (
-        <p className="muted small">No lifecycle events.</p>
+        <Empty size="sm" title="No lifecycle events." />
       ) : (
-        <ul className="event-list">
+        <ul className="flex flex-col gap-1">
           {events.value.map((ev) => (
-            <li key={ev.id}>
-              <span className={`badge lifecycle-${ev.type}`}>{ev.type}</span>
-              <span className="muted small">{fmt(ev.startedAt)}</span>
-              {ev.endedAt && <span className="muted small">→ {fmt(ev.endedAt)}</span>}
-              {ev.note && <span className="muted small">— {ev.note}</span>}
+            <li key={ev.id} className="flex items-center gap-2">
+              <Badge variant={ev.type === 'closed' ? 'red' : ev.type === 'temporarily-closed' ? 'warning' : 'green'}>
+                {ev.type}
+              </Badge>
+              <Text variant="secondary" size="sm" as="span">
+                {fmt(ev.startedAt)}
+              </Text>
+              {ev.endedAt && (
+                <Text variant="secondary" size="sm" as="span">
+                  → {fmt(ev.endedAt)}
+                </Text>
+              )}
+              {ev.note && (
+                <Text variant="secondary" size="sm" as="span">
+                  — {ev.note}
+                </Text>
+              )}
             </li>
           ))}
         </ul>
       )}
-    </section>
+    </Surface>
   )
 }

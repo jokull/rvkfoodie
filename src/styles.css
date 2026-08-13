@@ -1,86 +1,10 @@
+/* kumo: Tailwind must scan kumo's dist (v4 skips node_modules by default)
+   and its @theme tokens must register BEFORE tailwindcss (kumo README). */
+@source "../node_modules/@cloudflare/kumo/dist/**/*.{js,jsx,ts,tsx}";
+@import '@cloudflare/kumo/styles';
 @import 'tailwindcss';
 
-.site-header {
-  @apply flex items-center gap-3 border-b border-slate-200 px-4 py-3;
-}
-.site-header .brand {
-  @apply text-lg font-semibold;
-}
-.site-header .subtitle {
-  @apply text-sm text-slate-500;
-}
-
-main {
-  @apply mx-auto max-w-3xl px-4 py-6;
-}
-
-.site-footer {
-  @apply border-t border-slate-200 px-4 py-3 text-center text-xs text-slate-400;
-}
-
-.stats {
-  @apply mb-4 flex gap-4;
-}
-.stat {
-  @apply flex flex-col rounded-lg border border-slate-200 px-4 py-2;
-}
-.stat strong {
-  @apply text-2xl;
-}
-.stat span {
-  @apply text-xs text-slate-500;
-}
-
-.add-form {
-  @apply mb-4 flex flex-wrap gap-2;
-}
-.add-form input,
-.add-form select {
-  @apply rounded-md border border-slate-300 px-2 py-1 text-sm;
-}
-.add-form button {
-  @apply rounded-md bg-slate-900 px-3 py-1 text-sm font-medium text-white;
-}
-
-.feed {
-  @apply flex flex-col gap-2;
-}
-.card {
-  @apply rounded-lg border border-slate-200 p-3;
-}
-.card-head {
-  @apply flex items-center justify-between gap-2;
-}
-.toggle {
-  @apply rounded-md border border-slate-300 px-2 py-1 text-xs;
-}
-.badge {
-  @apply mr-1 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600;
-}
-.badge.status-live {
-  @apply bg-emerald-100 text-emerald-700;
-}
-.badge.status-closed {
-  @apply bg-rose-100 text-rose-700;
-}
-.badge.status-draft {
-  @apply bg-amber-100 text-amber-700;
-}
-
-.load-more {
-  @apply mt-3 rounded-md border border-slate-300 px-3 py-1 text-sm;
-}
-
-.hotels {
-  @apply mt-8;
-}
-.hotels h2 {
-  @apply mb-2 text-lg font-semibold;
-}
-.hotels ul {
-  @apply flex flex-col gap-1 text-sm;
-}
-
+/* Shared feedback text (global error boundary + public guide shell). */
 .error {
   @apply text-sm text-rose-600;
 }
@@ -88,7 +12,87 @@ main {
   @apply text-sm text-slate-500;
 }
 
-/* --- Guide page (/g/<slug>) --- */
+/* ============ Public consumer site theme (legacy tokens) ============ */
+@theme {
+  --color-cream: #fcf8ec;
+  --color-blue: #5071fe;
+  --color-ink: #1a1a1a;
+  --color-ink-light: #666;
+  --font-display: 'Instrument Serif', serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --text-tiny: 0.75rem;
+  --text-tiny--line-height: 1.4;
+  --text-huge: clamp(2.5rem, 5vw, 4.5rem);
+  --text-huge--line-height: 1.1;
+  --leading-tiny: 1.4;
+  --leading-huge: 1.1;
+}
+
+/* kumo primitives + semantic tokens → rvkfoodie brand (surfaces cream,
+   accent blue #5071fe, text ink). Declared after tailwindcss so these win
+   over kumo's defaults. */
+@theme {
+  --color-blue-400: #5071fe;
+  --color-blue-800: #3247c8;
+  --color-kumo-neutral-25: #fcf8ec;
+  --color-kumo-neutral-50: #fcf8ec;
+  --color-kumo-neutral-75: #f8f3e4;
+  --color-kumo-neutral-125: #f2ecda;
+  --color-kumo-neutral-450: #e2dbc3;
+  --color-kumo-neutral-1000: #1a1a1a;
+
+  /* kumo's button-emphasis hooks are consumer-defined (undefined by kumo) */
+  --kumo-button-emphasis-bg: #5071fe;
+  --kumo-button-emphasis-ring: #5071fe;
+  --kumo-button-emphasis-gradient-end: #3247c8;
+
+  /* semantic tokens from theme-kumo.css, light-mode values → brand */
+  --color-kumo-brand: #5071fe;
+  --color-kumo-brand-hover: #3247c8;
+  --color-kumo-canvas: #fcf8ec;
+  --color-kumo-elevated: #f8f3e4;
+  --color-kumo-base: #ffffff;
+  --color-kumo-focus: #5071fe;
+  --text-color-kumo-link: #5071fe;
+}
+
+.public-shell {
+  @apply bg-cream text-ink font-body antialiased;
+  min-height: 100vh;
+}
+
+.prose-custom a {
+  color: var(--color-blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-custom blockquote {
+  border-left: 3px solid var(--color-blue);
+  padding-left: 1.25rem;
+  margin: 1.5rem 0;
+  color: var(--color-ink-light);
+}
+.prose-intro p {
+  margin-bottom: 1rem;
+  color: var(--color-ink-light);
+}
+.prose-intro h3 {
+  font-weight: 500;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-ink);
+}
+.prose-intro ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  color: var(--color-ink-light);
+}
+.prose-intro strong {
+  font-weight: 500;
+  color: var(--color-ink);
+}
+
+/* ============ Guide page (/g/<slug>) ============ */
 .guide-shell {
   @apply mx-auto max-w-xl px-4 py-4;
 }
@@ -149,6 +153,9 @@ main {
 .venue-card-actions {
   @apply mt-2 flex gap-3 text-sm font-medium text-sky-700;
 }
+.venue-card-photo {
+  @apply mb-2 h-40 w-full rounded-lg object-cover;
+}
 .guide-footer {
   @apply mt-8 border-t border-slate-200 pt-4 text-center;
 }
@@ -169,321 +176,4 @@ main {
 }
 .capture-done {
   @apply text-sm text-emerald-700;
-}
-
-/* Leaflet map pins */
-.pin-dot {
-  @apply rounded-full border-2 border-white shadow;
-}
-.pin-hotel-dot {
-  @apply h-3.5 w-3.5 bg-sky-600;
-}
-.pin-venue-dot {
-  @apply h-2.5 w-2.5 bg-rose-600;
-}
-.radius-ring {
-  @apply fill-sky-200/40 stroke-sky-500;
-}
-
-/* --- Auth / app shell --- */
-.login {
-  @apply mx-auto max-w-sm px-4 py-10 text-center;
-}
-.login h1 {
-  @apply text-2xl font-semibold;
-}
-.login-form {
-  @apply mt-4 flex flex-col gap-2;
-}
-.login-form input {
-  @apply rounded-md border border-slate-300 px-2 py-1.5 text-sm;
-}
-.login-form button {
-  @apply rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white;
-}
-.app-shell {
-  @apply mx-auto max-w-3xl px-4 py-6;
-}
-
-/* --- Guide venue card photos (legacy CDN, media.rvkfoodie.is) --- */
-.venue-card-photo {
-  @apply mb-2 h-40 w-full rounded-lg object-cover;
-}
-
-/* --- Internal SPA (ticket 11: venues screen) --- */
-.app-layout {
-  @apply flex min-h-screen;
-}
-.app-sidebar {
-  @apply flex w-56 shrink-0 flex-col border-r border-slate-200 bg-slate-50 px-4 py-5;
-}
-.app-brand {
-  @apply mb-5 flex flex-col;
-}
-.app-brand strong {
-  @apply text-sm font-semibold;
-}
-.app-nav {
-  @apply flex flex-col gap-1;
-}
-.app-nav-link {
-  @apply no-underline;
-}
-.app-nav-item {
-  @apply block rounded-md px-2 py-1.5 text-sm text-slate-700;
-}
-.app-nav-item:hover {
-  @apply bg-slate-200/60;
-}
-.app-nav-item.is-active {
-  @apply bg-white font-medium text-slate-900 shadow-sm;
-}
-.app-nav-item small {
-  @apply text-xs text-slate-400;
-}
-.app-nav-disabled {
-  @apply cursor-default text-slate-400;
-}
-.app-nav-disabled:hover {
-  @apply bg-transparent;
-}
-.app-user {
-  @apply mt-auto truncate;
-}
-.app-main {
-  @apply w-full max-w-5xl px-8 py-6;
-}
-.page-title {
-  @apply text-xl font-semibold;
-}
-.page-head {
-  @apply mb-4 flex items-baseline gap-3;
-}
-
-/* venue list */
-.venue-filters {
-  @apply mb-4 flex flex-wrap gap-2;
-}
-.venue-filters input {
-  @apply w-72 rounded-md border border-slate-300 px-2 py-1.5 text-sm;
-}
-.venue-filters select {
-  @apply rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm;
-}
-.venue-list {
-  @apply flex flex-col gap-1;
-}
-.venue-row {
-  @apply flex items-center gap-3 rounded-lg px-2 py-2 no-underline hover:bg-slate-50;
-}
-.venue-thumb {
-  @apply h-10 w-10 shrink-0 rounded-md object-cover;
-}
-.venue-thumb-empty {
-  @apply bg-slate-100;
-}
-.venue-row-body {
-  @apply flex min-w-0 flex-1 flex-col;
-}
-.venue-row-body strong {
-  @apply truncate text-sm font-medium text-slate-900;
-}
-.venue-confidence {
-  @apply w-10 text-right text-xs tabular-nums text-slate-500;
-}
-
-/* venue detail */
-.venue-hero {
-  @apply mb-6 flex gap-4;
-}
-.venue-hero-photo {
-  @apply h-24 w-24 shrink-0 rounded-lg object-cover;
-}
-.venue-badges {
-  @apply mb-1 flex flex-wrap gap-1.5;
-}
-.venue-form {
-  @apply mb-6;
-}
-.form-grid {
-  @apply grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2;
-}
-.form-grid-two {
-  @apply grid;
-}
-.form-field {
-  @apply flex flex-col gap-1;
-}
-.form-field > span {
-  @apply text-xs font-medium text-slate-600;
-}
-.form-field input,
-.form-field select,
-.form-field textarea {
-  @apply rounded-md border border-slate-300 px-2 py-1.5 text-sm;
-}
-.form-field textarea {
-  @apply resize-y;
-}
-.form-field-wide {
-  @apply md:col-span-2;
-}
-.form-error {
-  @apply text-xs text-red-600;
-}
-.form-actions {
-  @apply mt-4 flex items-center gap-3;
-}
-.form-actions button,
-.toggle {
-  @apply rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50;
-}
-.saved {
-  @apply text-sm text-emerald-600;
-}
-.panel {
-  @apply mb-6 rounded-lg border border-slate-200 p-4;
-}
-.panel-title {
-  @apply mb-2 text-sm font-semibold text-slate-700;
-}
-.lifecycle-form {
-  @apply mb-3 flex flex-wrap gap-2;
-}
-.lifecycle-form input,
-.lifecycle-form select {
-  @apply rounded-md border border-slate-300 px-2 py-1.5 text-sm;
-}
-.lifecycle-form button {
-  @apply rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50;
-}
-.event-list {
-  @apply flex flex-col gap-1;
-}
-.event-list li {
-  @apply flex items-center gap-2;
-}
-.link-button {
-  @apply ml-auto text-xs text-slate-500 underline;
-}
-.audit-list {
-  @apply flex flex-col gap-1;
-}
-.audit-list li {
-  @apply flex flex-wrap items-baseline gap-2 text-sm;
-}
-.audit-list code {
-  @apply rounded bg-slate-100 px-1 text-xs;
-}
-.badge-pick {
-  @apply bg-amber-100 text-amber-800;
-}
-.add-button {
-  @apply ml-auto rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white;
-}
-.add-dialog {
-  @apply flex flex-col gap-3 p-4;
-}
-.ghost {
-  @apply rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700;
-}
-.photo-strip {
-  @apply flex flex-wrap gap-2;
-}
-.photo-cell {
-  @apply flex flex-col items-center gap-1;
-}
-.photo-cell img {
-  @apply h-20 w-20 rounded-md object-cover;
-}
-.photo-upload {
-  @apply mt-3 flex items-center gap-3;
-}
-.panel-head {
-  @apply mb-2 flex items-center justify-between;
-}
-.checkbox-label {
-  @apply flex items-center gap-1.5 text-sm;
-}
-.deal-row {
-  @apply flex flex-wrap items-center gap-2;
-}
-.deal-row select {
-  @apply rounded-md border border-slate-300 bg-white px-1.5 py-0.5 text-xs;
-}
-.builder-row {
-  @apply flex flex-col gap-1 border-b border-slate-100 py-1.5 last:border-0;
-}
-.builder-row-main {
-  @apply flex flex-wrap items-center gap-2;
-}
-.builder-row-actions {
-  @apply flex flex-wrap items-center gap-2;
-}
-.icon-button {
-  @apply rounded border border-slate-300 px-1.5 text-xs leading-5;
-}
-.override-input {
-  @apply rounded-md border border-slate-300 px-2 py-0.5 text-xs;
-}
-.pass-row {
-  @apply flex flex-wrap items-center gap-2 py-1;
-}
-.pass-name {
-  @apply font-medium text-slate-900 no-underline;
-}
-.pass-actions {
-  @apply ml-auto flex gap-2;
-}
-
-/* ============ Public consumer site theme (legacy tokens) ============ */
-@theme {
-  --color-cream: #fcf8ec;
-  --color-blue: #5071fe;
-  --color-ink: #1a1a1a;
-  --color-ink-light: #666;
-  --font-display: 'Instrument Serif', serif;
-  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
-  --text-tiny: 0.75rem;
-  --text-tiny--line-height: 1.4;
-  --text-huge: clamp(2.5rem, 5vw, 4.5rem);
-  --text-huge--line-height: 1.1;
-  --leading-tiny: 1.4;
-  --leading-huge: 1.1;
-}
-
-.public-shell {
-  @apply bg-cream text-ink font-body antialiased;
-  min-height: 100vh;
-}
-
-.prose-custom a {
-  color: var(--color-blue);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.prose-custom blockquote {
-  border-left: 3px solid var(--color-blue);
-  padding-left: 1.25rem;
-  margin: 1.5rem 0;
-  color: var(--color-ink-light);
-}
-.prose-intro p {
-  margin-bottom: 1rem;
-  color: var(--color-ink-light);
-}
-.prose-intro h3 {
-  font-weight: 500;
-  margin-top: 1.5rem;
-  margin-bottom: 0.5rem;
-  color: var(--color-ink);
-}
-.prose-intro ul {
-  list-style: disc;
-  padding-left: 1.25rem;
-  color: var(--color-ink-light);
-}
-.prose-intro strong {
-  font-weight: 500;
-  color: var(--color-ink);
 }

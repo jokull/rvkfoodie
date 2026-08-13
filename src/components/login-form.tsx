@@ -5,6 +5,9 @@
 import { useState } from 'react'
 import { createAuthClient } from 'better-auth/client'
 import { emailOTPClient } from 'better-auth/client/plugins'
+import { Button } from '@cloudflare/kumo/components/button'
+import { Input } from '@cloudflare/kumo/components/input'
+import { Text } from '@cloudflare/kumo/components/text'
 
 const authClient = createAuthClient({
   baseURL: typeof window !== 'undefined' ? window.location.origin : undefined,
@@ -49,12 +52,12 @@ export function LoginForm() {
   }
 
   return (
-    <div className="login">
-      <h1>Reykjavík Foodie</h1>
-      <p className="muted">Operator sign-in — we'll email you a code.</p>
+    <div className="mx-auto max-w-sm px-4 py-10 text-center">
+      <h1 className="text-2xl font-semibold">Reykjavík Foodie</h1>
+      <Text variant="secondary">Operator sign-in — we'll email you a code.</Text>
       {!otpSent ? (
-        <form className="login-form" onSubmit={sendCode}>
-          <input
+        <form className="mt-4 flex flex-col gap-2" onSubmit={sendCode}>
+          <Input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -62,14 +65,14 @@ export function LoginForm() {
             autoComplete="email"
             required
           />
-          <button type="submit" disabled={busy}>
-            {busy ? 'Sending…' : 'Email me a code'}
-          </button>
+          <Button type="submit" variant="primary" loading={busy}>
+            Email me a code
+          </Button>
         </form>
       ) : (
-        <form className="login-form" onSubmit={verify}>
-          <p className="muted">Code sent to {email}</p>
-          <input
+        <form className="mt-4 flex flex-col gap-2" onSubmit={verify}>
+          <Text variant="secondary">Code sent to {email}</Text>
+          <Input
             value={otp}
             onChange={(e) => setOtp(e.target.value)}
             placeholder="6-digit code"
@@ -77,12 +80,12 @@ export function LoginForm() {
             autoFocus
             required
           />
-          <button type="submit" disabled={busy}>
-            {busy ? 'Signing in…' : 'Sign in'}
-          </button>
+          <Button type="submit" variant="primary" loading={busy}>
+            Sign in
+          </Button>
         </form>
       )}
-      {error && <p className="error">{error}</p>}
+      {error && <Text variant="error">{error}</Text>}
     </div>
   )
 }
