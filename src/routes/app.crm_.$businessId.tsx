@@ -800,7 +800,7 @@ function DealCard({
       disabled={!to || pending}
       aria-label={to ? `Move to ${stageLabel(to)}` : 'No further stage'}
       onClick={() => to && onMove(to)}
-      className="rounded p-0.5 text-slate-400 transition-colors hover:bg-kumo-tint hover:text-kumo-default disabled:opacity-30 disabled:hover:bg-transparent"
+      className="rounded p-0.5 text-slate-400 transition-colors hover:bg-kumo-tint hover:text-kumo-default disabled:opacity-30 disabled:hover:bg-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-kumo-focus"
     >
       {dir === 'prev' ? <CaretLeft className="size-4" /> : <CaretRight className="size-4" />}
     </button>
@@ -811,10 +811,20 @@ function DealCard({
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium leading-tight">{deal.name}</p>
         <div className="flex shrink-0 gap-0.5">
-          <button type="button" aria-label={`Edit ${deal.name}`} onClick={onEdit} className="rounded p-0.5 text-slate-400 transition-colors hover:bg-kumo-tint hover:text-kumo-default">
+          <button
+            type="button"
+            aria-label={`Edit ${deal.name}`}
+            onClick={onEdit}
+            className="rounded p-0.5 text-slate-400 transition-colors hover:bg-kumo-tint hover:text-kumo-default focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-kumo-focus"
+          >
             <PencilSimple className="size-3.5" />
           </button>
-          <button type="button" aria-label={`Delete ${deal.name}`} onClick={onDelete} className="rounded p-0.5 text-slate-400 transition-colors hover:bg-kumo-tint hover:text-rose-700">
+          <button
+            type="button"
+            aria-label={`Delete ${deal.name}`}
+            onClick={onDelete}
+            className="rounded p-0.5 text-slate-400 transition-colors hover:bg-kumo-tint hover:text-rose-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-kumo-focus"
+          >
             <Trash className="size-3.5" />
           </button>
         </div>
@@ -837,7 +847,7 @@ function DealCard({
         {pending ? (
           <Loader size="sm" />
         ) : (
-          <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">{stageLabel(deal.stage)}</span>
+          <span className="text-[10px] font-medium uppercase tracking-wide text-slate-300">·</span>
         )}
         {arrow(next, 'next')}
       </div>

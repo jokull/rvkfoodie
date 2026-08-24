@@ -77,6 +77,19 @@ export function LoginForm() {
           <Button type="submit" variant="primary" loading={busy}>
             Sign in
           </Button>
+          <div className="flex items-center justify-center gap-3 text-sm">
+            <button
+              type="button"
+              className="text-kumo-link hover:underline"
+              onClick={() => void authClient.emailOtp.sendVerificationOtp({ email: email.trim(), type: 'sign-in' })}
+            >
+              Resend code
+            </button>
+            <span className="text-slate-400">·</span>
+            <button type="button" className="text-kumo-link hover:underline" onClick={() => { setOtpSent(false); setOtp(''); setEmail('') }}>
+              Use a different email
+            </button>
+          </div>
         </form>
       )}
       {error && <Text variant="error">{error}</Text>}
