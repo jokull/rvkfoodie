@@ -294,7 +294,30 @@ if (biz.status === 'ok') {
     assert(deals.status === 'ok' && deals.value.length === 1, 'deals.listByBusiness ok')
     const hotels = await client.hotels.listByBusiness({ businessId: bid })
     assert(hotels.status === 'ok' && hotels.value.length === 1, 'hotels.listByBusiness ok')
+    const summaries = await client.businesses.summaries({})
+    const mine = summaries.status === 'ok' ? summaries.value.find((s) => s.businessId === bid) : undefined
+    assert(
+      summaries.status === 'ok' && mine && mine.stage === 'won' && mine.dealCount === 1 && mine.annualValue === 40_000,
+      `businesses.summaries roll-up ok (got ${JSON.stringify(mine)})`,
+    )
+    const rmDeal = await client.deals.remove({ id: deal.value.id })
+    assert(rmDeal.status === 'ok', 'deals.remove ok')
+    const sumsAfter = await client.businesses.summaries({})
+    assert(
+      sumsAfter.status === 'ok' && !sumsAfter.value.some((s) => s.businessId === bid),
+      'summaries drop the business when its last deal is removed',
+    )
   }
-  const del = await client.businesses.update({ id: bid, name: 'E2E Operator (done)' })
-  assert(del.status === 'ok', 'businesses.update ok')
+  if (hotel.status === 'ok') {
+    const rmH = await client.hotels.remove({ id: hotel.value.id })
+    assert(rmH.status === 'ok', 'hotels.remove ok')
+  }
+  if (contact.status === 'ok') {
+    const rmC = await client.contacts.remove({ id: contact.value.id })
+    assert(rmC.status === 'ok', 'contacts.remove ok')
+  }
+  const del = await client.businesses.remove({ id: bid })
+  assert(del.status === 'ok', 'businesses.remove ok')
+  const gone = await client.businesses.byId({ id: bid })
+  assert(gone.status === 'error' && gone.error._tag === 'business/not-found', 'business gone after remove')
 }

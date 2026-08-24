@@ -249,6 +249,32 @@ export const updateBusinessContract = app
   .affects(businessListContract)
   .mutation()
 
+/** Per-business pipeline roll-up for the CRM list (latest stage, sum). */
+export const businessDealSummariesContract = app
+  .procedure()
+  .input(wire.object({}))
+  .output(
+    wire.array(
+      wire.object({
+        businessId: wire.string,
+        stage: wire.string,
+        annualValue: wire.number,
+        dealCount: wire.number,
+      }),
+    ),
+  )
+  .query()
+
+export const removeBusinessContract = app
+  .procedure()
+  .input(wire.object({ id: wire.string }))
+  .output(wire.object({ removed: wire.boolean }))
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(businessErrors, 'notFound') })
+  .affects(businessListContract)
+  .affects(businessByIdContract)
+  .affects(businessDealSummariesContract)
+  .mutation()
+
 // --- CRM: hotels (properties) -------------------------------------------
 
 export const hotelsByBusinessContract = app
@@ -293,6 +319,15 @@ export const updateHotelContract = app
     }),
   )
   .output(Hotel.all('every hotel field is public'))
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(hotelErrors, 'notFound') })
+  .affects(hotelsListContract)
+  .affects(hotelsByBusinessContract)
+  .mutation()
+
+export const removeHotelContract = app
+  .procedure()
+  .input(wire.object({ id: wire.string }))
+  .output(wire.object({ removed: wire.boolean }))
   .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(hotelErrors, 'notFound') })
   .affects(hotelsListContract)
   .affects(hotelsByBusinessContract)
@@ -346,6 +381,14 @@ export const updateContactContract = app
   .affects(contactsByBusinessContract)
   .mutation()
 
+export const removeContactContract = app
+  .procedure()
+  .input(wire.object({ id: wire.string }))
+  .output(wire.object({ removed: wire.boolean }))
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(contactErrors, 'notFound') })
+  .affects(contactsByBusinessContract)
+  .mutation()
+
 // --- CRM: deals ----------------------------------------------------------
 
 export const dealsByBusinessContract = app
@@ -371,6 +414,7 @@ export const addDealContract = app
   .errors({ ...pickErrors(authErrors, 'unauthorized') })
   .output(Deal.all('every deal field is staff-visible'))
   .affects(dealsByBusinessContract)
+  .affects(businessDealSummariesContract)
   .mutation()
 
 export const updateDealContract = app
@@ -390,6 +434,16 @@ export const updateDealContract = app
   .output(Deal.all('every deal field is staff-visible'))
   .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(dealErrors, 'notFound') })
   .affects(dealsByBusinessContract)
+  .affects(businessDealSummariesContract)
+  .mutation()
+
+export const removeDealContract = app
+  .procedure()
+  .input(wire.object({ id: wire.string }))
+  .output(wire.object({ removed: wire.boolean }))
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(dealErrors, 'notFound') })
+  .affects(dealsByBusinessContract)
+  .affects(businessDealSummariesContract)
   .mutation()
 
 // --- Guides ---------------------------------------------------------------
@@ -582,22 +636,27 @@ export const appContract = app.contract({
     listByBusiness: hotelsByBusinessContract,
     add: addHotelContract,
     update: updateHotelContract,
+    remove: removeHotelContract,
   },
   businesses: {
     list: businessListContract,
     byId: businessByIdContract,
     add: addBusinessContract,
     update: updateBusinessContract,
+    remove: removeBusinessContract,
+    summaries: businessDealSummariesContract,
   },
   contacts: {
     listByBusiness: contactsByBusinessContract,
     add: addContactContract,
     update: updateContactContract,
+    remove: removeContactContract,
   },
   deals: {
     listByBusiness: dealsByBusinessContract,
     add: addDealContract,
     update: updateDealContract,
+    remove: removeDealContract,
   },
   guides: {
     view: guideViewContract,

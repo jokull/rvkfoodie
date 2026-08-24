@@ -47,6 +47,7 @@ import {
   approveGuideCandidatesContract,
   auditListContract,
   businessByIdContract,
+  businessDealSummariesContract,
   businessListContract,
   contactsByBusinessContract,
   createGuideContract,
@@ -62,7 +63,11 @@ import {
   overviewContract,
   publishGuideContract,
   recordGuideEventContract,
+  removeBusinessContract,
+  removeContactContract,
+  removeDealContract,
   removeGuideExcludeContract,
+  removeHotelContract,
   requestGuideCaptureContract,
   setGuideConfigContract,
   setVenueStatusContract,
@@ -531,11 +536,61 @@ const updateHotel = server.implement(updateHotelContract).use(requireStaff).hand
   return ok(decodeHotel(afterRow))
 })
 
+const removeHotel = server
+  .implement(removeHotelContract).use(requireStaff)
+  .handler(async ({ input, errors, context }) => {
+    const before = await context.db.selectFrom('hotels').selectAll().where('id', '=', input.id).executeTakeFirst()
+    if (!before) return err(errors.notFound({ hotelId: input.id }))
+    // Keep the people; drop the property link.
+    await context.db.updateTable('contacts').set({ hotel_id: null }).where('hotel_id', '=', input.id).execute()
+    const row = await context.db.deleteFrom('hotels').where('id', '=', input.id).returningAll().executeTakeFirst()
+    if (!row) return err(errors.notFound({ hotelId: input.id }))
+    await audit(context.db, {
+      actor: 'staff',
+      action: 'delete',
+      entityType: 'hotel',
+      entityId: input.id,
+      before,
+    })
+    return ok({ removed: true })
+  })
+
 // --- CRM handlers ---------------------------------------------------------
 
 const businessList = server.implement(businessListContract).handler(async ({ context }) => {
   const rows = await context.db.selectFrom('businesses').selectAll().orderBy('name', 'asc').execute()
   return ok(rows.map(decodeBusiness))
+})
+
+/** Latest stage + summed annual value per business, for the CRM list column. */
+const businessDealSummaries = server.implement(businessDealSummariesContract).handler(async ({ context }) => {
+  const rows = await context.db
+    .selectFrom('deals')
+    .select(['business_id', 'stage', 'annual_value', 'updated_at'])
+    .execute()
+  const acc = new Map<string, { stage: string; annualValue: number; dealCount: number; updatedAt: number }>()
+  for (const r of rows) {
+    const t = r.updated_at ?? 0
+    const cur = acc.get(r.business_id)
+    if (!cur) {
+      acc.set(r.business_id, { stage: r.stage, annualValue: r.annual_value ?? 0, dealCount: 1, updatedAt: t })
+    } else {
+      cur.dealCount += 1
+      cur.annualValue += r.annual_value ?? 0
+      if (t > cur.updatedAt) {
+        cur.updatedAt = t
+        cur.stage = r.stage
+      }
+    }
+  }
+  return ok(
+    [...acc.entries()].map(([businessId, s]) => ({
+      businessId,
+      stage: s.stage,
+      annualValue: s.annualValue,
+      dealCount: s.dealCount,
+    })),
+  )
 })
 
 const businessById = server
@@ -613,6 +668,27 @@ const updateBusiness = server
       after: afterRow,
     })
     return ok(decodeBusiness(afterRow))
+  })
+
+const removeBusiness = server
+  .implement(removeBusinessContract).use(requireStaff)
+  .handler(async ({ input, errors, context }) => {
+    const before = await context.db.selectFrom('businesses').selectAll().where('id', '=', input.id).executeTakeFirst()
+    if (!before) return err(errors.notFound({ businessId: input.id }))
+    // No FK constraints on the CRM tables — clear children explicitly.
+    await context.db.deleteFrom('deals').where('business_id', '=', input.id).execute()
+    await context.db.deleteFrom('contacts').where('business_id', '=', input.id).execute()
+    await context.db.deleteFrom('hotels').where('business_id', '=', input.id).execute()
+    const row = await context.db.deleteFrom('businesses').where('id', '=', input.id).returningAll().executeTakeFirst()
+    if (!row) return err(errors.notFound({ businessId: input.id }))
+    await audit(context.db, {
+      actor: 'staff',
+      action: 'delete',
+      entityType: 'business',
+      entityId: input.id,
+      before,
+    })
+    return ok({ removed: true })
   })
 
 const contactsByBusiness = server
@@ -697,6 +773,23 @@ const updateContact = server
       after: updated.value,
     })
     return ok(decodeContact(updated.value))
+  })
+
+const removeContact = server
+  .implement(removeContactContract).use(requireStaff)
+  .handler(async ({ input, errors, context }) => {
+    const before = await context.db.selectFrom('contacts').selectAll().where('id', '=', input.id).executeTakeFirst()
+    if (!before) return err(errors.notFound({ contactId: input.id }))
+    const row = await context.db.deleteFrom('contacts').where('id', '=', input.id).returningAll().executeTakeFirst()
+    if (!row) return err(errors.notFound({ contactId: input.id }))
+    await audit(context.db, {
+      actor: 'staff',
+      action: 'delete',
+      entityType: 'contact',
+      entityId: input.id,
+      before,
+    })
+    return ok({ removed: true })
   })
 
 const dealsByBusiness = server
@@ -797,6 +890,23 @@ const updateDeal = server.implement(updateDealContract).use(requireStaff).handle
   })
   return ok(decodeDeal(updated.value))
 })
+
+const removeDeal = server
+  .implement(removeDealContract).use(requireStaff)
+  .handler(async ({ input, errors, context }) => {
+    const before = await context.db.selectFrom('deals').selectAll().where('id', '=', input.id).executeTakeFirst()
+    if (!before) return err(errors.notFound({ dealId: input.id }))
+    const row = await context.db.deleteFrom('deals').where('id', '=', input.id).returningAll().executeTakeFirst()
+    if (!row) return err(errors.notFound({ dealId: input.id }))
+    await audit(context.db, {
+      actor: 'staff',
+      action: 'delete',
+      entityType: 'deal',
+      entityId: input.id,
+      before,
+    })
+    return ok({ removed: true })
+  })
 
 const overview = server.implement(overviewContract).handler(async ({ context }) => {
   const venueCount = (
@@ -1462,22 +1572,27 @@ export const router = server.router({
     listByBusiness: hotelsByBusiness,
     add: addHotel,
     update: updateHotel,
+    remove: removeHotel,
   },
   businesses: {
     list: businessList,
     byId: businessById,
     add: addBusiness,
     update: updateBusiness,
+    remove: removeBusiness,
+    summaries: businessDealSummaries,
   },
   contacts: {
     listByBusiness: contactsByBusiness,
     add: addContact,
     update: updateContact,
+    remove: removeContact,
   },
   deals: {
     listByBusiness: dealsByBusiness,
     add: addDeal,
     update: updateDeal,
+    remove: removeDeal,
   },
   guides: {
     view: guideView,
