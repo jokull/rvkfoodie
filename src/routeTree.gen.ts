@@ -19,6 +19,7 @@ import { Route as PublicSearchRouteImport } from './routes/_public.search'
 import { Route as ApiCheckoutRouteImport } from './routes/api.checkout'
 import { Route as ApiClaimRouteImport } from './routes/api.claim'
 import { Route as ApiGumroadPingRouteImport } from './routes/api.gumroad-ping'
+import { Route as ApiMcpRouteImport } from './routes/api.mcp'
 import { Route as ApiQrRouteImport } from './routes/api.qr'
 import { Route as ApiRpcRouteImport } from './routes/api.rpc'
 import { Route as ApiUnlockRouteImport } from './routes/api.unlock'
@@ -85,6 +86,11 @@ const ApiClaimRoute = ApiClaimRouteImport.update({
 const ApiGumroadPingRoute = ApiGumroadPingRouteImport.update({
   id: '/api/gumroad-ping',
   path: '/api/gumroad-ping',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMcpRoute = ApiMcpRouteImport.update({
+  id: '/api/mcp',
+  path: '/api/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiQrRoute = ApiQrRouteImport.update({
@@ -188,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/claim': typeof ApiClaimRoute
   '/api/gumroad-ping': typeof ApiGumroadPingRoute
+  '/api/mcp': typeof ApiMcpRoute
   '/api/qr': typeof ApiQrRoute
   '/api/rpc': typeof ApiRpcRoute
   '/api/unlock': typeof ApiUnlockRoute
@@ -215,6 +222,7 @@ export interface FileRoutesByTo {
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/claim': typeof ApiClaimRoute
   '/api/gumroad-ping': typeof ApiGumroadPingRoute
+  '/api/mcp': typeof ApiMcpRoute
   '/api/qr': typeof ApiQrRoute
   '/api/rpc': typeof ApiRpcRoute
   '/api/unlock': typeof ApiUnlockRoute
@@ -246,6 +254,7 @@ export interface FileRoutesById {
   '/api/checkout': typeof ApiCheckoutRoute
   '/api/claim': typeof ApiClaimRoute
   '/api/gumroad-ping': typeof ApiGumroadPingRoute
+  '/api/mcp': typeof ApiMcpRoute
   '/api/qr': typeof ApiQrRoute
   '/api/rpc': typeof ApiRpcRoute
   '/api/unlock': typeof ApiUnlockRoute
@@ -278,6 +287,7 @@ export interface FileRouteTypes {
     | '/api/checkout'
     | '/api/claim'
     | '/api/gumroad-ping'
+    | '/api/mcp'
     | '/api/qr'
     | '/api/rpc'
     | '/api/unlock'
@@ -305,6 +315,7 @@ export interface FileRouteTypes {
     | '/api/checkout'
     | '/api/claim'
     | '/api/gumroad-ping'
+    | '/api/mcp'
     | '/api/qr'
     | '/api/rpc'
     | '/api/unlock'
@@ -335,6 +346,7 @@ export interface FileRouteTypes {
     | '/api/checkout'
     | '/api/claim'
     | '/api/gumroad-ping'
+    | '/api/mcp'
     | '/api/qr'
     | '/api/rpc'
     | '/api/unlock'
@@ -363,6 +375,7 @@ export interface RootRouteChildren {
   ApiCheckoutRoute: typeof ApiCheckoutRoute
   ApiClaimRoute: typeof ApiClaimRoute
   ApiGumroadPingRoute: typeof ApiGumroadPingRoute
+  ApiMcpRoute: typeof ApiMcpRoute
   ApiQrRoute: typeof ApiQrRoute
   ApiRpcRoute: typeof ApiRpcRoute
   ApiUnlockRoute: typeof ApiUnlockRoute
@@ -441,6 +454,13 @@ declare module '@tanstack/react-router' {
       path: '/api/gumroad-ping'
       fullPath: '/api/gumroad-ping'
       preLoaderRoute: typeof ApiGumroadPingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/mcp': {
+      id: '/api/mcp'
+      path: '/api/mcp'
+      fullPath: '/api/mcp'
+      preLoaderRoute: typeof ApiMcpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/qr': {
@@ -628,6 +648,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCheckoutRoute: ApiCheckoutRoute,
   ApiClaimRoute: ApiClaimRoute,
   ApiGumroadPingRoute: ApiGumroadPingRoute,
+  ApiMcpRoute: ApiMcpRoute,
   ApiQrRoute: ApiQrRoute,
   ApiRpcRoute: ApiRpcRoute,
   ApiUnlockRoute: ApiUnlockRoute,
