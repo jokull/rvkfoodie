@@ -198,7 +198,7 @@ if (bySlug.status === 'ok') assert(bySlug.value.venueRows.length === 7, '7 venue
 const capture = await client.captures.request({ slug: 'hotel-borg', email: 'guest@example.com' })
 assert(capture.status === 'ok', 'captures.request ok (EMAIL binding local emulation)')
 
-const qrRes = await fetch('http://localhost:3000/api/qr?slug=hotel-borg')
+const qrRes = await fetch(`${base}/api/qr?slug=hotel-borg`)
 assert(qrRes.status === 200 && (qrRes.headers.get('content-type') ?? '').includes('image/svg+xml'), 'QR endpoint returns SVG')
 
 // --- Analytics beacon (ticket 09) ---
@@ -208,7 +208,7 @@ const evClick = await client.events.record({ slug: 'hotel-borg', event: 'venue-c
 assert(evClick.status === 'ok', 'events.record venue-click ok')
 
 // --- Auth (ticket 10) — better-auth kysely adapter (CamelCasePlugin) + D1 ---
-const AUTH = 'http://localhost:3000'
+const AUTH = base
 const unauth = await fetch(`${AUTH}/api/auth/get-session`)
 assert(unauth.status === 200, 'get-session ok when signed out')
 const wrong = await fetch(`${AUTH}/api/auth/sign-in/email-otp`, {
