@@ -1,14 +1,18 @@
 /**
  * End-to-end RPC smoke test against the running dev server, using the real
- * browser client + wire protocol (works in node 24). Run with the dev server
- * up: pnpm dev, then npx tsx rpc-e2e.test.ts
+ * browser client + wire protocol (works in node 24). Run with hangar's dev
+ * server up (https://web.rvkfoodie.localhost — see `hangar services`), then
+ * `npx tsx rpc-e2e.test.ts`. The hangar proxy cert lives in the system
+ * store, so node needs `--use-system-ca`:
+ *
+ *   NODE_OPTIONS=--use-system-ca pnpm test:rpc
  */
 import { execFileSync } from 'node:child_process'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { createBrowserClient, fetchTransport } from 'result-rpc/client'
 import { appContract } from '../src/contract.js'
 
-const base = process.env.RPC_URL ?? 'http://localhost:3000'
+const base = process.env.RPC_URL ?? 'https://web.rvkfoodie.localhost'
 
 // Staff session: real OTP login against the dev server, then every mutation
 // below rides the session cookie (the wire gates mutations on auth). The OTP
