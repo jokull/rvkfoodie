@@ -8,3 +8,6 @@ dist/
 .DS_Store
 .tanstack
 PLAN.md
+
+# hangar runtime state (lock, port block) — not source
+.hangar/daemon/
