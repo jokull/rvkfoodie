@@ -1,13 +1,26 @@
 # rvkfoodie — the Reykjavík food guide. TanStack Start on Cloudflare Workers
 # (workerd) via the Vite plugin, with D1, R2, KV and Vectorize emulated
-# locally. Secrets come from the repo's own .dev.vars (gitignored), read by
-# wrangler — nothing here needs the Keychain.
+# locally.
 #
 #   hangar up          boots the dev server, healthcheck-gated
 #   hangar services    what is running, and on what URL
 #   hangar requests    every request the proxy carried
 #   hangar run         checks + receipts for the working tree
 #   hangar watch       checks whenever the worktree goes quiet
+#
+# Env model (no .dev.vars — it is deleted):
+#  - Non-sensitive, env-independent values live in wrangler.jsonc `vars`
+#    (committed): ENVIRONMENT, ASSET_BASE_URL.
+#  - Per-environment values ride wrangler's `secrets.required` channel
+#    (see wrangler.jsonc): BETTER_AUTH_URL (dev origin differs from prod),
+#    BETTER_AUTH_SECRET, CMS_WRITE_KEY, R2_ACCESS_KEY_ID,
+#    R2_SECRET_ACCESS_KEY. Their values live in the macOS Keychain via
+#    `hangar secrets set <KEY>`; this service's `env` list is the allowlist
+#    the daemon injects into the process.
+#  - CLOUDFLARE_INCLUDE_PROCESS_ENV=true is required because the Vite plugin
+#    (not `wrangler dev`) runs the worker: hangar auto-sets that flag only
+#    for wrangler invocations, so we set it in the run line to let the
+#    injected process env reach the Worker's `env` bindings.
 #
 # The one wrinkle: vite.config.ts reads $PORT with a 3000 fallback, because
 # the daemon owns the port and hands it over — two worktrees of this project
@@ -20,10 +33,16 @@ schema = 1
 run = ["pnpm install", "pnpm db:migrate", "pnpm db:seed"]
 
 [services.web]
-run = "pnpm dev"
+run = "CLOUDFLARE_ENV=development CLOUDFLARE_INCLUDE_PROCESS_ENV=true pnpm dev"
 host = "web"
 health.log = "ready in|Local:"
 health_start_period = "5s"
+env = [
+  "BETTER_AUTH_SECRET",
+  "CMS_WRITE_KEY",
+  "R2_ACCESS_KEY_ID",
+  "R2_SECRET_ACCESS_KEY",
+]
 
 # Browser work waits on this, not on "the process started".
 [ready]
