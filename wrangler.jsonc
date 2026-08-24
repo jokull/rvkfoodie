@@ -44,14 +44,13 @@
   "ai": { "binding": "AI" },
 
   // Auth config — BETTER_AUTH_SECRET is a real secret (wrangler secret put
-  // in prod, .dev.vars locally). BETTER_AUTH_URL is the public base URL
-  // (https://rvkfoodie.is).
-  // CMS_WRITE_KEY, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY are real secrets
-  // too — NOT vars: declaring them here would block `wrangler secret put`
-  // ("Binding name already in use"). Types for them live in src/worker-env.d.ts.
+  // in prod; the local value lives in .dev.vars). It is NOT a var: declaring
+  // it here blocks `wrangler secret put` ("Binding name already in use").
+  // Its type lives in src/worker-env.d.ts.
+  // BETTER_AUTH_URL is a non-sensitive, environment-dependent var: the
+  // committed value is production; local dev overrides it in .dev.vars.
   "vars": {
-    "BETTER_AUTH_URL": "",
-    "BETTER_AUTH_SECRET": "",
+    "BETTER_AUTH_URL": "https://rvkfoodie.is",
     "ENVIRONMENT": "development",
     "ASSET_BASE_URL": "https://media.rvkfoodie.is"
   }

@@ -8,6 +8,7 @@
  */
 declare namespace Cloudflare {
   interface Env {
+    BETTER_AUTH_SECRET: string
     R2_ACCESS_KEY_ID: string
     R2_SECRET_ACCESS_KEY: string
     CMS_WRITE_KEY: string
