@@ -39,6 +39,7 @@ build tickets as the frontier resolves.
 08 [R2 photo uploads](tickets/08-r2-photo-uploads.md) — task.
 11 [Internal SPA screens](tickets/11-internal-spa-screens.md) — grilling.
 12 [Monthly pass + digest](tickets/12-monthly-pass-digest.md) — task.
+13 [MCP — agent access](tickets/13-mcp.md) — task.
 
 Closed: 01 categories, 02 venue data model, 03 CRM data model,
 04 legacy venue backfill (37 city venues + awards table),
@@ -46,7 +47,10 @@ Closed: 01 categories, 02 venue data model, 03 CRM data model,
 drafting engine, 06 guide page, 09 analytics events, 10 auth (better-auth
 adapter verified on drizzle 1.0-rc.4), 11 SPA screens (venues, CRM, guide
 builder, monthly pass, dashboard), 12 monthly pass + digest (queue screen +
-guides.digest baseline-diff emails; remote migration pending deploy).
+guides.digest baseline-diff emails; remote migration pending deploy),
+13 MCP (stateless 2026-07-28 server at /api/mcp: agent-cms editor proxy +
+RPC tools + photo upload; hand-rolled JSON-RPC, CMS_WRITE_KEY bearer,
+legacy streamable-HTTP compat).
 07 email: product part done (capture + HTML email); ops remaining
 (from-address verification); Turnstile punted to GitHub issue #2.
 

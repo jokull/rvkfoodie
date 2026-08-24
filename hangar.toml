@@ -1,0 +1,30 @@
+# rvkfoodie — the Reykjavík food guide. TanStack Start on Cloudflare Workers
+# (workerd) via the Vite plugin, with D1, R2, KV and Vectorize emulated
+# locally. Secrets come from the repo's own .dev.vars (gitignored), read by
+# wrangler — nothing here needs the Keychain.
+#
+#   hangar up          boots the dev server, healthcheck-gated
+#   hangar services    what is running, and on what URL
+#   hangar requests    every request the proxy carried
+#   hangar run         checks + receipts for the working tree
+#   hangar watch       checks whenever the worktree goes quiet
+#
+# The one wrinkle: vite.config.ts reads $PORT with a 3000 fallback, because
+# the daemon owns the port and hands it over — two worktrees of this project
+# run at once without colliding.
+
+schema = 1
+
+# Fresh worktrees (`hangar new`) get deps and a local D1 before first boot.
+[setup]
+run = ["pnpm install", "pnpm db:migrate", "pnpm db:seed"]
+
+[services.web]
+run = "pnpm dev"
+host = "web"
+health.log = "ready in|Local:"
+health_start_period = "5s"
+
+# Browser work waits on this, not on "the process started".
+[ready]
+requires = ["web"]

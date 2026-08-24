@@ -1,0 +1,4 @@
+#!/bin/bash
+# Build + typecheck tripwire — vite build (workerd bundle) then tsc.
+set -euo pipefail
+pnpm check

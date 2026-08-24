@@ -15,7 +15,8 @@
     "db:migrate:remote": "wrangler d1 migrations apply rvkfoodie-cms-v4b --remote",
     "db:seed": "wrangler d1 execute rvkfoodie-cms-v4b --local --file scripts/seed.sql",
     "db:seed:remote": "wrangler d1 execute rvkfoodie-cms-v4b --remote --file scripts/seed.sql",
-    "test:rpc": "tsx scripts/rpc-e2e.test.ts"
+    "test:rpc": "tsx scripts/rpc-e2e.test.ts",
+    "test:mcp": "tsx scripts/mcp-e2e.test.ts"
   },
   "dependencies": {
     "@better-auth/kysely-adapter": "^1.7.1",
@@ -25,7 +26,7 @@
     "@phosphor-icons/react": "^2.1.10",
     "@tanstack/react-router": "^1.170.32",
     "@tanstack/react-start": "^1.168.49",
-    "agent-cms": "0.4.5",
+    "agent-cms": "0.4.6",
     "better-auth": "^1.7.1",
     "better-result": "^3.0.1",
     "datocms-structured-text-to-html-string": "^5.1.16",

@@ -678,6 +678,28 @@ let cmsToolCacheAt = 0
 let cmsNames = new Set<string>()
 const CMS_TOOL_TTL_MS = 60_000
 
+/**
+ * Wire mode negotiated against the in-process agent-cms MCP.
+ *
+ * - `stateless` (MCP 2026-07-28, agent-cms >= 0.5): every request carries
+ *   `_meta` with the protocol version + client info and the
+ *   `MCP-Protocol-Version` header; responses are single JSON-RPC objects.
+ * - `legacy` (agent-cms 0.4.x Effect MCP): plain JSON-RPC POST, no `_meta` —
+ *   the Effect layer rejects unknown params and answers with batch arrays.
+ *
+ * The first call tries stateless; a transport-level failure (thrown HTTPError
+ * or non-200 — the Effect MCP's signature for undecodable requests) retries
+ * once in legacy mode and the winner is cached for the isolate. JSON-RPC
+ * error RESPONSES are never retried (the server understood the request).
+ */
+let cmsMode: 'stateless' | 'legacy' | null = null
+
+const STATELESS_META = {
+  'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+  'io.modelcontextprotocol/clientInfo': { name: 'rvkfoodie-mcp', version: '1.0.0' },
+  'io.modelcontextprotocol/clientCapabilities': {},
+}
+
 const parseSsePayload = (text: string): unknown => {
   let payload: unknown = null
   for (const line of text.split('\n')) {
@@ -695,9 +717,10 @@ const parseSsePayload = (text: string): unknown => {
 
 type CmsRpcMessage = { result?: Record<string, unknown>; error?: { code: number; message: string } }
 
-/** Effect RPC answers with a JSON-RPC batch array even for a single request
- * ([{...}]) — pick the message for our request id. Handles plain JSON,
- * NDJSON, and SSE-framed payloads defensively. */
+/** The legacy Effect MCP answers with a JSON-RPC batch array even for a
+ * single request ([{...}]) — pick the message for our request id. The
+ * stateless MCP answers with a single object. Handles plain JSON, NDJSON,
+ * and SSE-framed payloads defensively. */
 const pickRpcMessage = (payload: unknown, id: number): CmsRpcMessage => {
   const candidates = Array.isArray(payload)
     ? (payload as Array<CmsRpcMessage & { id?: unknown }>)
@@ -729,19 +752,28 @@ const parseRpcBody = (text: string, ct: string, id: number): CmsRpcMessage => {
   }
 }
 
-const cmsFetch = async (
-  body: Record<string, unknown>,
-): Promise<{ result?: Record<string, unknown>; error?: { code: number; message: string }; raw?: string }> => {
+type CmsFetchResult =
+  | { kind: 'ok'; result: Record<string, unknown>; raw: string }
+  | { kind: 'http-error'; status: number; raw: string }
+  | { kind: 'rpc-error'; error: { code: number; message: string }; raw: string }
+
+const cmsFetch = async (body: Record<string, unknown>): Promise<CmsFetchResult> => {
+  const stateless = cmsMode !== 'legacy'
+  const params = (body.params as Record<string, unknown> | undefined) ?? {}
+  const wireBody = stateless
+    ? { ...body, params: { ...params, _meta: STATELESS_META } }
+    : body
   const headers = new Headers({
     'content-type': 'application/json',
     accept: 'application/json',
     authorization: `Bearer ${env.CMS_WRITE_KEY}`,
   })
+  if (stateless) headers.set('mcp-protocol-version', '2026-07-28')
   if (cmsSessionId) headers.set('mcp-session-id', cmsSessionId)
   let res: Response
   try {
     res = await getCmsHandler().fetch(
-      new Request(`${CMS_INTERNAL}/mcp/editor`, { method: 'POST', headers, body: JSON.stringify(body) }),
+      new Request(`${CMS_INTERNAL}/mcp/editor`, { method: 'POST', headers, body: JSON.stringify(wireBody) }),
     )
   } catch (e) {
     throw new Error(`agent-cms MCP fetch failed: ${e instanceof Error ? e.message : String(e)}`)
@@ -750,29 +782,49 @@ const cmsFetch = async (
   if (sid) cmsSessionId = sid
   const ct = res.headers.get('content-type') ?? ''
   const text = await res.text()
-  if (!res.ok) {
-    return { error: { code: res.status, message: `agent-cms /mcp/editor ${res.status} (${ct}): ${text.slice(0, 300)}` } }
-  }
-  if (!text.trim()) return { error: { code: -1, message: `agent-cms /mcp/editor returned an empty body (${ct})` } }
+  if (!res.ok) return { kind: 'http-error', status: res.status, raw: text.slice(0, 300) }
+  if (!text.trim()) return { kind: 'http-error', status: 0, raw: `empty body (${ct})` }
   const parsed = parseRpcBody(text, ct, (body.id as number) ?? 0)
-  if (!parsed || (!parsed.result && !parsed.error)) {
-    return { error: { code: -1, message: `agent-cms /mcp/editor returned an unparseable body (${ct}): ${text.slice(0, 300)}` }, raw: text }
+  if (parsed.error) return { kind: 'rpc-error', error: parsed.error, raw: text.slice(0, 300) }
+  if (!parsed.result) return { kind: 'http-error', status: 0, raw: `unparseable body (${ct}): ${text.slice(0, 300)}` }
+  return { kind: 'ok', result: parsed.result, raw: text }
+}
+
+/** One JSON-RPC round trip with mode negotiation: try stateless first, and
+ * on a TRANSPORT-level failure (throw or non-200 — never on a JSON-RPC error
+ * response) retry once in legacy mode. The working mode sticks. */
+const cmsRequest = async (body: Record<string, unknown>): Promise<CmsRpcMessage> => {
+  const attempt = async (): Promise<CmsFetchResult> => {
+    try {
+      return await cmsFetch(body)
+    } catch (e) {
+      if (cmsMode === null) {
+        cmsMode = 'legacy'
+        return cmsFetch(body)
+      }
+      throw e
+    }
   }
-  return { ...parsed, raw: text }
+  let res = await attempt()
+  if (res.kind === 'http-error' && cmsMode === null) {
+    cmsMode = 'legacy'
+    res = await attempt()
+  }
+  if (res.kind === 'ok') {
+    cmsMode ??= 'stateless'
+    return res
+  }
+  if (res.kind === 'rpc-error') return { error: res.error }
+  return { error: { code: -1, message: `agent-cms /mcp/editor transport error: ${res.raw}` } }
 }
 
 const cmsListTools = async (): Promise<McpTool[]> => {
   if (cmsToolCache && Date.now() - cmsToolCacheAt < CMS_TOOL_TTL_MS) return cmsToolCache
-  // agent-cms's MCP is Effect-RPC over plain JSON-RPC POST — per its own
-  // docs, tools/call works directly with no initialize round-trip, so we
-  // skip the handshake entirely.
-  const res = await cmsFetch({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} })
+  // agent-cms's MCP is plain JSON-RPC POST — per its own docs, tools/call
+  // works directly with no initialize round-trip, so we skip the handshake
+  // in both wire modes.
+  const res = await cmsRequest({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} })
   if (res.error) throw new Error(`agent-cms tools/list failed: ${res.error.message}`)
-  if (!res.result || !Array.isArray(res.result.tools)) {
-    throw new Error(
-      `agent-cms tools/list: unexpected result shape: ${JSON.stringify(res.result ?? null).slice(0, 500)} — raw: ${(res.raw ?? '').slice(0, 500)}`,
-    )
-  }
   const tools = Array.isArray(res.result?.tools)
     ? (res.result.tools as Array<{ name?: unknown; description?: unknown; inputSchema?: unknown }>).map((t) => ({
         name: String(t.name ?? ''),
@@ -790,7 +842,7 @@ const cmsListTools = async (): Promise<McpTool[]> => {
 }
 
 const cmsCall = async (name: string, args: Record<string, unknown>): Promise<McpCallResult> => {
-  const res = await cmsFetch({
+  const res = await cmsRequest({
     jsonrpc: '2.0',
     id: 3,
     method: 'tools/call',

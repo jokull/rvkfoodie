@@ -41,6 +41,9 @@ Local D1 state lives in `.wrangler/` (gitignored).
 - `src/rpc-server.ts` — server-only router + fetch handler (Drizzle/D1)
 - `src/ssr.ts` — `createServerFn` loaders that prefetch and dehydrate
 - `src/routes/api.rpc.ts` — mounts the RPC handler at POST `/api/rpc`
+- `src/routes/api.mcp.ts` — mounts the stateless MCP server at POST/GET
+  `/api/mcp` (agent-cms editor tools + RPC tools + photo upload; tool surface
+  and connection setup in [`MCP.md`](MCP.md))
 - `.wayfinder/` — decision map + tickets for the product build-out
 - `.oldsite/` — legacy archive (D1 dump, venue data, old docs)
 
