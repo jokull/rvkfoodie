@@ -275,6 +275,18 @@ export const removeBusinessContract = app
   .affects(businessDealSummariesContract)
   .mutation()
 
+/** Undo a soft delete — clears deletedAt (and, for businesses, its
+ * soft-deleted children). Idempotent: restoring a live row returns it. */
+export const restoreBusinessContract = app
+  .procedure()
+  .input(wire.object({ id: wire.string }))
+  .output(Business.all('every business field is staff-visible'))
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(businessErrors, 'notFound') })
+  .affects(businessListContract)
+  .affects(businessByIdContract)
+  .affects(businessDealSummariesContract)
+  .mutation()
+
 // --- CRM: hotels (properties) -------------------------------------------
 
 export const hotelsByBusinessContract = app
@@ -328,6 +340,16 @@ export const removeHotelContract = app
   .procedure()
   .input(wire.object({ id: wire.string }))
   .output(wire.object({ removed: wire.boolean }))
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(hotelErrors, 'notFound') })
+  .affects(hotelsListContract)
+  .affects(hotelsByBusinessContract)
+  .mutation()
+
+/** Undo a soft delete — clears deletedAt. Idempotent. */
+export const restoreHotelContract = app
+  .procedure()
+  .input(wire.object({ id: wire.string }))
+  .output(Hotel.all('every hotel field is public'))
   .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(hotelErrors, 'notFound') })
   .affects(hotelsListContract)
   .affects(hotelsByBusinessContract)
@@ -389,6 +411,15 @@ export const removeContactContract = app
   .affects(contactsByBusinessContract)
   .mutation()
 
+/** Undo a soft delete — clears deletedAt. Idempotent. */
+export const restoreContactContract = app
+  .procedure()
+  .input(wire.object({ id: wire.string }))
+  .output(Contact.all('every contact field is staff-visible'))
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(contactErrors, 'notFound') })
+  .affects(contactsByBusinessContract)
+  .mutation()
+
 // --- CRM: deals ----------------------------------------------------------
 
 export const dealsByBusinessContract = app
@@ -441,6 +472,16 @@ export const removeDealContract = app
   .procedure()
   .input(wire.object({ id: wire.string }))
   .output(wire.object({ removed: wire.boolean }))
+  .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(dealErrors, 'notFound') })
+  .affects(dealsByBusinessContract)
+  .affects(businessDealSummariesContract)
+  .mutation()
+
+/** Undo a soft delete — clears deletedAt. Idempotent. */
+export const restoreDealContract = app
+  .procedure()
+  .input(wire.object({ id: wire.string }))
+  .output(Deal.all('every deal field is staff-visible'))
   .errors({ ...pickErrors(authErrors, 'unauthorized'), ...pickErrors(dealErrors, 'notFound') })
   .affects(dealsByBusinessContract)
   .affects(businessDealSummariesContract)
@@ -637,6 +678,7 @@ export const appContract = app.contract({
     add: addHotelContract,
     update: updateHotelContract,
     remove: removeHotelContract,
+    restore: restoreHotelContract,
   },
   businesses: {
     list: businessListContract,
@@ -644,6 +686,7 @@ export const appContract = app.contract({
     add: addBusinessContract,
     update: updateBusinessContract,
     remove: removeBusinessContract,
+    restore: restoreBusinessContract,
     summaries: businessDealSummariesContract,
   },
   contacts: {
@@ -651,12 +694,14 @@ export const appContract = app.contract({
     add: addContactContract,
     update: updateContactContract,
     remove: removeContactContract,
+    restore: restoreContactContract,
   },
   deals: {
     listByBusiness: dealsByBusinessContract,
     add: addDealContract,
     update: updateDealContract,
     remove: removeDealContract,
+    restore: restoreDealContract,
   },
   guides: {
     view: guideViewContract,

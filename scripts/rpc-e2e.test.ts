@@ -325,3 +325,49 @@ if (biz.status === 'ok') {
   const gone = await client.businesses.byId({ id: bid })
   assert(gone.status === 'error' && gone.error._tag === 'business/not-found', 'business gone after remove')
 }
+
+// --- Soft delete + restore round trip (ticket 13 follow-up) ---
+const biz2 = await client.businesses.add({ name: 'E2E Restore Operator', industry: 'hotel-operator' })
+assert(biz2.status === 'ok', 'businesses.add ok (restore round trip)')
+if (biz2.status === 'ok') {
+  const bid2 = biz2.value.id
+  const h2 = await client.hotels.add({ businessId: bid2, name: 'E2E Restore Hotel', roomCount: 10 })
+  const c2 = await client.contacts.add({ businessId: bid2, firstName: 'Restore', lastName: 'Contact' })
+  const d2 = await client.deals.add({ businessId: bid2, name: 'Restore Deal', pricePerRoom: 1000 })
+  assert(
+    h2.status === 'ok' && c2.status === 'ok' && d2.status === 'ok',
+    'restore round trip: hotel + contact + deal created',
+  )
+  // cascade soft delete
+  const rmBiz = await client.businesses.remove({ id: bid2 })
+  assert(rmBiz.status === 'ok', 'restore round trip: businesses.remove ok')
+  const gone2 = await client.businesses.byId({ id: bid2 })
+  assert(gone2.status === 'error' && gone2.error._tag === 'business/not-found', 'restore round trip: business gone')
+  const hotelsGone = await client.hotels.listByBusiness({ businessId: bid2 })
+  assert(hotelsGone.status === 'ok' && hotelsGone.value.length === 0, 'restore round trip: hotels hidden')
+  const contactsGone = await client.contacts.listByBusiness({ businessId: bid2 })
+  assert(contactsGone.status === 'ok' && contactsGone.value.length === 0, 'restore round trip: contacts hidden')
+  const dealsGone = await client.deals.listByBusiness({ businessId: bid2 })
+  assert(dealsGone.status === 'ok' && dealsGone.value.length === 0, 'restore round trip: deals hidden')
+  // restore the whole account
+  const rest = await client.businesses.restore({ id: bid2 })
+  assert(rest.status === 'ok' && rest.value.id === bid2, 'restore round trip: businesses.restore ok')
+  const back = await client.businesses.byId({ id: bid2 })
+  assert(back.status === 'ok' && back.value.name === 'E2E Restore Operator', 'restore round trip: business back')
+  const hotelsBack = await client.hotels.listByBusiness({ businessId: bid2 })
+  assert(hotelsBack.status === 'ok' && hotelsBack.value.length === 1, 'restore round trip: hotels restored')
+  const contactsBack = await client.contacts.listByBusiness({ businessId: bid2 })
+  assert(contactsBack.status === 'ok' && contactsBack.value.length === 1, 'restore round trip: contacts restored')
+  const dealsBack = await client.deals.listByBusiness({ businessId: bid2 })
+  assert(dealsBack.status === 'ok' && dealsBack.value.length === 1, 'restore round trip: deals restored')
+  const summariesBack = await client.businesses.summaries({})
+  const mine2 =
+    summariesBack.status === 'ok' ? summariesBack.value.find((s) => s.businessId === bid2) : undefined
+  assert(
+    summariesBack.status === 'ok' && mine2 && mine2.dealCount === 1 && mine2.annualValue === 10_000,
+    'restore round trip: summaries back with annualValue = pricePerRoom × rooms',
+  )
+  // cleanup: soft-delete the account again
+  const rm2 = await client.businesses.remove({ id: bid2 })
+  assert(rm2.status === 'ok', 'restore round trip: cleanup remove ok')
+}

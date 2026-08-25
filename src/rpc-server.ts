@@ -69,6 +69,10 @@ import {
   removeGuideExcludeContract,
   removeHotelContract,
   requestGuideCaptureContract,
+  restoreBusinessContract,
+  restoreContactContract,
+  restoreDealContract,
+  restoreHotelContract,
   setGuideConfigContract,
   setVenueStatusContract,
   updateBusinessContract,
@@ -108,6 +112,10 @@ const requireStaff = server
     if (context.session) return next({ context })
     return err(errors.unauthorized())
   })
+
+/** Audit actor: the signed-in session's email when present (MCP sessions
+ * report mcp@rvkfoodie.is), else 'system'. */
+const actorOf = (context: AppContext) => context.session?.user.email ?? 'system'
 
 const PAGE_SIZE = 50
 
@@ -232,7 +240,7 @@ const addVenue = server.implement(addVenueContract).use(requireStaff).handler(as
     throw inserted.error
   }
   await audit(context.db, {
-    actor: 'system',
+    actor: actorOf(context),
     action: 'create',
     entityType: 'venue',
     entityId: inserted.value.id,
@@ -280,7 +288,7 @@ const updateVenue = server.implement(updateVenueContract).use(requireStaff).hand
   }
   const afterRow = updated.value
   await audit(context.db, {
-    actor: 'system',
+    actor: actorOf(context),
     action: 'update',
     entityType: 'venue',
     entityId: afterRow.id,
@@ -305,7 +313,7 @@ const setVenueStatus = server
     )
     if (updated.isErr()) throw updated.error
     await audit(context.db, {
-      actor: 'system',
+      actor: actorOf(context),
       action: 'status-change',
       entityType: 'venue',
       entityId: input.id,
@@ -355,7 +363,7 @@ const addLifecycleEvent = server
     )
     if (inserted.isErr()) throw inserted.error
     await audit(context.db, {
-      actor: 'system',
+      actor: actorOf(context),
       action: 'lifecycle',
       entityType: 'venue',
       entityId: input.venueId,
@@ -408,7 +416,7 @@ const addAward = server.implement(venueAwardAddContract).use(requireStaff).handl
     throw inserted.error
   }
   await audit(context.db, {
-    actor: 'staff',
+    actor: actorOf(context),
     action: 'venue.award.add',
     entityType: 'venue',
     entityId: input.venueId,
@@ -421,7 +429,7 @@ const removeAward = server.implement(venueAwardRemoveContract).use(requireStaff)
   const row = await context.db.deleteFrom('venue_awards').where('id', '=', input.id).returningAll().executeTakeFirst()
   if (!row) return err(errors.notFound({ awardId: input.id }))
   await audit(context.db, {
-    actor: 'staff',
+    actor: actorOf(context),
     action: 'venue.award.remove',
     entityType: 'venue',
     entityId: row.venue_id,
@@ -443,7 +451,12 @@ const auditList = server.implement(auditListContract).handler(async ({ input, co
 })
 
 const hotelsList = server.implement(hotelsListContract).handler(async ({ context }) => {
-  const rows = await context.db.selectFrom('hotels').selectAll().orderBy('name', 'asc').execute()
+  const rows = await context.db
+    .selectFrom('hotels')
+    .selectAll()
+    .where('deleted_at', 'is', null)
+    .orderBy('name', 'asc')
+    .execute()
   return ok(rows.map(decodeHotel))
 })
 
@@ -454,6 +467,7 @@ const hotelsByBusiness = server
       .selectFrom('hotels')
       .selectAll()
       .where('business_id', '=', input.businessId)
+      .where('deleted_at', 'is', null)
       .orderBy('name', 'asc')
       .execute()
     return ok(rows.map(decodeHotel))
@@ -488,7 +502,7 @@ const addHotel = server
     throw inserted.error
   }
   await audit(context.db, {
-    actor: 'system',
+    actor: actorOf(context),
     action: 'create',
     entityType: 'hotel',
     entityId: inserted.value.id,
@@ -498,7 +512,12 @@ const addHotel = server
 })
 
 const updateHotel = server.implement(updateHotelContract).use(requireStaff).handler(async ({ input, errors, context }) => {
-  const before = await context.db.selectFrom('hotels').selectAll().where('id', '=', input.id).executeTakeFirst()
+  const before = await context.db
+    .selectFrom('hotels')
+    .selectAll()
+    .where('id', '=', input.id)
+    .where('deleted_at', 'is', null)
+    .executeTakeFirst()
   if (!before) return err(errors.notFound({ hotelId: input.id }))
   const set = {
     ...(input.businessId !== undefined ? { business_id: input.businessId } : {}),
@@ -526,7 +545,7 @@ const updateHotel = server.implement(updateHotelContract).use(requireStaff).hand
   }
   const afterRow = updated.value
   await audit(context.db, {
-    actor: 'system',
+    actor: actorOf(context),
     action: 'update',
     entityType: 'hotel',
     entityId: afterRow.id,
@@ -541,24 +560,57 @@ const removeHotel = server
   .handler(async ({ input, errors, context }) => {
     const before = await context.db.selectFrom('hotels').selectAll().where('id', '=', input.id).executeTakeFirst()
     if (!before) return err(errors.notFound({ hotelId: input.id }))
-    // Keep the people; drop the property link.
-    await context.db.updateTable('contacts').set({ hotel_id: null }).where('hotel_id', '=', input.id).execute()
-    const row = await context.db.deleteFrom('hotels').where('id', '=', input.id).returningAll().executeTakeFirst()
+    const now = Date.now()
+    const row = await context.db
+      .updateTable('hotels')
+      .set({ deleted_at: now, updated_at: now })
+      .where('id', '=', input.id)
+      .returningAll()
+      .executeTakeFirst()
     if (!row) return err(errors.notFound({ hotelId: input.id }))
     await audit(context.db, {
-      actor: 'staff',
+      actor: actorOf(context),
       action: 'delete',
       entityType: 'hotel',
       entityId: input.id,
       before,
+      after: row,
     })
     return ok({ removed: true })
+  })
+
+const restoreHotel = server
+  .implement(restoreHotelContract).use(requireStaff)
+  .handler(async ({ input, errors, context }) => {
+    const before = await context.db.selectFrom('hotels').selectAll().where('id', '=', input.id).executeTakeFirst()
+    if (!before) return err(errors.notFound({ hotelId: input.id }))
+    const row = await context.db
+      .updateTable('hotels')
+      .set({ deleted_at: null, updated_at: Date.now() })
+      .where('id', '=', input.id)
+      .returningAll()
+      .executeTakeFirst()
+    if (!row) return err(errors.notFound({ hotelId: input.id }))
+    await audit(context.db, {
+      actor: actorOf(context),
+      action: 'restore',
+      entityType: 'hotel',
+      entityId: input.id,
+      before,
+      after: row,
+    })
+    return ok(decodeHotel(row))
   })
 
 // --- CRM handlers ---------------------------------------------------------
 
 const businessList = server.implement(businessListContract).handler(async ({ context }) => {
-  const rows = await context.db.selectFrom('businesses').selectAll().orderBy('name', 'asc').execute()
+  const rows = await context.db
+    .selectFrom('businesses')
+    .selectAll()
+    .where('deleted_at', 'is', null)
+    .orderBy('name', 'asc')
+    .execute()
   return ok(rows.map(decodeBusiness))
 })
 
@@ -567,6 +619,7 @@ const businessDealSummaries = server.implement(businessDealSummariesContract).ha
   const rows = await context.db
     .selectFrom('deals')
     .select(['business_id', 'stage', 'annual_value', 'updated_at'])
+    .where('deleted_at', 'is', null)
     .execute()
   const acc = new Map<string, { stage: string; annualValue: number; dealCount: number; updatedAt: number }>()
   for (const r of rows) {
@@ -596,7 +649,12 @@ const businessDealSummaries = server.implement(businessDealSummariesContract).ha
 const businessById = server
   .implement(businessByIdContract)
   .handler(async ({ input, errors, context }) => {
-    const row = await context.db.selectFrom('businesses').selectAll().where('id', '=', input.id).executeTakeFirst()
+    const row = await context.db
+      .selectFrom('businesses')
+      .selectAll()
+      .where('id', '=', input.id)
+      .where('deleted_at', 'is', null)
+      .executeTakeFirst()
     if (!row) return err(errors.notFound({ businessId: input.id }))
     return ok(decodeBusiness(row))
   })
@@ -625,7 +683,7 @@ const addBusiness = server
       throw inserted.error
     }
     await audit(context.db, {
-      actor: 'system',
+      actor: actorOf(context),
       action: 'create',
       entityType: 'business',
       entityId: inserted.value.id,
@@ -637,7 +695,12 @@ const addBusiness = server
 const updateBusiness = server
   .implement(updateBusinessContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
-    const before = await context.db.selectFrom('businesses').selectAll().where('id', '=', input.id).executeTakeFirst()
+    const before = await context.db
+      .selectFrom('businesses')
+      .selectAll()
+      .where('id', '=', input.id)
+      .where('deleted_at', 'is', null)
+      .executeTakeFirst()
     if (!before) return err(errors.notFound({ businessId: input.id }))
     const set = {
       ...(input.name !== undefined ? { name: input.name } : {}),
@@ -660,7 +723,7 @@ const updateBusiness = server
     }
     const afterRow = updated.value
     await audit(context.db, {
-      actor: 'system',
+      actor: actorOf(context),
       action: 'update',
       entityType: 'business',
       entityId: afterRow.id,
@@ -675,20 +738,74 @@ const removeBusiness = server
   .handler(async ({ input, errors, context }) => {
     const before = await context.db.selectFrom('businesses').selectAll().where('id', '=', input.id).executeTakeFirst()
     if (!before) return err(errors.notFound({ businessId: input.id }))
-    // No FK constraints on the CRM tables — clear children explicitly.
-    await context.db.deleteFrom('deals').where('business_id', '=', input.id).execute()
-    await context.db.deleteFrom('contacts').where('business_id', '=', input.id).execute()
-    await context.db.deleteFrom('hotels').where('business_id', '=', input.id).execute()
-    const row = await context.db.deleteFrom('businesses').where('id', '=', input.id).returningAll().executeTakeFirst()
+    // No FK constraints on the CRM tables — soft-delete children explicitly.
+    const now = Date.now()
+    await context.db.updateTable('deals').set({ deleted_at: now, updated_at: now }).where('business_id', '=', input.id).execute()
+    await context.db.updateTable('contacts').set({ deleted_at: now, updated_at: now }).where('business_id', '=', input.id).execute()
+    await context.db.updateTable('hotels').set({ deleted_at: now, updated_at: now }).where('business_id', '=', input.id).execute()
+    const row = await context.db
+      .updateTable('businesses')
+      .set({ deleted_at: now, updated_at: now })
+      .where('id', '=', input.id)
+      .returningAll()
+      .executeTakeFirst()
     if (!row) return err(errors.notFound({ businessId: input.id }))
     await audit(context.db, {
-      actor: 'staff',
+      actor: actorOf(context),
       action: 'delete',
       entityType: 'business',
       entityId: input.id,
       before,
+      after: row,
     })
     return ok({ removed: true })
+  })
+
+const restoreBusiness = server
+  .implement(restoreBusinessContract).use(requireStaff)
+  .handler(async ({ input, errors, context }) => {
+    const before = await context.db.selectFrom('businesses').selectAll().where('id', '=', input.id).executeTakeFirst()
+    if (!before) return err(errors.notFound({ businessId: input.id }))
+    // Restore the account: the business plus children soft-deleted together
+    // with it (same deleted_at timestamp from the cascade). Children deleted
+    // independently earlier stay deleted.
+    const deletedAt = before.deleted_at
+    const row = await context.db
+      .updateTable('businesses')
+      .set({ deleted_at: null, updated_at: Date.now() })
+      .where('id', '=', input.id)
+      .returningAll()
+      .executeTakeFirst()
+    if (!row) return err(errors.notFound({ businessId: input.id }))
+    if (deletedAt !== null) {
+      await context.db
+        .updateTable('deals')
+        .set({ deleted_at: null, updated_at: Date.now() })
+        .where('business_id', '=', input.id)
+        .where('deleted_at', '=', deletedAt)
+        .execute()
+      await context.db
+        .updateTable('contacts')
+        .set({ deleted_at: null, updated_at: Date.now() })
+        .where('business_id', '=', input.id)
+        .where('deleted_at', '=', deletedAt)
+        .execute()
+      await context.db
+        .updateTable('hotels')
+        .set({ deleted_at: null, updated_at: Date.now() })
+        .where('business_id', '=', input.id)
+        .where('deleted_at', '=', deletedAt)
+        .execute()
+    }
+    await audit(context.db, {
+      actor: actorOf(context),
+      action: 'restore',
+      entityType: 'business',
+      entityId: input.id,
+      before,
+      after: row,
+    })
+    return ok(decodeBusiness(row))
   })
 
 const contactsByBusiness = server
@@ -698,6 +815,7 @@ const contactsByBusiness = server
       .selectFrom('contacts')
       .selectAll()
       .where('business_id', '=', input.businessId)
+      .where('deleted_at', 'is', null)
       .orderBy('last_name', 'asc')
       .orderBy('first_name', 'asc')
       .execute()
@@ -730,7 +848,7 @@ const addContact = server
   )
   if (inserted.isErr()) throw inserted.error
   await audit(context.db, {
-    actor: 'system',
+    actor: actorOf(context),
     action: 'create',
     entityType: 'contact',
     entityId: inserted.value.id,
@@ -742,7 +860,12 @@ const addContact = server
 const updateContact = server
   .implement(updateContactContract).use(requireStaff)
   .handler(async ({ input, errors, context }) => {
-    const before = await context.db.selectFrom('contacts').selectAll().where('id', '=', input.id).executeTakeFirst()
+    const before = await context.db
+      .selectFrom('contacts')
+      .selectAll()
+      .where('id', '=', input.id)
+      .where('deleted_at', 'is', null)
+      .executeTakeFirst()
     if (!before) return err(errors.notFound({ contactId: input.id }))
     const set = {
       ...(input.hotelId !== undefined ? { hotel_id: input.hotelId } : {}),
@@ -765,7 +888,7 @@ const updateContact = server
     )
     if (updated.isErr()) throw updated.error
     await audit(context.db, {
-      actor: 'system',
+      actor: actorOf(context),
       action: 'update',
       entityType: 'contact',
       entityId: input.id,
@@ -780,16 +903,46 @@ const removeContact = server
   .handler(async ({ input, errors, context }) => {
     const before = await context.db.selectFrom('contacts').selectAll().where('id', '=', input.id).executeTakeFirst()
     if (!before) return err(errors.notFound({ contactId: input.id }))
-    const row = await context.db.deleteFrom('contacts').where('id', '=', input.id).returningAll().executeTakeFirst()
+    const now = Date.now()
+    const row = await context.db
+      .updateTable('contacts')
+      .set({ deleted_at: now, updated_at: now })
+      .where('id', '=', input.id)
+      .returningAll()
+      .executeTakeFirst()
     if (!row) return err(errors.notFound({ contactId: input.id }))
     await audit(context.db, {
-      actor: 'staff',
+      actor: actorOf(context),
       action: 'delete',
       entityType: 'contact',
       entityId: input.id,
       before,
+      after: row,
     })
     return ok({ removed: true })
+  })
+
+const restoreContact = server
+  .implement(restoreContactContract).use(requireStaff)
+  .handler(async ({ input, errors, context }) => {
+    const before = await context.db.selectFrom('contacts').selectAll().where('id', '=', input.id).executeTakeFirst()
+    if (!before) return err(errors.notFound({ contactId: input.id }))
+    const row = await context.db
+      .updateTable('contacts')
+      .set({ deleted_at: null, updated_at: Date.now() })
+      .where('id', '=', input.id)
+      .returningAll()
+      .executeTakeFirst()
+    if (!row) return err(errors.notFound({ contactId: input.id }))
+    await audit(context.db, {
+      actor: actorOf(context),
+      action: 'restore',
+      entityType: 'contact',
+      entityId: input.id,
+      before,
+      after: row,
+    })
+    return ok(decodeContact(row))
   })
 
 const dealsByBusiness = server
@@ -799,6 +952,7 @@ const dealsByBusiness = server
       .selectFrom('deals')
       .selectAll()
       .where('business_id', '=', input.businessId)
+      .where('deleted_at', 'is', null)
       .orderBy('updated_at', 'desc')
       .execute()
     return ok(rows.map(decodeDeal))
@@ -810,6 +964,7 @@ const computedAnnualValue = async (db: Db, businessId: string, pricePerRoom: num
     .selectFrom('hotels')
     .select((eb) => eb.fn.sum('room_count').as('n'))
     .where('business_id', '=', businessId)
+    .where('deleted_at', 'is', null)
     .executeTakeFirst()
   return pricePerRoom * Number(total?.n ?? 0)
 }
@@ -844,7 +999,7 @@ const addDeal = server
   )
   if (inserted.isErr()) throw inserted.error
   await audit(context.db, {
-    actor: 'system',
+    actor: actorOf(context),
     action: 'create',
     entityType: 'deal',
     entityId: inserted.value.id,
@@ -854,7 +1009,12 @@ const addDeal = server
 })
 
 const updateDeal = server.implement(updateDealContract).use(requireStaff).handler(async ({ input, errors, context }) => {
-  const before = await context.db.selectFrom('deals').selectAll().where('id', '=', input.id).executeTakeFirst()
+  const before = await context.db
+    .selectFrom('deals')
+    .selectAll()
+    .where('id', '=', input.id)
+    .where('deleted_at', 'is', null)
+    .executeTakeFirst()
   if (!before) return err(errors.notFound({ dealId: input.id }))
   const annualValue =
     input.annualValue ??
@@ -881,7 +1041,7 @@ const updateDeal = server.implement(updateDealContract).use(requireStaff).handle
   )
   if (updated.isErr()) throw updated.error
   await audit(context.db, {
-    actor: 'system',
+    actor: actorOf(context),
     action: 'update',
     entityType: 'deal',
     entityId: input.id,
@@ -896,16 +1056,46 @@ const removeDeal = server
   .handler(async ({ input, errors, context }) => {
     const before = await context.db.selectFrom('deals').selectAll().where('id', '=', input.id).executeTakeFirst()
     if (!before) return err(errors.notFound({ dealId: input.id }))
-    const row = await context.db.deleteFrom('deals').where('id', '=', input.id).returningAll().executeTakeFirst()
+    const now = Date.now()
+    const row = await context.db
+      .updateTable('deals')
+      .set({ deleted_at: now, updated_at: now })
+      .where('id', '=', input.id)
+      .returningAll()
+      .executeTakeFirst()
     if (!row) return err(errors.notFound({ dealId: input.id }))
     await audit(context.db, {
-      actor: 'staff',
+      actor: actorOf(context),
       action: 'delete',
       entityType: 'deal',
       entityId: input.id,
       before,
+      after: row,
     })
     return ok({ removed: true })
+  })
+
+const restoreDeal = server
+  .implement(restoreDealContract).use(requireStaff)
+  .handler(async ({ input, errors, context }) => {
+    const before = await context.db.selectFrom('deals').selectAll().where('id', '=', input.id).executeTakeFirst()
+    if (!before) return err(errors.notFound({ dealId: input.id }))
+    const row = await context.db
+      .updateTable('deals')
+      .set({ deleted_at: null, updated_at: Date.now() })
+      .where('id', '=', input.id)
+      .returningAll()
+      .executeTakeFirst()
+    if (!row) return err(errors.notFound({ dealId: input.id }))
+    await audit(context.db, {
+      actor: actorOf(context),
+      action: 'restore',
+      entityType: 'deal',
+      entityId: input.id,
+      before,
+      after: row,
+    })
+    return ok(decodeDeal(row))
   })
 
 const overview = server.implement(overviewContract).handler(async ({ context }) => {
@@ -920,7 +1110,11 @@ const overview = server.implement(overviewContract).handler(async ({ context }) 
       .executeTakeFirst()
   )?.n ?? 0
   const hotelCount = (
-    await context.db.selectFrom('hotels').select((eb) => eb.fn.countAll<number>().as('n')).executeTakeFirst()
+    await context.db
+      .selectFrom('hotels')
+      .select((eb) => eb.fn.countAll<number>().as('n'))
+      .where('deleted_at', 'is', null)
+      .executeTakeFirst()
   )?.n ?? 0
   return ok({ venueCount, liveVenueCount, hotelCount })
 })
@@ -958,7 +1152,12 @@ const guideById = server.implement(guideByIdContract).handler(async ({ input, er
 })
 
 const createGuide = server.implement(createGuideContract).use(requireStaff).handler(async ({ input, errors, context }) => {
-  const hotel = await context.db.selectFrom('hotels').selectAll().where('id', '=', input.hotelId).executeTakeFirst()
+  const hotel = await context.db
+    .selectFrom('hotels')
+    .selectAll()
+    .where('id', '=', input.hotelId)
+    .where('deleted_at', 'is', null)
+    .executeTakeFirst()
   if (!hotel) return err(errors.notFound({ guideId: input.hotelId }))
   const existing = await context.db.selectFrom('guides').selectAll().where('hotel_id', '=', input.hotelId).executeTakeFirst()
   if (existing) return ok(decodeGuide(existing))
@@ -984,7 +1183,7 @@ const createGuide = server.implement(createGuideContract).use(requireStaff).hand
   )
   if (inserted.isErr()) throw inserted.error
   await audit(context.db, {
-    actor: 'system',
+    actor: actorOf(context),
     action: 'create',
     entityType: 'guide',
     entityId: inserted.value.id,
@@ -1084,7 +1283,7 @@ const draftGuide = server.implement(draftGuideContract).use(requireStaff).handle
     .where('id', '=', input.id)
     .execute()
   await audit(context.db, {
-    actor: 'system',
+    actor: actorOf(context),
     action: 'draft',
     entityType: 'guide',
     entityId: input.id,
@@ -1114,7 +1313,7 @@ const approveGuideCandidates = server
         .execute()
     }
     await audit(context.db, {
-      actor: 'system',
+      actor: actorOf(context),
       action: 'approve-candidates',
       entityType: 'guide',
       entityId: input.guideId,
@@ -1142,7 +1341,7 @@ const setGuideConfig = server
     )
     if (updated.isErr()) throw updated.error
     await audit(context.db, {
-      actor: 'system',
+      actor: actorOf(context),
       action: 'config-change',
       entityType: 'guide',
       entityId: input.guideId,
@@ -1165,7 +1364,7 @@ const publishGuide = server.implement(publishGuideContract).use(requireStaff).ha
   )
   if (updated.isErr()) throw updated.error
   await audit(context.db, {
-    actor: 'system',
+    actor: actorOf(context),
     action: 'publish',
     entityType: 'guide',
     entityId: input.id,
@@ -1538,7 +1737,7 @@ const updateGuideVenue = server
     )
     if (updated.isErr()) throw updated.error
     await audit(context.db, {
-      actor: 'staff',
+    actor: actorOf(context),
       action: 'guide-venue.update',
       entityType: 'guide',
       entityId: row.guide_id,
@@ -1573,6 +1772,7 @@ export const router = server.router({
     add: addHotel,
     update: updateHotel,
     remove: removeHotel,
+    restore: restoreHotel,
   },
   businesses: {
     list: businessList,
@@ -1580,6 +1780,7 @@ export const router = server.router({
     add: addBusiness,
     update: updateBusiness,
     remove: removeBusiness,
+    restore: restoreBusiness,
     summaries: businessDealSummaries,
   },
   contacts: {
@@ -1587,12 +1788,14 @@ export const router = server.router({
     add: addContact,
     update: updateContact,
     remove: removeContact,
+    restore: restoreContact,
   },
   deals: {
     listByBusiness: dealsByBusiness,
     add: addDeal,
     update: updateDeal,
     remove: removeDeal,
+    restore: restoreDeal,
   },
   guides: {
     view: guideView,

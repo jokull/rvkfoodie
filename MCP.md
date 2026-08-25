@@ -20,6 +20,12 @@ Keychain (`hangar secrets get CMS_WRITE_KEY`); prod via `wrangler secret put`.
   `src/contract.ts`, dispatched in-process through result-rpc's
   `createServerClient` (middleware + codecs + error sanitization run exactly
   as for the SPA). Tool inputs mirror the contract inputs.
+- **Soft delete + restore** — `*_remove` soft-deletes (rows hidden from
+  every list, guide generation, and summaries) and `*_restore` undoes it.
+  `businesses_remove` cascades to its deals/contacts/hotels with one
+  `deleted_at` stamp; `businesses_restore` brings the whole account back
+  (independently-deleted children stay deleted). Audit records the actor as
+  `mcp@rvkfoodie.is` for MCP-originated writes.
 - **`upload_venue_photo`** — base64 image → R2 media bucket
   (`venues/{venueId}/{ts}-{name}`), returns the CDN URL. Mirrors
   `src/routes/api.upload.ts`.
@@ -60,7 +66,6 @@ test image to the local D1/R2, like `test:rpc` does.
 - `src/mcp-tools.ts` — the tool registry: RPC-backed tools, the upload tool,
   and the agent-cms editor proxy.
 - `src/routes/api.mcp.ts` — the TanStack server route (POST/GET).
-- The MCP context carries a synthetic staff session (`mcp@rvkfoodie.is`) —
-  handlers that read `context.session` see it (e.g. the digest audit); most
-  handlers hardcode `system`/`staff` actors, so MCP writes are not yet
-  attributed per-actor in the audit log (open item).
+- Audit attribution — every handler threads the session actor through
+  `actorOf(context)`: MCP-originated writes log `mcp@rvkfoodie.is`, SPA writes
+  log the signed-in staff email.

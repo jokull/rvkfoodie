@@ -9,7 +9,8 @@
  * layer owns the value sets (venue status, categories, lifecycle types,
  * pipeline stages).
  */
-import { index, integer, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core'
+import { sql } from 'drizzle-orm'
+import { index, integer, real, sqliteTable, text, unique, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
 export const VENUE_STATUS = ['draft', 'live', 'closed'] as const
 export const VENUE_CATEGORIES = [
@@ -166,10 +167,12 @@ export const businesses = sqliteTable(
   'businesses',
   {
     id: text('id').primaryKey(),
-    name: text('name').notNull().unique(),
+    name: text('name').notNull(),
     website: text('website'),
     industry: text('industry'),
     notes: text('notes'),
+    /** Soft delete: set on remove, cleared on restore. */
+    deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .$defaultFn(() => new Date())
       .notNull(),
@@ -177,7 +180,10 @@ export const businesses = sqliteTable(
       .$defaultFn(() => new Date())
       .notNull(),
   },
-  (t) => [index('businesses_name_idx').on(t.name)],
+  (t) => [
+    uniqueIndex('businesses_name_active_uq').on(t.name).where(sql`${t.deletedAt} is null`),
+    index('businesses_name_idx').on(t.name),
+  ],
 )
 
 /** The sales CRM — one hotel property, secondary to a business. */
@@ -186,7 +192,7 @@ export const hotels = sqliteTable(
   {
     id: text('id').primaryKey(),
     businessId: text('business_id'),
-    name: text('name').notNull().unique(),
+    name: text('name').notNull(),
     address: text('address'),
     /** The pin the guide generator measures proximity from. */
     lat: real('lat'),
@@ -194,6 +200,8 @@ export const hotels = sqliteTable(
     roomCount: integer('room_count').notNull().default(0),
     website: text('website'),
     notes: text('notes'),
+    /** Soft delete: set on remove, cleared on restore. */
+    deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .$defaultFn(() => new Date())
       .notNull(),
@@ -201,7 +209,10 @@ export const hotels = sqliteTable(
       .$defaultFn(() => new Date())
       .notNull(),
   },
-  (t) => [index('hotels_business_idx').on(t.businessId)],
+  (t) => [
+    uniqueIndex('hotels_name_active_uq').on(t.name).where(sql`${t.deletedAt} is null`),
+    index('hotels_business_idx').on(t.businessId),
+  ],
 )
 
 /** The sales CRM — a person at a business (optionally at one of its hotels). */
@@ -220,6 +231,8 @@ export const contacts = sqliteTable(
       .notNull()
       .default(false),
     notes: text('notes'),
+    /** Soft delete: set on remove, cleared on restore. */
+    deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .$defaultFn(() => new Date())
       .notNull(),
@@ -248,6 +261,8 @@ export const contacts = sqliteTable(
     startDate: integer('start_date', { mode: 'timestamp_ms' }),
     renewalDate: integer('renewal_date', { mode: 'timestamp_ms' }),
     notes: text('notes'),
+    /** Soft delete: set on remove, cleared on restore. */
+    deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
       .$defaultFn(() => new Date())
       .notNull(),
@@ -442,6 +457,7 @@ export type BusinessTable = {
   website: string | null
   industry: string | null
   notes: string | null
+  deleted_at: number | null
   created_at: number
   updated_at: number
 }
@@ -456,6 +472,7 @@ export type HotelTable = {
   room_count: number
   website: string | null
   notes: string | null
+  deleted_at: number | null
   created_at: number
   updated_at: number
 }
@@ -471,6 +488,7 @@ export type ContactTable = {
   title: string | null
   is_decision_maker: 0 | 1
   notes: string | null
+  deleted_at: number | null
   created_at: number
   updated_at: number
 }
@@ -485,6 +503,7 @@ export type DealTable = {
   start_date: number | null
   renewal_date: number | null
   notes: string | null
+  deleted_at: number | null
   created_at: number
   updated_at: number
 }

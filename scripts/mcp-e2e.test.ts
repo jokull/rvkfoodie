@@ -131,16 +131,37 @@ const main = async () => {
   const overview = single((await rpc('tools/call', { name: 'stats_overview', arguments: {} })).body)
   assert(overview.result && ((overview.result.content as Array<{ text: string }>)[0]?.text ?? '').includes('venueCount'), 'stats_overview call ok')
 
-  // 5) RPC mutation + audit trail records the write (handlers hardcode the
-  // actor as 'system'/'staff'; the MCP session email flows where handlers
-  // read it, e.g. the digest audit)
+  // 5) RPC mutation + audit trail records the write with the MCP actor
   const stamp = Date.now()
   const added = single((await rpc('tools/call', { name: 'venues_add', arguments: { name: `MCP e2e ${stamp}`, category: 'cafe', address: 'Testavegur 1' } })).body)
   assert(added.result && !(added.result as { isError?: boolean }).isError, 'venues_add call ok')
   const created = JSON.parse((added.result?.content as Array<{ text: string }>)[0].text) as { id: string }
   const audit = single((await rpc('tools/call', { name: 'audit_list', arguments: { entityType: 'venue', entityId: created.id } })).body)
-  const auditEntries = JSON.parse((audit.result?.content as Array<{ text: string }>)[0].text) as Array<{ action: string }>
+  const auditEntries = JSON.parse((audit.result?.content as Array<{ text: string }>)[0].text) as Array<{ action: string; actor: string }>
   assert(auditEntries.some((e) => e.action === 'create'), 'audit records the venue create')
+  assert(auditEntries.some((e) => e.action === 'create' && e.actor === 'mcp@rvkfoodie.is'), `audit actor is the MCP session (got ${auditEntries.map((e) => e.actor).join(',')})`)
+
+  // 5b) CRM soft-delete + restore round trip through the new tools
+  const biz = single((await rpc('tools/call', { name: 'businesses_add', arguments: { name: `MCP e2e co ${stamp}`, industry: 'hotel-operator' } })).body)
+  assert(biz.result && !(biz.result as { isError?: boolean }).isError, 'businesses_add call ok')
+  const bizRow = JSON.parse((biz.result?.content as Array<{ text: string }>)[0].text) as { id: string }
+  const deal = single((await rpc('tools/call', { name: 'deals_add', arguments: { businessId: bizRow.id, name: 'MCP e2e deal', pricePerRoom: 1000 } })).body)
+  assert(deal.result && !(deal.result as { isError?: boolean }).isError, 'deals_add call ok')
+  const sums = single((await rpc('tools/call', { name: 'businesses_summaries', arguments: {} })).body)
+  const sumsText = JSON.parse((sums.result?.content as Array<{ text: string }>)[0].text) as Array<{ businessId: string; dealCount: number }>
+  assert(sumsText.some((s) => s.businessId === bizRow.id && s.dealCount === 1), 'businesses_summaries shows the new deal')
+  const rmBiz = single((await rpc('tools/call', { name: 'businesses_remove', arguments: { id: bizRow.id } })).body)
+  assert(rmBiz.result && !(rmBiz.result as { isError?: boolean }).isError, 'businesses_remove call ok')
+  const sumsAfter = single((await rpc('tools/call', { name: 'businesses_summaries', arguments: {} })).body)
+  const sumsAfterText = JSON.parse((sumsAfter.result?.content as Array<{ text: string }>)[0].text) as Array<{ businessId: string }>
+  assert(!sumsAfterText.some((s) => s.businessId === bizRow.id), 'summaries drop the soft-deleted business')
+  const rest = single((await rpc('tools/call', { name: 'businesses_restore', arguments: { id: bizRow.id } })).body)
+  assert(rest.result && !(rest.result as { isError?: boolean }).isError, 'businesses_restore call ok')
+  const sumsRestored = single((await rpc('tools/call', { name: 'businesses_summaries', arguments: {} })).body)
+  const sumsRestoredText = JSON.parse((sumsRestored.result?.content as Array<{ text: string }>)[0].text) as Array<{ businessId: string; dealCount: number }>
+  assert(sumsRestoredText.some((s) => s.businessId === bizRow.id && s.dealCount === 1), 'summaries return after businesses_restore')
+  const rmAgain = single((await rpc('tools/call', { name: 'businesses_remove', arguments: { id: bizRow.id } })).body)
+  assert(rmAgain.result && !(rmAgain.result as { isError?: boolean }).isError, 'cleanup businesses_remove ok')
 
   // 6) guide surface
   const guide = single((await rpc('tools/call', { name: 'guides_view_by_slug', arguments: { slug: 'hotel-borg' } })).body)

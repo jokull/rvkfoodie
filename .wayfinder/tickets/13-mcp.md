@@ -66,6 +66,8 @@ Code / Cursor) can drive the whole product from one endpoint:
 - Open item (not built): most rpc-server handlers hardcode the audit actor as
   `system`/`staff`, so MCP-originated writes aren't per-actor attributed in
   the audit log yet — thread `context.session` through handlers when wanted.
+  → **DONE (2026-08-25)**: `actorOf(context)` threaded through all 24 audit
+  sites; see the update below.
 
 ## Update (2026-08-24) — agent-cms stateless migration prep
 
@@ -92,6 +94,29 @@ CMS proxy calls working.
 
 Open item unchanged: most rpc-server handlers hardcode the audit actor as
 `system`/`staff`; MCP-originated writes aren't per-actor attributed yet.
+
+## Update (2026-08-25) — soft delete + restore; audit actors threaded
+
+Closed the CRM coverage gap + made deletes recoverable:
+
+- **Soft delete** — `deleted_at` on businesses/hotels/contacts/deals
+  (migration 20260825090521; partial unique indexes so names are reusable
+  after delete). `remove*` now stamps instead of hard-deleting;
+  `businesses.remove` cascades to its deals/contacts/hotels with one shared
+  timestamp. Every read path (lists, byId, summaries, annualValue, overview,
+  createGuide) filters `deleted_at is null`; update/remove of a soft-deleted
+  row reads as not-found.
+- **Restore** — new `restore*` procedures (contract + handlers + MCP tools)
+  clear the stamp. `businesses.restore` brings back the account: business +
+  children sharing its deleted_at (children deleted independently earlier
+  stay deleted). Idempotent on live rows.
+- **Audit actors threaded** — `actorOf(context)` replaces the hardcoded
+  `system`/`staff` in all 24 audit sites: MCP-originated writes log
+  `mcp@rvkfoodie.is`, SPA writes log the signed-in staff email.
+- **MCP tools 62 → 71** — added `businesses_summaries`,
+  `hotels/businesses/contacts/deals_remove` + `_restore`.
+- `pnpm check` clean; `test:rpc` (restore round-trip block) and `test:mcp`
+  (audit-actor assert + CRM round trip) all green.
 
 ## Update (2026-08-24) — agent-cms 0.4.6 shipped, stateless live
 

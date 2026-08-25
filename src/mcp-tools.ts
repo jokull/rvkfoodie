@@ -328,6 +328,23 @@ const RPC_TOOLS: RpcToolDef[] = [
     },
     call: (c, a) => c.hotels.update(a as never),
   },
+  {
+    tool: {
+      name: 'hotels_remove',
+      description:
+        'Soft-delete a hotel property — hidden from every list and from guide generation, but recoverable with hotels_restore (and with businesses_restore when removed as part of its business).',
+      inputSchema: S({ id: id('The hotel id') }, ['id']),
+    },
+    call: (c, a) => c.hotels.remove(a as never),
+  },
+  {
+    tool: {
+      name: 'hotels_restore',
+      description: 'Undo hotels_remove — brings a soft-deleted hotel back into lists and guide generation.',
+      inputSchema: S({ id: id('The hotel id') }, ['id']),
+    },
+    call: (c, a) => c.hotels.restore(a as never),
+  },
   // businesses
   {
     tool: {
@@ -371,6 +388,33 @@ const RPC_TOOLS: RpcToolDef[] = [
       ),
     },
     call: (c, a) => c.businesses.update(a as never),
+  },
+  {
+    tool: {
+      name: 'businesses_summaries',
+      description:
+        'The CRM list roll-up: per business, its latest pipeline stage, summed annualValue and dealCount across active deals. Drives the pipeline column.',
+      inputSchema: S({}),
+    },
+    call: (c, a) => c.businesses.summaries(a as never),
+  },
+  {
+    tool: {
+      name: 'businesses_remove',
+      description:
+        'Soft-delete a business and everything under it (deals, contacts, hotels share one deleted_at stamp) — all hidden from lists, all recoverable in one call with businesses_restore.',
+      inputSchema: S({ id: id('The business id') }, ['id']),
+    },
+    call: (c, a) => c.businesses.remove(a as never),
+  },
+  {
+    tool: {
+      name: 'businesses_restore',
+      description:
+        'Undo businesses_remove — restores the business and the children soft-deleted together with it (children deleted independently earlier stay deleted).',
+      inputSchema: S({ id: id('The business id') }, ['id']),
+    },
+    call: (c, a) => c.businesses.restore(a as never),
   },
   // contacts
   {
@@ -423,6 +467,22 @@ const RPC_TOOLS: RpcToolDef[] = [
     },
     call: (c, a) => c.contacts.update(a as never),
   },
+  {
+    tool: {
+      name: 'contacts_remove',
+      description: 'Soft-delete a contact — hidden from the business, recoverable with contacts_restore.',
+      inputSchema: S({ id: id('The contact id') }, ['id']),
+    },
+    call: (c, a) => c.contacts.remove(a as never),
+  },
+  {
+    tool: {
+      name: 'contacts_restore',
+      description: 'Undo contacts_remove — brings a soft-deleted contact back to its business.',
+      inputSchema: S({ id: id('The contact id') }, ['id']),
+    },
+    call: (c, a) => c.contacts.restore(a as never),
+  },
   // deals
   {
     tool: {
@@ -472,6 +532,23 @@ const RPC_TOOLS: RpcToolDef[] = [
       ),
     },
     call: (c, a) => c.deals.update(a as never),
+  },
+  {
+    tool: {
+      name: 'deals_remove',
+      description:
+        'Soft-delete a deal — hidden from the pipeline and summaries, recoverable with deals_restore (or businesses_restore when removed with its business).',
+      inputSchema: S({ id: id('The deal id') }, ['id']),
+    },
+    call: (c, a) => c.deals.remove(a as never),
+  },
+  {
+    tool: {
+      name: 'deals_restore',
+      description: 'Undo deals_remove — brings a soft-deleted deal back to the pipeline and summaries.',
+      inputSchema: S({ id: id('The deal id') }, ['id']),
+    },
+    call: (c, a) => c.deals.restore(a as never),
   },
   // guides
   {
