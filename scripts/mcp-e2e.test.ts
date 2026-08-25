@@ -5,7 +5,6 @@
  * pnpm dev, then npx tsx scripts/mcp-e2e.test.ts
  */
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
 
 /**
  * Dev server URL: hangar owns the port per worktree ($PORT, proxied at
@@ -28,14 +27,21 @@ const base = process.env.MCP_URL ?? hangarUrl ?? 'http://localhost:3000'
 const endpoint = `${base}/api/mcp`
 console.log(`MCP endpoint: ${endpoint}`)
 
-// The same key that gates agent-cms's own MCP — from .dev.vars locally.
-const writeKey = (process.env.CMS_WRITE_KEY ??
-  readFileSync('.dev.vars', 'utf8')
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l.startsWith('CMS_WRITE_KEY='))
-    .map((l) => l.slice('CMS_WRITE_KEY='.length).trim())[0]) as string
-if (!writeKey) throw new Error('CMS_WRITE_KEY not found (set it or add to .dev.vars)')
+// The same key that gates agent-cms's own MCP — injected by hangar from the
+// macOS Keychain into the web service (hangar.toml `[env.CMS_WRITE_KEY]
+// from = "keychain"`); CMS_WRITE_KEY env var wins, hangar fallback.
+const writeKey = (() => {
+  if (process.env.CMS_WRITE_KEY) return process.env.CMS_WRITE_KEY
+  try {
+    return execFileSync('hangar', ['secrets', 'get', 'CMS_WRITE_KEY'], { encoding: 'utf8' }).trim()
+  } catch {
+    return ''
+  }
+})() as string
+if (!writeKey)
+  throw new Error(
+    'CMS_WRITE_KEY not found (set CMS_WRITE_KEY, or store it with `hangar secrets set CMS_WRITE_KEY`)',
+  )
 
 const META = {
   'io.modelcontextprotocol/protocolVersion': '2026-07-28',

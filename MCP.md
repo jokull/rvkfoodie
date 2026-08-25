@@ -10,7 +10,8 @@ never-pushing SSE stream.
 ## Auth
 
 Every request needs `Authorization: Bearer <CMS_WRITE_KEY>` — the same secret
-that gates agent-cms's own MCP endpoints. Local dev key is in `.dev.vars`.
+that gates agent-cms's own MCP endpoints. In dev the key lives in the macOS
+Keychain (`hangar secrets get CMS_WRITE_KEY`); prod via `wrangler secret put`.
 
 ## Tool surface (merged at runtime)
 
@@ -41,8 +42,8 @@ claude mcp add --transport http rvkfoodie http://web.rvkfoodie.localhost:<port>/
   --header "Authorization: Bearer <CMS_WRITE_KEY>"
 # plain `pnpm dev` outside hangar: http://localhost:3000/api/mcp
 
-# prod:
-claude mcp add --transport http rvkfoodie https://rvkfoodie.is/api/mcp \
+# prod (apex 301s to www — use www so the Authorization header isn't lost):
+claude mcp add --transport http rvkfoodie https://www.rvkfoodie.is/api/mcp \
   --header "Authorization: Bearer <prod CMS_WRITE_KEY>"
 ```
 

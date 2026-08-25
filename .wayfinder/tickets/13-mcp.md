@@ -81,6 +81,18 @@ JSON-RPC objects (no more batch-array workaround needed, but the tolerant
 parser stays). e2e green against the hangar-managed dev server (URL resolved
 from `hangar services`, `MCP_URL` override).
 
+## Update (2026-08-25) — dev key source moved off .dev.vars
+
+`scripts/mcp-e2e.test.ts` read `CMS_WRITE_KEY` from `.dev.vars`, which the env
+rework deleted (secrets now live in the hangar Keychain). The test now reads
+`hangar secrets get CMS_WRITE_KEY` (env-var override wins); `MCP.md` updated
+to match, and prod connect URL uses `www.rvkfoodie.is` (apex 301s and drops
+the bearer header on redirect). `pnpm test:mcp` green — 62 merged tools,
+CMS proxy calls working.
+
+Open item unchanged: most rpc-server handlers hardcode the audit actor as
+`system`/`staff`; MCP-originated writes aren't per-actor attributed yet.
+
 ## Update (2026-08-24) — agent-cms 0.4.6 shipped, stateless live
 
 agent-cms released **0.4.6** (commit 44e2ca9, hand-rolled stateless MCP
