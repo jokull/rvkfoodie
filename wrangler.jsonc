@@ -60,7 +60,7 @@
   // Bindings are NON-INHERITABLE in wrangler, so `env.development` below
   // redeclares them; only `vars` differ from production.
   "vars": {
-    "ENVIRONMENT": "development",
+    "ENVIRONMENT": "production",
     "ASSET_BASE_URL": "https://media.rvkfoodie.is",
     "BETTER_AUTH_URL": "https://rvkfoodie.is"
   },
