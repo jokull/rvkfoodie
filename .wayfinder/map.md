@@ -155,3 +155,27 @@ changelog, about, sitemap. Not yet ported: `/places/<slug>`, `/search`
 agent-cms result-rpc codegen bridge: **planned, not shipped** in 0.4.5
 (agent-cms wayfinder tickets 04 + 09) — revisit for /app CMS tooling once it
 lands.
+
+## Update (2026-08-25) — /g hotel guide mobile pass (impeccable critique)
+
+impeccable critique on the `/g/<slug>` mobile view (19/36) → improvement pass.
+- **P0 fixed:** no live guide existed in prod (every `/g/*` slug 404'd — prod
+  D1 had 0 venues/0 guides). Added `scripts/seed-demo.sql` (`db:seed:demo`) —
+  a scoped, idempotent seed of the Hotel Borg demo guide only (no CRM rows);
+  ran against prod. `/g/hotel-borg` now renders live.
+- **GuideView extended:** `hotel` (id/name/address/lat/lon, joined from
+  guide.hotel_id) + venue `cuisine`, `priceLevel`, `lastVerifiedAt` added to
+  the public codec. `venuePublic`/`loadGuideView` updated.
+- **Surface rebranded** into the consumer theme (cream canvas, ink text,
+  #5071fe blue, Instrument Serif display) — the flagship deliverable now reads
+  as the same product as the marketing site.
+- **Decision-ready cards:** walk-time (haversine from hotel pin), open-now /
+  open-today chip (parses "Mo-Su hh:mm-hh:mm"), cuisine tag, price glyphs,
+  "Spot-checked {month year}" freshness. Hotel pin + radius ring now render
+  (`radiusKm` derived from guide.radiusMin).
+- **Mobile ergonomics:** ≥44px pill actions with a primary Directions action,
+  sticky category nav with section anchors, focus-visible states, a11y
+  (`role="status"` on capture success, branded not-found w/ email CTA).
+- Verified: `pnpm check` clean, `test:rpc` + `test:mcp` green, live prod
+  screenshot at 375px matches dev. Detector clean (one `side-tab` flag is a
+  false positive on a pre-existing editorial blockquote, not a card).

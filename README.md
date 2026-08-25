@@ -30,6 +30,7 @@ pnpm db:migrate           # apply migrations to local D1
 pnpm db:migrate:remote    # apply migrations to remote D1
 pnpm db:seed              # seed local D1
 pnpm db:seed:remote       # seed remote D1
+pnpm db:seed:demo         # seed the prod demo guide (Hotel Borg /g/hotel-borg)
 ```
 
 Local D1 state lives in `.wrangler/` (gitignored).

@@ -182,7 +182,7 @@ export const GuideVenue = defineModel('guide-venue', {
 }).$satisfies<StoredGuideVenue>()
 export type GuideVenueRow = ModelValue<typeof GuideVenue>
 
-/** The public guide view — guide + live venue rows with overrides. */
+/** The public guide view — guide + hotel context + live venue rows. */
 export const GuideVenueViewCodec = wire.object({
   id: wire.string,
   venueId: wire.string,
@@ -203,13 +203,27 @@ export const GuideVenueViewCodec = wire.object({
     'phone',
     'lat',
     'lon',
+    'cuisine',
+    'priceLevel',
+    'lastVerifiedAt',
     'confidence',
     'photos',
   ),
 })
 
+/** The hotel this guide was made for — name + pin, so "made for your stay"
+ * and the walk-time / radius ring have a concrete anchor. */
+export const GuideHotelCodec = wire.object({
+  id: wire.string,
+  name: wire.string,
+  address: wire.nullable(wire.string),
+  lat: wire.nullable(wire.number),
+  lon: wire.nullable(wire.number),
+})
+
 export const GuideViewCodec = wire.object({
   guide: Guide.all('the guide is public'),
+  hotel: wire.nullable(GuideHotelCodec),
   venueRows: wire.array(GuideVenueViewCodec),
 })
 export type GuideView = InputOf<typeof GuideViewCodec>

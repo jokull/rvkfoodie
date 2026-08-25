@@ -15,6 +15,7 @@
     "db:migrate:remote": "wrangler d1 migrations apply rvkfoodie-cms-v4b --remote",
     "db:seed": "wrangler d1 execute rvkfoodie-cms-v4b --local --file scripts/seed.sql",
     "db:seed:remote": "wrangler d1 execute rvkfoodie-cms-v4b --remote --file scripts/seed.sql",
+    "db:seed:demo": "wrangler d1 execute rvkfoodie-cms-v4b --remote --file scripts/seed-demo.sql",
     "test:rpc": "tsx scripts/rpc-e2e.test.ts",
     "test:mcp": "tsx scripts/mcp-e2e.test.ts"
   },

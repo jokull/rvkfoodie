@@ -3,10 +3,16 @@
  * capture form (Turnstile-protected when a site key is configured), the
  * analytics beacon, and the sample marker for draft guides.
  *
- * Rendered on the server AND hydrated (Start is SSR, not RSC) — the map and
- * the beacon are the only client-only pieces.
+ * Rendered on the server AND hydrated (Start is SSR, not RSC) — the only
+ * client-only pieces are the map, open-now / walk-time computation, and the
+ * beacon.
+ *
+ * Brand: the guide renders INSIDE the /g surface (not the _public shell), so
+ * it echoes the consumer theme — cream canvas, ink text, #5071fe blue,
+ * Instrument Serif for the display line — so the flagship hotel deliverable
+ * reads as the same product the marketing site sells.
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useResultMutation, useResultQuery } from 'result-rpc/react'
 import { client } from '../rpc-client.js'
 import type { GuideView } from '../models.js'
@@ -14,6 +20,78 @@ import { GuideMap } from './guide-map.js'
 import { VENUE_CATEGORIES } from '../schema.js'
 
 const sample = (value: GuideView) => value.guide.status !== 'live' || value.venueRows.length === 0
+
+// ${priceLevel} → kr glyphs (1–4).
+const PRICE_LEVELS = ['', 'kr', 'krkr', 'krkrkr', 'krkrkrkr']
+
+/** "Mo-Su 10:00-22:00" (optionally ", 18:00-23:00") → open/closed status for
+ * the current time, plus a short "closes/opens HH:MM" string. Best-effort. */
+const openStatus = (hours: string | null): { open: boolean; label: string } | null => {
+  if (!hours) return null
+  const now = new Date()
+  const dayIdx = now.getDay() // 0 = Sun
+  const today = now.getHours() * 60 + now.getMinutes()
+  const segments = hours.split(/[,;]/).map((s) => s.trim())
+  for (const seg of segments) {
+    const m = seg.match(/([A-Za-z]{2})-([A-Za-z]{2})\s+(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/)
+    if (!m) continue
+    const dayLetter = (s: string) => ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].indexOf(s)
+    const from = dayLetter(m[1])
+    const to = dayLetter(m[2])
+    const isToday = (i: number) => (from <= to ? i >= from && i <= to : i >= from || i <= to)
+    if (!isToday(dayIdx)) continue
+    const openMin = Number(m[3]) * 60 + Number(m[4])
+    const closeMin = Number(m[5]) * 60 + Number(m[6])
+    if (today >= openMin && today < closeMin) {
+      return { open: true, label: `Open · closes ${HHMM(closeMin)}` }
+    }
+    if (today < openMin) return { open: false, label: `Closed · opens ${HHMM(openMin)}` }
+  }
+  return { open: false, label: 'Closed today' }
+}
+
+const HHMM = (mins: number) => `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`
+
+/** Haversine → meters. */
+const metres = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) => {
+  const R = 6371e3
+  const φ1 = (a.lat * Math.PI) / 180
+  const φ2 = (b.lat * Math.PI) / 180
+  const Δφ = ((b.lat - a.lat) * Math.PI) / 180
+  const Δλ = ((b.lon - a.lon) * Math.PI) / 180
+  const h = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(h))
+}
+
+/** "3 min walk" from hotel to venue (~4.5 km/h). Null when either pin is missing. */
+const walkMin = (from: { lat: number; lon: number } | null, to: { lat: number; lon: number } | null) => {
+  if (!from || !to) return null
+  const m = metres(from, to)
+  return Math.max(1, Math.round(m / 75))
+}
+
+const monthYear = (d: Date | null) => {
+  if (!d) return null
+  const month = d.toLocaleString('en', { month: 'short' })
+  return `${month} ${d.getFullYear()}`
+}
+
+const sectionTitle = (category: string): string =>
+  (
+    {
+      'breakfast-brunch': 'Breakfast & brunch',
+      cafe: 'Cafés',
+      bakery: 'Bakeries',
+      restaurant: 'Restaurants',
+      bar: 'Bars & nightlife',
+      'street-food': 'Street food',
+      'sweet-treats': 'Sweet treats',
+    } as Record<string, string>
+  )[category] ?? category
+
+const slugify = (s: string) => s.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '')
+
+const LinkBack = () => <a href="/" className="guide-back">← rvkfoodie.is</a>
 
 export function GuidePage({ slug }: { slug: string }) {
   const view = useResultQuery(client.guides.viewBySlug, { slug }, { staleTime: 60_000 })
@@ -28,19 +106,37 @@ export function GuidePage({ slug }: { slug: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view.state === 'success'])
 
-  if (view.state === 'pending') return <p className="muted">Loading guide…</p>
+  if (view.state === 'pending') {
+    return (
+      <div className="guide-shell bg-cream min-h-screen">
+        <p className="muted">Loading your guide…</p>
+      </div>
+    )
+  }
   if (view.state === 'failure') {
     return (
-      <p className="error">
-        {view.error._tag === 'guide/not-found'
-          ? 'This guide does not exist.'
-          : `Guide failed: ${view.error._tag}`}
-      </p>
+      <div className="guide-shell bg-cream min-h-screen">
+        <p className="guide-back"><LinkBack /></p>
+        <h1 className="guide-h1">This guide isn't available yet</h1>
+        <p className="guide-intro">
+          {view.error._tag === 'guide/not-found'
+            ? "We couldn't find it — it may be being prepared."
+            : `Something went wrong (${view.error._tag}).`}
+        </p>
+        <p className="guide-intro">
+          Is your hotel guide missing?{' '}
+          <a href="mailto:guides@rvkfoodie.is" className="guide-link">Email us</a>{' '}
+          and we'll get it to you.
+        </p>
+      </div>
     )
   }
 
   const value = view.value
   const isSample = sample(value)
+  const hotel = value.hotel
+  const hotelPin = hotel?.lat != null && hotel?.lon != null ? { lat: hotel.lat, lon: hotel.lon } : null
+  const radiusMin = value.guide.radiusMin ?? 20
 
   // Group live venue rows by category, keeping template order.
   const sections = useMemo(() => {
@@ -57,31 +153,49 @@ export function GuidePage({ slug }: { slug: string }) {
   }, [value])
 
   return (
-    <div className="guide-shell">
-      <p className="muted small">
-        <LinkBack />
-      </p>
+    <div className="guide-shell bg-cream min-h-screen">
+      <p className="guide-back"><LinkBack /></p>
 
       <header className="guide-hero">
-        <h1>{isSample ? 'Sample guide' : 'Your guide to Reykjavík'}</h1>
+        <h1 className="guide-h1">{isSample ? 'Sample guide' : 'Your guide to Reykjavík'}</h1>
+        {hotel?.name && (
+          <p className="guide-hotel">made for your stay<>{' '}at <strong>{hotel.name}</strong></></p>
+        )}
         <p className="guide-intro">
           {isSample
             ? 'What your guests could receive — curated picks, kept current.'
-            : 'The best eats within a 20-minute walk — curated and kept current.'}
+            : `The best eats within a ${radiusMin}-minute walk — curated and kept current.`}
         </p>
         {isSample && <span className="badge badge-sample">sample</span>}
       </header>
 
-      <GuideMap hotelPin={null} venueRows={value.venueRows} radiusKm={1.2} />
+      {/* Sticky category nav — jump to a day-part without scrolling the list. */}
+      {sections.length > 1 && (
+        <nav className="guide-nav" aria-label="Guide sections">
+          {sections.map((s) => (
+            <a key={s.category} href={`#${slugify(s.category)}`} className="guide-nav-chip">
+              {sectionTitle(s.category)}
+            </a>
+          ))}
+        </nav>
+      )}
+
+      <GuideMap hotelPin={hotelPin} venueRows={value.venueRows} radiusKm={radiusMin * 0.08} />
 
       {sections.length === 0 && <p className="muted">This guide is still being assembled.</p>}
 
       {sections.map((section) => (
-        <section key={section.category} className="guide-section">
+        <section key={section.category} id={slugify(section.category)} className="guide-section">
           <h2 className="section-title">{sectionTitle(section.category)}</h2>
           <ul className="guide-list">
             {section.rows.map((row, i) => (
-              <VenueCard key={row.id} row={row} editorPick={i === 0} onVenueClick={(venueId) => beacon.mutate({ slug, event: 'venue-click', venueId })} />
+              <VenueCard
+                key={row.id}
+                row={row}
+                hotelPin={hotelPin}
+                editorPick={i === 0}
+                onVenueClick={(venueId) => beacon.mutate({ slug, event: 'venue-click', venueId })}
+              />
             ))}
           </ul>
         </section>
@@ -89,7 +203,7 @@ export function GuidePage({ slug }: { slug: string }) {
 
       <footer className="guide-footer">
         <p>
-          Made for <strong>your stay</strong> · curated by Reykjavík Foodie
+          Made for <strong>{hotel?.name ?? 'your stay'}</strong> · curated by Reykjavík Foodie
         </p>
         <CaptureForm slug={slug} onCaptured={() => beacon.mutate({ slug, event: 'email-captured' })} />
       </footer>
@@ -97,33 +211,16 @@ export function GuidePage({ slug }: { slug: string }) {
   )
 }
 
-const sectionTitle = (category: string): string =>
-  (
-    {
-      'breakfast-brunch': 'Breakfast & brunch',
-      cafe: 'Cafés',
-      bakery: 'Bakeries',
-      restaurant: 'Restaurants',
-      bar: 'Bars & nightlife',
-      'street-food': 'Street food',
-      'sweet-treats': 'Sweet treats',
-    } as Record<string, string>
-  )[category] ?? category
-
-const LinkBack = () => (
-  <a href="/" className="guide-back">
-    ← rvkfoodie.is
-  </a>
-)
-
 function VenueCard({
   row,
+  hotelPin,
   editorPick,
   onVenueClick,
 }: {
   row: GuideView['venueRows'][number]
+  hotelPin: { lat: number; lon: number } | null
   editorPick: boolean
-  onVenueClick: (venueId: string) => void
+  onVenueClick: (venueId: string, action?: string) => void
 }) {
   const v = row.venue
   const note = row.overrideText ?? v.note
@@ -134,46 +231,73 @@ function VenueCard({
         '$1/cdn-cgi/image/width=640,fit=scale-down,format=webp/$2',
       )
     : null
+  const walk = walkMin(hotelPin, v.lat != null && v.lon != null ? { lat: v.lat, lon: v.lon } : null)
+  const open = openStatus(v.openingHours)
+
   return (
-    <li className={`venue-card${editorPick ? ' editor-pick' : ''}`}>
+    <li className={`venue-card ${editorPick ? 'editor-pick' : ''}`}>
       {photoUrl && <img className="venue-card-photo" src={photoUrl} alt={v.name} loading="lazy" />}
       <div className="venue-card-head">
         <h3>{v.name}</h3>
-        {editorPick && <span className="badge badge-pick">editor's pick</span>}
+        {v.priceLevel != null && <span className="venue-card-price">{PRICE_LEVELS[v.priceLevel] ?? ''}</span>}
       </div>
-      <p className="venue-card-address">{v.address}</p>
-      {v.openingHours && <p className="venue-card-hours">{v.openingHours}</p>}
+      {editorPick && <span className="badge badge-pick">editor's pick</span>}
+      <p className="venue-card-meta">
+        <span>{v.address}</span>
+        {walk != null && <span className="venue-card-walk">{walk} min walk</span>}
+      </p>
+      {open && (
+        <p className={`venue-card-hours ${open.open ? 'is-open' : 'is-closed'}`}>{open.label}</p>
+      )}
+      {(v.cuisine || v.categorySecondary) && (
+        <p className="venue-card-tags">{[v.cuisine, v.categorySecondary].filter(Boolean).join(' · ')}</p>
+      )}
       {note && <p className="venue-card-note">{note}</p>}
       {v.recommendedDishes.length > 0 && (
         <p className="venue-card-dishes">Try: {v.recommendedDishes.join(' · ')}</p>
+      )}
+      {v.lastVerifiedAt && (
+        <p className="venue-card-verified">Spot-checked {monthYear(v.lastVerifiedAt)}</p>
       )}
       <div className="venue-card-actions">
         <a
           href={`https://maps.google.com/?q=${encodeURIComponent(`${v.name} ${v.address}`)}`}
           target="_blank"
           rel="noreferrer"
-          onClick={() => onVenueClick(v.id)}
+          className="action action-primary"
+          onClick={() => onVenueClick(v.id, 'directions')}
         >
           Directions
         </a>
+        {v.phone && (
+          <a
+            href={`tel:${v.phone.replace(/\s/g, '')}`}
+            className="action action-call"
+            onClick={() => onVenueClick(v.id, 'call')}
+          >
+            Call
+          </a>
+        )}
         {v.dineoutId && (
           <a
             href={`https://dineout.is/restaurant/${v.dineoutId}`}
             target="_blank"
             rel="noreferrer"
-            onClick={() => onVenueClick(v.id)}
+            className="action"
+            onClick={() => onVenueClick(v.id, 'reserve')}
           >
-            Reserve a table
+            Reserve
           </a>
         )}
         {v.website && (
-          <a href={v.website} target="_blank" rel="noreferrer" onClick={() => onVenueClick(v.id)}>
+          <a
+            href={v.website}
+            target="_blank"
+            rel="noreferrer"
+            className="action"
+            onClick={() => onVenueClick(v.id, 'website')}
+          >
             Website
-          </a>
-        )}
-        {v.phone && (
-          <a href={`tel:${v.phone.replace(/\s/g, '')}`} onClick={() => onVenueClick(v.id)}>
-            Call
           </a>
         )}
       </div>
@@ -201,7 +325,13 @@ function CaptureForm({
     },
   })
 
-  if (sent) return <p className="capture-done">Check your inbox — the guide is on its way.</p>
+  if (sent) {
+    return (
+      <p className="capture-done" role="status">
+        Check your inbox — the guide is on its way.
+      </p>
+    )
+  }
   return (
     <form
       className="capture-form"

@@ -140,6 +140,9 @@ const venuePublic = (v: StoredVenue) => ({
   phone: v.phone,
   lat: v.lat,
   lon: v.lon,
+  cuisine: v.cuisine,
+  priceLevel: v.priceLevel,
+  lastVerifiedAt: v.lastVerifiedAt,
   confidence: v.confidence,
   photos: v.photos,
 })
@@ -1510,7 +1513,24 @@ const loadGuideView = async (db: Db, guideId: string) => {
       venue: venuePublic(decodeVenue(venue)),
     }
   })
-  return { guide: decodeGuide(guide), venueRows: venueRowsOut }
+  // The hotel the guide was made for — name + pin for "made for your stay"
+  // and the walk-time / radius ring anchor. Null when the hotel is missing.
+  const hotel = guide.hotel_id
+    ? await db.selectFrom('hotels').selectAll().where('id', '=', guide.hotel_id).executeTakeFirst()
+    : null
+  return {
+    guide: decodeGuide(guide),
+    hotel: hotel
+      ? {
+          id: hotel.id,
+          name: hotel.name,
+          address: hotel.address,
+          lat: hotel.lat,
+          lon: hotel.lon,
+        }
+      : null,
+    venueRows: venueRowsOut,
+  }
 }
 
 const guideView = server.implement(guideViewContract).handler(async ({ input, errors, context }) => {
