@@ -8,15 +8,18 @@
 #   hangar run         checks + receipts for the working tree
 #   hangar watch       checks whenever the worktree goes quiet
 #
-# Env model (no .dev.vars — it is deleted):
-#  - Non-sensitive, env-independent values live in wrangler.jsonc `vars`
-#    (committed): ENVIRONMENT, ASSET_BASE_URL.
-#  - Per-environment values ride wrangler's `secrets.required` channel
-#    (see wrangler.jsonc): BETTER_AUTH_URL (dev origin differs from prod),
-#    BETTER_AUTH_SECRET, CMS_WRITE_KEY, R2_ACCESS_KEY_ID,
-#    R2_SECRET_ACCESS_KEY. Their values live in the macOS Keychain via
-#    `hangar secrets set <KEY>`; this service's `env` list is the allowlist
-#    the daemon injects into the process.
+# Env model (no .dev.vars — it is deleted). Non-sensitive config vs secrets:
+#  - vars (committed, public config): ENVIRONMENT, ASSET_BASE_URL,
+#    BETTER_AUTH_URL. BETTER_AUTH_URL is a public URL, not a secret — it is a
+#    wrangler var (prod https://rvkfoodie.is), overridden to the hangar dev
+#    origin by the `env.development` block (selected via CLOUDFLARE_ENV=development
+#    on the run line below).
+#  - secrets (Keychain -> wrangler secrets.required -> this service's `env`
+#    allowlist -> the [env.*] rules below): BETTER_AUTH_SECRET (session
+#    signing), CMS_WRITE_KEY (agent-cms writes), R2_ACCESS_KEY_ID + and
+#    R2_SECRET_ACCESS_KEY (media bucket). Values live in the macOS Keychain
+#    via `hangar secrets set <KEY>`; the allowlist decides which reach the
+#    process.
 #  - CLOUDFLARE_INCLUDE_PROCESS_ENV=true is required because the Vite plugin
 #    (not `wrangler dev`) runs the worker: hangar auto-sets that flag only
 #    for wrangler invocations, so we set it in the run line to let the
