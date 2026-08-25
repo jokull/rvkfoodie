@@ -47,3 +47,19 @@ env = [
 # Browser work waits on this, not on "the process started".
 [ready]
 requires = ["web"]
+
+# Per-key env rules (hangar docs env, §3) — the policy layer on top of the
+# allowlist above. `from = "keychain"` pins where each value must come from
+# (never a tracked file or a literal) and keeps secrets out of build-cache
+# keys. No require_prefix: these values have no test/live prefix to guard.
+[env.BETTER_AUTH_SECRET]
+from = "keychain"
+
+[env.CMS_WRITE_KEY]
+from = "keychain"
+
+[env.R2_ACCESS_KEY_ID]
+from = "keychain"
+
+[env.R2_SECRET_ACCESS_KEY]
+from = "keychain"
